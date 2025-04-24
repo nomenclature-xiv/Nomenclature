@@ -10,4 +10,8 @@
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.15" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Domain\" />
+    </ItemGroup>
+
 </Project>
