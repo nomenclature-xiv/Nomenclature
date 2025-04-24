@@ -44,6 +44,7 @@ namespace Nomenclature.Services
                     collection.AddSingleton<FrameworkService>();
                     collection.AddSingleton<CommandService>();
                     collection.AddSingleton<WorldService>();
+                    collection.AddSingleton<NetworkService>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
@@ -52,6 +53,7 @@ namespace Nomenclature.Services
                     collection.AddHostedService(p => p.GetRequiredService<WindowService>());
                     collection.AddHostedService(p => p.GetRequiredService<InstallerWindowService>());
                     collection.AddHostedService(p => p.GetRequiredService<CommandService>());
+                    collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
                 }).Build();
 
         }

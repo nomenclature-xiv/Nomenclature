@@ -29,7 +29,7 @@ public class NetworkService : IHostedService
         PluginLog = pluginLog;
 
         Connection = new HubConnectionBuilder()
-            .WithUrl("", options =>
+            .WithUrl("https://localhost:5006", options =>
             {
                 options.AccessTokenProvider = async () => await Token().ConfigureAwait(false);
             })

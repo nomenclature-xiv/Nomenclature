@@ -8,6 +8,12 @@ namespace Nomenclature.UI
 {
     public class MainWindowController
     {
+        public string ChangedName = string.Empty;
+        public MainWindowController(Configuration configuration)
+        {
+            ChangedName = configuration.Name;
+        }
+
         public string BlocklistName = string.Empty;
         public int BlocklistWorld = 0;
     }

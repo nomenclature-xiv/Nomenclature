@@ -2,16 +2,14 @@ using MessagePack;
 
 namespace NomenclatureCommon.Domain.Api;
 
-[MessagePackObject]
+[MessagePackObject(true)]
 public record RegisterNameRequest
 {
-    [Key(0)]
     public string Name { get; set; } = string.Empty;
 }
 
-[MessagePackObject]
+[MessagePackObject(true)]
 public record RegisterNameResponse
 {
-    [Key(0)]
-    public bool Success { get; set; } = true;
+    public bool Success { get; set; }
 }

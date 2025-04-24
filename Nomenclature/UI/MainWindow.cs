@@ -7,6 +7,10 @@ using ImGuiNET;
 using Nomenclature.Utils;
 using Nomenclature.Services;
 using Nomenclature.Types;
+using Serilog;
+using System;
+using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon;
 
 namespace Nomenclature.UI;
 
@@ -15,11 +19,13 @@ public class MainWindow : Window
     private readonly Configuration Configuration;
     private readonly WorldService WorldService;
     private readonly MainWindowController MainWindowController;
-    public MainWindow(Configuration configuration, WorldService worldService, MainWindowController mainWindowController) : base("Nomenclature")
+    private readonly NetworkService NetworkService;
+    public MainWindow(Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService) : base("Nomenclature")
     {
         Configuration = configuration;
         WorldService = worldService;
         MainWindowController = mainWindowController;
+        NetworkService = networkService;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -45,8 +51,10 @@ public class MainWindow : Window
         {
             ImGui.Text("Name: ");
             ImGui.SameLine();
-            string name = Configuration.Name;
-            ImGui.InputText("##NomenclatureName", ref name, 32);
+            if(ImGui.InputText("##NomenclatureName", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                UpdateName();
+            }
             ImGui.EndTabItem();
         }
     }
@@ -124,5 +132,23 @@ public class MainWindow : Window
     private bool ValidateName(string name)
     {
         return name != null && name.Length > 0;
+    }
+
+    private async void UpdateName()
+    {
+        try
+        {
+            RegisterNameResponse response = await NetworkService.InvokeAsync<RegisterNameRequest, RegisterNameResponse>(ApiMethod.RegisterName, new RegisterNameRequest { Name = MainWindowController.ChangedName });
+            if(response.Success)
+            {
+                Configuration.Name = MainWindowController.ChangedName;
+                Configuration.Save();
+                Log.Verbose("Successfully changed name!");
+            }
+        }
+        catch(Exception ex)
+        {
+            Log.Debug(ex.ToString());
+        }
     }
 }
