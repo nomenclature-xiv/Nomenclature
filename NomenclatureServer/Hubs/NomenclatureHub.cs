@@ -23,9 +23,17 @@ public class NomenclatureHub(RegisteredNamesService registeredNamesService, ILog
     public RegisterNameResponse RegisterName(RegisterNameRequest request)
     {
         logger.LogInformation("{Request}", request);
+        if (registeredNamesService.ActiveNameChanges.ContainsKey(RegisteredCharacter))
+        {
+            registeredNamesService.ActiveNameChanges[RegisteredCharacter] = request.Name;
+        }
+        else
+        {
+            registeredNamesService.ActiveNameChanges.Add(RegisteredCharacter, request.Name);
+        }
         return new RegisterNameResponse
         {
-            Success = registeredNamesService.ActiveNameChanges.TryAdd(RegisteredCharacter, request.Name)
+            Success = true
         };
     }
 
@@ -33,14 +41,17 @@ public class NomenclatureHub(RegisteredNamesService registeredNamesService, ILog
     public QueryChangedNamesResponse QueryChangedNames(QueryChangedNamesRequest request)
     {
         logger.LogInformation("{Request}", request);
-        var span = request.NamesToQuery.ToArray().AsSpan();
-        
+        var span = request.NamesToQuery.ToArray();
+        var output = new Dictionary<string, string>();
         for (var i = 0; i < request.NamesToQuery.Count; i++)
         {
-            
+            if (registeredNamesService.ActiveNameChanges.ContainsKey(span[i]))
+            {
+                output.Add(span[i], registeredNamesService.ActiveNameChanges[span[i]]);
+            }
         }
 
-        return new();
+        return new() { ModifiedNames = output };
 
     }
 }

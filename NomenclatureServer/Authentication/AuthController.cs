@@ -26,7 +26,7 @@ public class AuthController(Configuration configuration, DatabaseService databas
         }
             
         
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.SigningKey));
+        var key = configuration.SigningKey;
         var claims = new List<Claim> { new(AuthClaimType.RegisteredCharacter, registeredName) };
         var descriptor = new SecurityTokenDescriptor
         {
@@ -35,6 +35,6 @@ public class AuthController(Configuration configuration, DatabaseService databas
             Expires = DateTime.UtcNow.AddHours(4)
         };
         
-        return Ok(new JwtSecurityTokenHandler().CreateJwtSecurityToken(descriptor));
+        return Ok(new JwtSecurityTokenHandler().CreateJwtSecurityToken(descriptor).RawData);
     }
 }

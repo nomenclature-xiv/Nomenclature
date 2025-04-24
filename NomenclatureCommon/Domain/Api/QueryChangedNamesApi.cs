@@ -2,17 +2,16 @@ using MessagePack;
 
 namespace NomenclatureCommon.Domain.Api;
 
-[MessagePackObject]
+[MessagePackObject(true)]
 public record QueryChangedNamesRequest
 {
     /// <summary>
     ///     The names of the in-game characters you would like to query
     /// </summary>
-    [Key(0)]
     public List<string> NamesToQuery { get; set; } = [];
 }
 
-[MessagePackObject]
+[MessagePackObject(true)]
 public record QueryChangedNamesResponse
 {
     /// <summary>

@@ -18,7 +18,7 @@ public class IdentityService : IHostedService
     /// <summary>
     ///     Maps [CharacterName]@[HomeWorld] to [ModifiedCharacterName]
     /// </summary>
-    public readonly Dictionary<string, string> Identities = new();
+    public Dictionary<string, string> Identities = new();
 
     public IdentityService(INamePlateGui namePlateGui)
     {

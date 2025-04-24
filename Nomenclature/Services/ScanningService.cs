@@ -8,6 +8,8 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon;
+using NomenclatureCommon.Domain.Api;
 
 namespace Nomenclature.Services;
 
@@ -19,8 +21,10 @@ public class ScanningService : IHostedService
     private readonly IPluginLog PluginLog;
     private readonly IObjectTable ObjectTable;
     private readonly FrameworkService FrameworkService;
+    private readonly NetworkService NetworkService;
+    private readonly IdentityService IdentityService;
     // Constants
-    private const int ScanInternal = 1000; //15000;
+    private const int ScanInternal = 5000; //15000;
     
     // Instantiated
     private readonly System.Timers.Timer _scanningTimer;
@@ -28,11 +32,13 @@ public class ScanningService : IHostedService
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
     /// </summary>
-    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, FrameworkService frameworkService)
+    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService)
     {
         PluginLog = pluginLog;
         FrameworkService = frameworkService;
         ObjectTable = objectTable;
+        NetworkService = networkService;
+        IdentityService = identityService;
 
         _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
     }
@@ -54,11 +60,14 @@ public class ScanningService : IHostedService
             var stop = Stopwatch.StartNew();
             //PluginLog.Verbose("Beginning Scan...");
             
-            await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
+            List<string> localNames = await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
             
             //PluginLog.Verbose("Finished Scan...");
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
+
+            QueryChangedNamesResponse response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethod.QueryChangedNames, new QueryChangedNamesRequest { NamesToQuery = localNames });
+            IdentityService.Identities = response.ModifiedNames;
         }
         catch (Exception e)
         {

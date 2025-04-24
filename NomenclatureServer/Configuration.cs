@@ -1,3 +1,4 @@
+using Microsoft.IdentityModel.Tokens;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -11,7 +12,7 @@ public class Configuration
     public static readonly IPAddress Ip = IPAddress.Parse("127.0.0.1");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public readonly string SigningKey = "SomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSilly";//Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    public readonly SymmetricSecurityKey SigningKey = new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32));
     public readonly string CertificatePath;
     public readonly string CertificatePasswordPath;
 
