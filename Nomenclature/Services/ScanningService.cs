@@ -2,30 +2,46 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Plugin.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace Nomenclature.Services;
 
 /// <summary>
 ///     TODO
 /// </summary>
-public class ScanningService : IDisposable
+public class ScanningService : IHostedService
 {
+    private readonly IPluginLog PluginLog;
+    private readonly IObjectTable ObjectTable;
+    private readonly FrameworkService FrameworkService;
     // Constants
     private const int ScanInternal = 1000; //15000;
     
     // Instantiated
-    private readonly Timer _scanningTimer;
+    private readonly System.Timers.Timer _scanningTimer;
 
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
     /// </summary>
-    public ScanningService()
+    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, FrameworkService frameworkService)
     {
-        _scanningTimer = new Timer { Interval = ScanInternal, Enabled = true };
+        PluginLog = pluginLog;
+        FrameworkService = frameworkService;
+        ObjectTable = objectTable;
+
+        _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {        
         _scanningTimer.Elapsed += Scan;
         _scanningTimer.Start();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -36,17 +52,17 @@ public class ScanningService : IDisposable
         try
         {
             var stop = Stopwatch.StartNew();
-            Plugin.Log.Verbose("Beginning Scan...");
+            PluginLog.Verbose("Beginning Scan...");
             
-            await Plugin.RunOnFramework(Scan).ConfigureAwait(false);
+            await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
             
-            Plugin.Log.Verbose("Finished Scan...");
+            PluginLog.Verbose("Finished Scan...");
             stop.Stop();
-            Plugin.Log.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
+            PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
         }
         catch (Exception e)
         {
-            Plugin.Log.Fatal($"Unexpected issue occurred while scanning, {e}");
+            PluginLog.Fatal($"Unexpected issue occurred while scanning, {e}");
         }
     }
 
@@ -61,9 +77,9 @@ public class ScanningService : IDisposable
         var players = new List<string>();
         
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < Plugin.ObjectTable.Length; i++)
+        for (var i = 0; i < ObjectTable.Length; i++)
         {
-            if (Plugin.ObjectTable[i] is not IPlayerCharacter player)
+            if (ObjectTable[i] is not IPlayerCharacter player)
                 continue;
             
             _identityNameBuilder.Clear();
@@ -76,9 +92,9 @@ public class ScanningService : IDisposable
         return players;
     }
 
-    public void Dispose()
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _scanningTimer.Dispose();
-        GC.SuppressFinalize(this);
+        return Task.CompletedTask;
     }
 }

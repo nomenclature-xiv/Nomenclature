@@ -1,5 +1,6 @@
 using System;
 using Dalamud.Configuration;
+using Dalamud.Plugin;
 
 namespace Nomenclature;
 
@@ -12,7 +13,20 @@ public class Configuration : IPluginConfiguration
     public int Version { get; set; } = 1;
 
     /// <summary>
-    ///     Save configuration
+    ///     Name to replace real name
     /// </summary>
-    public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
+    public string Name { get; set; } = string.Empty;
+
+    [NonSerialized]
+    private IDalamudPluginInterface? PluginInterface;
+
+    public void Initialize(IDalamudPluginInterface pluginInterface)
+    {
+        PluginInterface = pluginInterface;
+    }
+
+    public void Save()
+    {
+        PluginInterface!.SavePluginConfig(this);
+    }
 }

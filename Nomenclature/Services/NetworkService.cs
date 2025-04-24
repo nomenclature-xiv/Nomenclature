@@ -1,26 +1,33 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
 using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Nomenclature.Services;
 
 /// <summary>
 ///     TODO
 /// </summary>
-public class NetworkService : IDisposable
+public class NetworkService : IHostedService
 {
     /// <summary>
     ///     TODO
     /// </summary>
     public readonly HubConnection Connection;
 
+    private readonly IPluginLog PluginLog;
+
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService()
+    public NetworkService(IPluginLog pluginLog)
     {
+        PluginLog = pluginLog;
+
         Connection = new HubConnectionBuilder()
             .WithUrl("", options =>
             {
@@ -34,6 +41,11 @@ public class NetworkService : IDisposable
             .Build();
     }
 
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public async Task<TU> InvokeAsync<T, TU>(string method, T request)
     {
         if (Connection.State is not HubConnectionState.Connected)
@@ -41,14 +53,14 @@ public class NetworkService : IDisposable
 
         try
         {
-            Plugin.Log.Verbose($"[NetworkService] Request: {request}");
+            PluginLog.Verbose($"[NetworkService] Request: {request}");
             var response = await Connection.InvokeAsync<TU>(method, request);
-            Plugin.Log.Verbose($"[NetworkService] Response: {response}");
+            PluginLog.Verbose($"[NetworkService] Response: {response}");
             return response;
         }
         catch (Exception e)
         {
-            Plugin.Log.Warning($"[NetworkService] Unexpected error while invoking function on the server, {e}");
+            PluginLog.Warning($"[NetworkService] Unexpected error while invoking function on the server, {e}");
             return Activator.CreateInstance<TU>();
         }
     }
@@ -60,13 +72,13 @@ public class NetworkService : IDisposable
 
         try
         {
-            Plugin.Log.Info("[NetworkService] Connecting...");
+            PluginLog.Info("[NetworkService] Connecting...");
             await Connection.StartAsync().ConfigureAwait(false);
-            Plugin.Log.Info($"[NetworkService] Connected: {Connection.State is HubConnectionState.Connected}");
+            PluginLog.Info($"[NetworkService] Connected: {Connection.State is HubConnectionState.Connected}");
         }
         catch (Exception e)
         {
-            Plugin.Log.Warning($"[NetworkService] Unexpected error while connecting, {e}");
+            PluginLog.Warning($"[NetworkService] Unexpected error while connecting, {e}");
         }
     }
 
@@ -81,7 +93,7 @@ public class NetworkService : IDisposable
         }
         catch (Exception e)
         {
-            Plugin.Log.Warning($"[NetworkService] Unexpected error while disconnecting, {e}");
+            PluginLog.Warning($"[NetworkService] Unexpected error while disconnecting, {e}");
         }
     }
 
@@ -97,8 +109,8 @@ public class NetworkService : IDisposable
         }
     }
     
-    public void Dispose()
+    public Task StopAsync(CancellationToken cancellationToken)
     {
-        GC.SuppressFinalize(this);
+        return Task.CompletedTask;
     }
 }

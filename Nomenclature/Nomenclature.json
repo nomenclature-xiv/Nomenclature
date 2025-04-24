@@ -1,11 +1,11 @@
 {
-  "Author": "Mora",
+  "Author": "Mora, Misty",
   "Name": "Nomenclature",
-  "Punchline": "TODO.",
-  "Description": "TODO",
+  "Punchline": "What's in a name?",
+  "Description": "This plugin allows you to view names of others, as set by themselves!",
   "InternalName": "Nomenclature",
   "ApplicableVersion": "any",
-  "Tags": [],
+  "Tags": ["name", "ui"],
   "IconUrl": "https://raw.githubusercontent.com/aetherremote/AetherRemote/main/images/icon.jpg",
-  "RepoUrl": "https://github.com/aetherremote/AetherRemote"
+  "RepoUrl": "https://github.com/nomenclature-xiv/Nomenclature"
 }

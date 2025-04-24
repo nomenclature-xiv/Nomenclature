@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Dalamud.Game.Gui.NamePlate;
+using Dalamud.Plugin.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace Nomenclature.Services;
 
-public class IdentityService : IDisposable
+public class IdentityService : IHostedService
 {
+    private readonly INamePlateGui NamePlateGui;
     // Instantiated
     private readonly StringBuilder _handlerNameBuilder = new();
 
@@ -15,9 +20,15 @@ public class IdentityService : IDisposable
     /// </summary>
     public readonly Dictionary<string, string> Identities = new();
 
-    public IdentityService()
+    public IdentityService(INamePlateGui namePlateGui)
     {
-        Plugin.NamePlateGui.OnNamePlateUpdate += NamePlateGuiOnOnDataUpdate;
+        NamePlateGui = namePlateGui;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        NamePlateGui.OnNamePlateUpdate += NamePlateGuiOnOnDataUpdate;
+        return Task.CompletedTask;
     }
 
     private void NamePlateGuiOnOnDataUpdate(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
@@ -41,9 +52,10 @@ public class IdentityService : IDisposable
         }
     }
 
-    public void Dispose()
+    public Task StopAsync(CancellationToken cancellationToken)
     {
-        Plugin.NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
-        GC.SuppressFinalize(this);
+        NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
+
+        return Task.CompletedTask;
     }
 }
