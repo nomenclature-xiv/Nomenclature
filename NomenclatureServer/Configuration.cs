@@ -10,8 +10,8 @@ public class Configuration
     private const string DefaultValue = "DEFAULT_VALUE";
     public static readonly IPAddress Ip = IPAddress.Parse("127.0.0.1");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    
-    public readonly string SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
+    public readonly string SigningKey = "SomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSillySomethingSilly";//Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     public readonly string CertificatePath;
     public readonly string CertificatePasswordPath;
 

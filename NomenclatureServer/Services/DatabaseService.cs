@@ -47,6 +47,8 @@ public class DatabaseService
     /// </summary>
     public async Task<string?> GetRegisteredCharacter(string secret)
     {
+        return "Mist";
+        
         await using var command = _db.CreateCommand();
         command.CommandText = $"SELECT * FROM {RegisteredCharactersTable} WHERE Secret = {SecretParam}";
         command.Parameters.AddWithValue(SecretParam, secret);

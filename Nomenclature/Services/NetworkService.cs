@@ -1,4 +1,8 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
@@ -6,6 +10,7 @@ using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Domain.Api;
 
 namespace Nomenclature.Services;
 
@@ -14,6 +19,9 @@ namespace Nomenclature.Services;
 /// </summary>
 public class NetworkService : IHostedService
 {
+    private const string HubUrl = "https://localhost:5006/nomenclature";
+    private const string PostUrl = "https://localhost:5006/api/auth/login";
+    
     /// <summary>
     ///     TODO
     /// </summary>
@@ -29,7 +37,7 @@ public class NetworkService : IHostedService
         PluginLog = pluginLog;
 
         Connection = new HubConnectionBuilder()
-            .WithUrl("https://localhost:5006", options =>
+            .WithUrl(HubUrl, options =>
             {
                 options.AccessTokenProvider = async () => await Token().ConfigureAwait(false);
             })
@@ -41,15 +49,19 @@ public class NetworkService : IHostedService
             .Build();
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        PluginLog.Verbose("Starting server...");
+        await Connect().ConfigureAwait(false);
     }
 
     public async Task<TU> InvokeAsync<T, TU>(string method, T request)
     {
         if (Connection.State is not HubConnectionState.Connected)
+        {
+            PluginLog.Verbose($"[NetworkService] Cannot invoke method {method} because connection is not connected]");
             return Activator.CreateInstance<TU>();
+        }
 
         try
         {
@@ -97,20 +109,43 @@ public class NetworkService : IHostedService
         }
     }
 
-    private static async Task<string?> Token()
+    private async Task<string?> Token()
     {
         try
         {
-            return await Task.FromResult("TODO").ConfigureAwait(false);
+            using var client = new HttpClient();
+            var request = new TokenRequest
+            {
+                Secret = "Misty"
+            };
+
+            var payload = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(PostUrl, payload).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                PluginLog.Verbose("[NetworkHelper] Successfully authenticated");
+                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+
+            var error = response.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized => "[NetworkHelper] Unable to authenticate, invalid secret",
+                HttpStatusCode.BadRequest => "[NetworkHelper] Unable to authenticate, outdated client",
+                _ => $"[NetworkHelper] Unable to authenticate, {response.StatusCode}"
+            };
+
+            PluginLog.Warning(error);
+            return null;
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            return await Task.FromResult("TODO, but EVIL").ConfigureAwait(false);
+            PluginLog.Warning($"[NetworkHelper] Unable to send POST to server, {e.Message}");
+            return null;
         }
     }
     
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        await Disconnect().ConfigureAwait(false);
     }
 }

@@ -9,6 +9,7 @@ using Nomenclature.Services;
 using Nomenclature.Types;
 using Serilog;
 using System;
+using Dalamud.Plugin.Services;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon;
 
@@ -20,12 +21,14 @@ public class MainWindow : Window
     private readonly WorldService WorldService;
     private readonly MainWindowController MainWindowController;
     private readonly NetworkService NetworkService;
-    public MainWindow(Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService) : base("Nomenclature")
+    private readonly IPluginLog _log;
+    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService) : base("Nomenclature")
     {
         Configuration = configuration;
         WorldService = worldService;
         MainWindowController = mainWindowController;
         NetworkService = networkService;
+        _log = log;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -51,10 +54,32 @@ public class MainWindow : Window
         {
             ImGui.Text("Name: ");
             ImGui.SameLine();
-            if(ImGui.InputText("##NomenclatureName", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+
+            try
             {
-                UpdateName();
+                if(ImGui.InputText("##NomenclatureName", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+                {
+                    _log.Verbose("Clicked me!");
+                    UpdateName();
+                }
+
+                if (ImGui.Button("MIST"))
+                {
+                    _log.Verbose("CLICKED ME DAMNIT");
+                    //UpdateName();
+                }
+                
             }
+            catch (Exception e)
+            {
+                Log.Verbose($"{e}");
+                throw;
+            }
+            
+            
+            
+            
+            
             ImGui.EndTabItem();
         }
     }
@@ -143,12 +168,16 @@ public class MainWindow : Window
             {
                 Configuration.Name = MainWindowController.ChangedName;
                 Configuration.Save();
-                Log.Verbose("Successfully changed name!");
+                _log.Verbose("Successfully changed name!");
+            }
+            else
+            {
+                _log.Verbose("Failed to change name!");
             }
         }
         catch(Exception ex)
         {
-            Log.Debug(ex.ToString());
+            _log.Debug(ex.ToString());
         }
     }
 }

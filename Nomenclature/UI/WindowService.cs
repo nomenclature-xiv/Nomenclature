@@ -28,6 +28,11 @@ namespace Nomenclature.UI
             foreach (var pluginWindow in PluginWindows)
             {
                 WindowSystem.AddWindow(pluginWindow);
+                
+                #if DEBUG
+                pluginWindow.IsOpen = true;
+                #endif
+
             }
 
             PluginInterface.UiBuilder.Draw += UiBuilderOnDraw;

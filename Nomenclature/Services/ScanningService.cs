@@ -52,13 +52,13 @@ public class ScanningService : IHostedService
         try
         {
             var stop = Stopwatch.StartNew();
-            PluginLog.Verbose("Beginning Scan...");
+            //PluginLog.Verbose("Beginning Scan...");
             
             await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
             
-            PluginLog.Verbose("Finished Scan...");
+            //PluginLog.Verbose("Finished Scan...");
             stop.Stop();
-            PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
+            //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
         }
         catch (Exception e)
         {

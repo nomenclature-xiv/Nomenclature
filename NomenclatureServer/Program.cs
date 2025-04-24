@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NomenclatureServer.Hubs;
+using NomenclatureServer.Services;
 
 namespace NomenclatureServer;
 
@@ -29,6 +30,9 @@ public class Program
                     MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
             });
         builder.Services.AddSingleton(configuration);
+
+        builder.Services.AddSingleton<DatabaseService>();
+        builder.Services.AddSingleton<RegisteredNamesService>();
 
 #if DEBUG
         builder.WebHost.UseUrls("https://localhost:5006");

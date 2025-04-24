@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureServer.Services;
@@ -11,7 +12,7 @@ namespace NomenclatureServer.Authentication;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(Configuration configuration, DatabaseService databaseService) : ControllerBase
+public class AuthController(Configuration configuration, DatabaseService databaseService, ILogger<AuthController> logger) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("login")]
@@ -19,7 +20,11 @@ public class AuthController(Configuration configuration, DatabaseService databas
     {
         // DB Request
         if (await databaseService.GetRegisteredCharacter(request.Secret) is not { } registeredName)
+        {
+            logger.LogInformation("Secret {Secret} not found in database", request.Secret);
             return Unauthorized("There are no registered characters with this secret.");
+        }
+            
         
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.SigningKey));
         var claims = new List<Claim> { new(AuthClaimType.RegisteredCharacter, registeredName) };
