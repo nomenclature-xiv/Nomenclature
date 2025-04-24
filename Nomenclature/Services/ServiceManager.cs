@@ -17,7 +17,8 @@ namespace Nomenclature.Services
             IFramework framework,
             INamePlateGui namePlateGui,
             IObjectTable objectTable,
-            IPluginLog pluginLog
+            IPluginLog pluginLog,
+            IDataManager dataManager
             )
         {
             return new HostBuilder()
@@ -37,28 +38,13 @@ namespace Nomenclature.Services
                     collection.AddSingleton(namePlateGui);
                     collection.AddSingleton(objectTable);
                     collection.AddSingleton(pluginLog);
+                    collection.AddSingleton(dataManager);
                     collection.AddSingleton<IdentityService>();
                     collection.AddSingleton<ScanningService>();
                     collection.AddSingleton<FrameworkService>();
                     collection.AddSingleton<CommandService>();
-                    collection.AddSingleton<WindowService>();
-                    collection.AddSingleton<InstallerWindowService>();
-                    collection.AddSingleton<MainWindow>();
-
-                    //Easier to do using autofac
-                    collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
-
-                    //Add configuration
-                    collection.AddSingleton((s) =>
-                    {
-                        var dalamudPluginInterface = s.GetRequiredService<IDalamudPluginInterface>();
-                        var configuration = dalamudPluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-                        configuration.Initialize(dalamudPluginInterface);
-                        return configuration;
-                    });
-
-                    //Add window system
-                    collection.AddSingleton(new WindowSystem("Nomenclature"));
+                    collection.AddSingleton<WorldService>();
+                    collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
                     collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
@@ -68,6 +54,29 @@ namespace Nomenclature.Services
                     collection.AddHostedService(p => p.GetRequiredService<CommandService>());
                 }).Build();
 
+        }
+        private static IServiceCollection AddUiServices(IServiceCollection collection)
+        {
+            collection.AddSingleton<WindowService>();
+            collection.AddSingleton<InstallerWindowService>();
+            collection.AddSingleton<MainWindowController>();
+            collection.AddSingleton<MainWindow>();
+
+            //Easier to do using autofac
+            collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
+
+            //Add configuration
+            collection.AddSingleton((s) =>
+            {
+                var dalamudPluginInterface = s.GetRequiredService<IDalamudPluginInterface>();
+                var configuration = dalamudPluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+                configuration.Initialize(dalamudPluginInterface);
+                return configuration;
+            });
+
+            //Add window system
+            collection.AddSingleton(new WindowSystem("Nomenclature"));
+            return collection;
         }
     }
 }

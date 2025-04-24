@@ -28,9 +28,10 @@ public sealed class Plugin : IDalamudPlugin
             IFramework framework,
             INamePlateGui namePlateGui,
             IObjectTable objectTable,
-            IPluginLog pluginLog)
+            IPluginLog pluginLog,
+            IDataManager dataManager)
     {
-        _host = ServiceManager.RegisterServices(pluginInterface, commandManager, clientState, framework, namePlateGui, objectTable, pluginLog);
+        _host = ServiceManager.RegisterServices(pluginInterface, commandManager, clientState, framework, namePlateGui, objectTable, pluginLog, dataManager);
 
         _ = _host.StartAsync();
     }

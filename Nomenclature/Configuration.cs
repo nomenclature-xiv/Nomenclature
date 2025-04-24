@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
+using Nomenclature.Types;
 
 namespace Nomenclature;
 
@@ -16,6 +18,8 @@ public class Configuration : IPluginConfiguration
     ///     Name to replace real name
     /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    public List<BlocklistCharacter> BlocklistCharacters { get; set; } = new List<BlocklistCharacter>();
 
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;
