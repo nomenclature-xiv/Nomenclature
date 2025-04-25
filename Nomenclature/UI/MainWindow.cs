@@ -22,13 +22,15 @@ public class MainWindow : Window
     private readonly MainWindowController MainWindowController;
     private readonly NetworkService NetworkService;
     private readonly IPluginLog _log;
-    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService) : base("Nomenclature")
+    private readonly RegistrationWindow RegistrationWindow;
+    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService, RegistrationWindow registrationWindow) : base("Nomenclature")
     {
         Configuration = configuration;
         WorldService = worldService;
         MainWindowController = mainWindowController;
         NetworkService = networkService;
         _log = log;
+        RegistrationWindow = registrationWindow;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -41,16 +43,40 @@ public class MainWindow : Window
     {
         if(ImGui.BeginTabBar("Tab Bar##tabbarmain", ImGuiTabBarFlags.None))
         {
-            DrawMainTab();
-            DrawBlocklistTab();
-            DrawSettingsTab();
+            DrawInfoTab();
+            if (Configuration.LocalCharacters.Count > 0)
+            {
+                DrawMainTab();
+                DrawBlocklistTab();
+            }
             ImGui.EndTabBar();
+        }
+    }
+    private void DrawInfoTab()
+    {
+        if (ImGui.BeginTabItem("Info"))
+        {
+            if (Configuration.LocalCharacters.Count == 0)
+            {
+                ImGui.NewLine();
+                SharedUserInterfaces.TextCentered("You haven't registered a character yet!");
+                ImGui.NewLine();
+                if(SharedUserInterfaces.ButtonCentered("Register"))
+                {
+                    RegistrationWindow.Toggle();
+                }
+            }
+            else
+            {
+
+            }
+            ImGui.EndTabItem();
         }
     }
 
     private void DrawMainTab()
     {
-        if(ImGui.BeginTabItem("Nomenclature"))
+        if(ImGui.BeginTabItem("Name"))
         {
             ImGui.Text("Name: ");
             ImGui.SameLine();
@@ -141,15 +167,6 @@ public class MainWindow : Window
                 }
                 ImGui.EndTable();
             }
-            ImGui.EndTabItem();
-        }
-    }
-
-    private void DrawSettingsTab()
-    {
-        if (ImGui.BeginTabItem("Settings"))
-        {
-            ImGui.Text("Test");
             ImGui.EndTabItem();
         }
     }

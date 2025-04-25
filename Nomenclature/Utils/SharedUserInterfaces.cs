@@ -95,6 +95,12 @@ public static class SharedUserInterfaces
             ImGui.TextColored(color.Value, text);
     }
 
+    public static bool ButtonCentered(string text)
+    {
+        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - ImGui.CalcTextSize(text).X) * 0.5f);
+        return ImGui.Button(text);
+    }
+
     /// <summary>
     ///     Creates a button the size of a <see cref="ContentBox"/> on the right
     /// </summary>

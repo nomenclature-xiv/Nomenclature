@@ -61,10 +61,12 @@ namespace Nomenclature.Services
         {
             collection.AddSingleton<WindowService>();
             collection.AddSingleton<InstallerWindowService>();
+            collection.AddSingleton<RegistrationWindow>();
             collection.AddSingleton<MainWindowController>();
             collection.AddSingleton<MainWindow>();
 
             //Easier to do using autofac
+            collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
             collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
 
             //Add configuration

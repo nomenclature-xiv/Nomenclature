@@ -20,6 +20,7 @@ public class Configuration : IPluginConfiguration
     public string Name { get; set; } = string.Empty;
 
     public List<BlocklistCharacter> BlocklistCharacters { get; set; } = new List<BlocklistCharacter>();
+    public Dictionary<string, string> LocalCharacters { get; set; } = new Dictionary<string, string>();
 
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;
