@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Nomenclature.Types.Exceptions;
+using Nomenclature.Utils;
 using NomenclatureCommon.Api;
 
 namespace Nomenclature.Services;
@@ -130,8 +131,8 @@ public class NetworkService : IHostedService
     private async Task<string?> Token()
     {
         var name = await _characterService.GetCurrentCharacter()!;
-        if (name.CharacterName is null || name.WorldName is null) return null;
-        string charworld = name.CharacterName + "@" + name.WorldName;
+        if (name is null) return null;
+        string charworld = NameConvert.ToString(name.Value);
         _configuration.LocalCharacters.TryGetValue(charworld, out string? secret);
         if (secret == null) return null;
         var request = new TokenRequest { Secret = secret };

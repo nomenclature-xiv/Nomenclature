@@ -30,7 +30,7 @@ namespace Nomenclature.UI
                 WindowSystem.AddWindow(pluginWindow);
                 
                 #if DEBUG
-                pluginWindow.IsOpen = true;
+                if(pluginWindow.WindowName == "Nomenclature") pluginWindow.IsOpen = true;
                 #endif
 
             }

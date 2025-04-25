@@ -62,6 +62,16 @@ namespace Nomenclature.UI
                 {
                     ValidateRegister();
                 }
+                if (characterError)
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 255, Y = 0, Z = 0 });
+                    ImGui.TextWrapped("Your character somehow doesn't exist! You shouldn't be seeing this, but if you do, try clicking the 'Regenerate Secret' button.");
+                    ImGui.PopStyleColor();
+                    if(ImGui.Button("Regenerate Secret"))
+                    {
+                        InitRegister();
+                    }
+                }
                 if (registrationError)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 255, Y = 0, Z = 0 });
@@ -83,8 +93,8 @@ namespace Nomenclature.UI
             try
             {
                 var name = await _characterService.GetCurrentCharacter()!;
-                if (name.CharacterName is null || name.WorldName is null) return;
-                var result = await _networkService.RegisterCharacterInitiate(name.CharacterName, name.WorldName);
+                if (name is null) return;
+                var result = await _networkService.RegisterCharacterInitiate(name?.CharacterName!, name?.WorldName!);
                 _log.Info($"Result: {result}");
                 if(result is not null)
                 {
@@ -107,14 +117,20 @@ namespace Nomenclature.UI
             try
             {
                 var name = await _characterService.GetCurrentCharacter()!;
-                if (name.CharacterName is null || name.WorldName is null) return;
-                var charactername = name.CharacterName + "@" + name.WorldName;
+                if (name is null) return;
+                var charactername = NameConvert.ToString(name.Value);
                 var result = await _networkService.RegisterCharacterValidate(charactername, _registrationKey);
                 if(result is not null)
                 {
+                    registrationError = false;
                     _configuration.LocalCharacters.Add(charactername, result);
                     _configuration.Save();
                     await _networkService.Connect().ConfigureAwait(false);
+                    this.Toggle();
+                }
+                else
+                {
+                    registrationError = true;
                 }
             }
             catch(Exception e)

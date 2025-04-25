@@ -18,7 +18,8 @@ namespace Nomenclature.Services
             INamePlateGui namePlateGui,
             IObjectTable objectTable,
             IPluginLog pluginLog,
-            IDataManager dataManager
+            IDataManager dataManager,
+            IChatGui chatGui
             )
         {
             return new HostBuilder()
@@ -39,6 +40,7 @@ namespace Nomenclature.Services
                     collection.AddSingleton(objectTable);
                     collection.AddSingleton(pluginLog);
                     collection.AddSingleton(dataManager);
+                    collection.AddSingleton(chatGui);
                     collection.AddSingleton<CharacterService>();
                     collection.AddSingleton<IdentityService>();
                     collection.AddSingleton<ScanningService>();
