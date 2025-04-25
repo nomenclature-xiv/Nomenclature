@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NetStone;
 using NetStone.Search.Character;
+using System.Security.Cryptography;
 
 namespace NomenclatureServer.Services;
 
@@ -8,7 +9,7 @@ public class LodestoneService(RegisteredNamesService registeredNamesService, ILo
 {
     private LodestoneClient? _client = null;
 
-    public async Task<LodestoneErrorCode> Initiate(string characterName, string worldName)
+    public async Task<string?> Initiate(string characterName, string worldName)
     {
         try
         {
@@ -21,10 +22,10 @@ public class LodestoneService(RegisteredNamesService registeredNamesService, ILo
             };
 
             if (await _client.SearchCharacter(query) is not { } results)
-                return LodestoneErrorCode.CharacterNotFound;
+                return null;
 
             if (results.HasResults is false)
-                return LodestoneErrorCode.CharacterNotFound;
+                return null;
 
             foreach (var character in results.Results)
             {
@@ -32,21 +33,26 @@ public class LodestoneService(RegisteredNamesService registeredNamesService, ILo
                 {
                     logger.LogInformation("Got a hit!");
                     if (await character.GetCharacter() is { } dl)
-                        logger.LogInformation($"{dl.Name} - {dl.Bio}");
+                    {
+                        string lodestoneId = character.Id!;
+                        string key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+                        registeredNamesService.PendingRegistrations[lodestoneId] = key;
+                        return key;
+                    }
                 }
                 else
                 {
                     logger.LogInformation("Got a miss!");
                 }
             }
-            
-            return LodestoneErrorCode.Success;
+
+            return null;
 
         }
         catch (Exception e)
         {
             logger.LogError("{Exception}", e);
-            return LodestoneErrorCode.UnknownException;
+            return null;
         }
     }
     

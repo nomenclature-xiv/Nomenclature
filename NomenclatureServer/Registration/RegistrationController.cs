@@ -14,7 +14,7 @@ public class RegistrationController(LodestoneService lodestoneService) : Control
     public async Task<IActionResult> Initiate([FromBody] RegisterCharacterInitiateRequest request)
     {
         var result = await lodestoneService.Initiate(request.CharacterName, request.WorldName);
-        return Ok(result is LodestoneErrorCode.Success);
+        return Ok(result);
     }
     
     [AllowAnonymous]
