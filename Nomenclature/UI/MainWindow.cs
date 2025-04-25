@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Numerics;
-using Dalamud.Configuration;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
@@ -10,8 +9,6 @@ using Nomenclature.Types;
 using Serilog;
 using System;
 using Dalamud.Plugin.Services;
-using NomenclatureCommon.Domain.Api;
-using NomenclatureCommon;
 
 namespace Nomenclature.UI;
 
@@ -180,17 +177,7 @@ public class MainWindow : Window
     {
         try
         {
-            RegisterNameResponse response = await NetworkService.InvokeAsync<RegisterNameRequest, RegisterNameResponse>(ApiMethod.RegisterName, new RegisterNameRequest { Name = MainWindowController.ChangedName });
-            if(response.Success)
-            {
-                Configuration.Name = MainWindowController.ChangedName;
-                Configuration.Save();
-                _log.Verbose("Successfully changed name!");
-            }
-            else
-            {
-                _log.Verbose("Failed to change name!");
-            }
+            
         }
         catch(Exception ex)
         {

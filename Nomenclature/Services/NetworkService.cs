@@ -10,7 +10,8 @@ using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NomenclatureCommon.Domain.Api;
+using Nomenclature.Types.Exceptions;
+using NomenclatureCommon.Api;
 
 namespace Nomenclature.Services;
 
@@ -19,8 +20,13 @@ namespace Nomenclature.Services;
 /// </summary>
 public class NetworkService : IHostedService
 {
+    // Server Url
     private const string HubUrl = "https://localhost:5006/nomenclature";
-    private const string PostUrl = "https://localhost:5006/api/auth/login";
+    
+    // Post Url
+    private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
+    private const string RegisterPostUrlInit = "https://localhost:5006/registration/initiate";
+    private const string RegisterPostUrlValidate = "https://localhost:5006/registration/validate";
     
     /// <summary>
     ///     TODO
@@ -84,9 +90,11 @@ public class NetworkService : IHostedService
 
         try
         {
-            PluginLog.Info("[NetworkService] Connecting...");
             await Connection.StartAsync().ConfigureAwait(false);
-            PluginLog.Info($"[NetworkService] Connected: {Connection.State is HubConnectionState.Connected}");
+        }
+        catch (InvalidSecretException)
+        {
+            PluginLog.Warning("[NetworkService] Your secret is invalid. Make sure your current character is registered");
         }
         catch (Exception e)
         {
@@ -109,39 +117,59 @@ public class NetworkService : IHostedService
         }
     }
 
+    /// <summary>
+    ///     Queries the login server for a valid token
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="InvalidSecretException">Thrown when the client submits an invalid token</exception>
+    /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
+    {
+        var request = new TokenRequest { Secret = "Misty" };
+        var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
+        if (response.IsSuccessStatusCode is false)
+            throw response.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized => new InvalidSecretException(),
+                _ => new UnknownTokenException($"StatusCode was {response.StatusCode}")
+            };
+        
+        PluginLog.Verbose("[NetworkHelper] Successfully authenticated");
+        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Begins the registration process on the server
+    /// </summary>
+    public async Task<string?> RegisterCharacterInitiate(string characterName, string worldName)
     {
         try
         {
-            using var client = new HttpClient();
-            var request = new TokenRequest
+            var request = new RegisterCharacterInitiateRequest
             {
-                Secret = "Misty"
+                CharacterName = characterName,
+                WorldName = worldName
             };
-
-            var payload = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(PostUrl, payload).ConfigureAwait(false);
-            if (response.IsSuccessStatusCode)
-            {
-                PluginLog.Verbose("[NetworkHelper] Successfully authenticated");
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-
-            var error = response.StatusCode switch
-            {
-                HttpStatusCode.Unauthorized => "[NetworkHelper] Unable to authenticate, invalid secret",
-                HttpStatusCode.BadRequest => "[NetworkHelper] Unable to authenticate, outdated client",
-                _ => $"[NetworkHelper] Unable to authenticate, {response.StatusCode}"
-            };
-
-            PluginLog.Warning(error);
-            return null;
+            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
+            return response.IsSuccessStatusCode 
+                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
+                : null;
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[NetworkHelper] Unable to send POST to server, {e.Message}");
+            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
             return null;
         }
+    }
+
+    /// <summary>
+    ///     Posts a request to the server
+    /// </summary>
+    private static async Task<HttpResponseMessage> PostRequest(string content, string url)
+    {
+        using var client = new HttpClient();
+        var payload = new StringContent(content, Encoding.UTF8, "application/json");
+        return await client.PostAsync(url, payload).ConfigureAwait(false);
     }
     
     public async Task StopAsync(CancellationToken cancellationToken)

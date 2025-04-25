@@ -8,8 +8,6 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using NomenclatureCommon;
-using NomenclatureCommon.Domain.Api;
 
 namespace Nomenclature.Services;
 
@@ -66,8 +64,7 @@ public class ScanningService : IHostedService
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
 
-            QueryChangedNamesResponse response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethod.QueryChangedNames, new QueryChangedNamesRequest { NamesToQuery = localNames });
-            IdentityService.Identities = response.ModifiedNames;
+            IdentityService.Identities = []; //response.ModifiedNames;
         }
         catch (Exception e)
         {

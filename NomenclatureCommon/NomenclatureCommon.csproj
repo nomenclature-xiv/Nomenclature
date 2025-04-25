@@ -14,4 +14,8 @@
       <Folder Include="Domain\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="ApiMethod.cs" />
+    </ItemGroup>
+
 </Project>

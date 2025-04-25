@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NomenclatureServer.Hubs;
+using NomenclatureServer.Registration;
 using NomenclatureServer.Services;
 
 namespace NomenclatureServer;
@@ -34,6 +34,8 @@ public class Program
 
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<RegisteredNamesService>();
+        builder.Services.AddSingleton<LodestoneService>();
+        builder.Services.AddSingleton<RegistrationController>();
 
 #if DEBUG
         builder.WebHost.UseUrls("https://localhost:5006");
@@ -79,7 +81,7 @@ public class Program
                 ValidateIssuer = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = configuration.SigningKey
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(configuration.SigningKey))
             };
         });
     }

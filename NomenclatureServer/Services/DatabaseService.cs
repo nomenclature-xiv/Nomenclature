@@ -11,7 +11,7 @@ public class DatabaseService
     // Const
     private const string RegisteredCharactersTable = "RegisteredCharacters";
     private const string SecretParam = "@Secret";
-    
+
     // Injected
     private readonly ILogger<DatabaseService> _logger;
 
@@ -23,8 +23,9 @@ public class DatabaseService
     /// </summary>
     public DatabaseService(ILogger<DatabaseService> logger)
     {
+        // Inject
         _logger = logger;
-        
+
         // Check if the database exists, otherwise create it
         var path = Path.Combine(Directory.GetCurrentDirectory(), "database", "nomenclature.db");
         if (File.Exists(path) is false)
@@ -33,11 +34,11 @@ public class DatabaseService
             Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "database"));
             File.WriteAllBytes(path, []);
         }
-        
+
         // Open Database
         _db = new SqliteConnection($"Data Source={path}");
         _db.Open();
-        
+
         // Initialize
         InitializeDatabaseTables();
     }
@@ -64,7 +65,7 @@ public class DatabaseService
             return null;
         }
     }
-    
+
     /// <summary>
     ///     Creates database tables if they do not exist already
     /// </summary>

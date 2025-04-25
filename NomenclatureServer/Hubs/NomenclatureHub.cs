@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using NomenclatureCommon;
-using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Api;
 using NomenclatureServer.Authentication;
 using NomenclatureServer.Services;
 
@@ -19,39 +18,34 @@ public class NomenclatureHub(RegisteredNamesService registeredNamesService, ILog
             string.Equals(claim.Type, AuthClaimType.RegisteredCharacter, StringComparison.Ordinal))?.Value ??
         throw new Exception("RegisteredCharacter is not present in provided claims");
 
-    [HubMethodName(ApiMethod.RegisterName)]
-    public RegisterNameResponse RegisterName(RegisterNameRequest request)
+    [HubMethodName(ApiMethods.ClearName)]
+    public GenericResponse ClearName(ClearNameRequest request)
     {
         logger.LogInformation("{Request}", request);
-        if (registeredNamesService.ActiveNameChanges.ContainsKey(RegisteredCharacter))
-        {
-            registeredNamesService.ActiveNameChanges[RegisteredCharacter] = request.Name;
-        }
-        else
-        {
-            registeredNamesService.ActiveNameChanges.Add(RegisteredCharacter, request.Name);
-        }
-        return new RegisterNameResponse
-        {
-            Success = true
-        };
+        registeredNamesService.ActiveNameChanges.Remove(RegisteredCharacter);
+        return new GenericResponse();
+    }
+    
+    [HubMethodName(ApiMethods.SetName)]
+    public GenericResponse RegisterName(NewNameRequest request)
+    {
+        logger.LogInformation("{Request}", request);
+        registeredNamesService.ActiveNameChanges[RegisteredCharacter] = request.Name;
+        return new GenericResponse();
     }
 
-    [HubMethodName(ApiMethod.QueryChangedNames)]
+    [HubMethodName(ApiMethods.QueryChangedNames)]
     public QueryChangedNamesResponse QueryChangedNames(QueryChangedNamesRequest request)
     {
         logger.LogInformation("{Request}", request);
-        var span = request.NamesToQuery.ToArray();
+        
+        var span = request.NamesToQuery.AsSpan();
         var output = new Dictionary<string, string>();
-        for (var i = 0; i < request.NamesToQuery.Count; i++)
-        {
-            if (registeredNamesService.ActiveNameChanges.ContainsKey(span[i]))
-            {
-                output.Add(span[i], registeredNamesService.ActiveNameChanges[span[i]]);
-            }
-        }
+        
+        for (var i = 0; i < span.Length; i++)
+            if (registeredNamesService.ActiveNameChanges.TryGetValue(span[i], out var name))
+                output.Add(span[i], name);
 
-        return new() { ModifiedNames = output };
-
+        return new QueryChangedNamesResponse { ModifiedNames = output };
     }
 }
