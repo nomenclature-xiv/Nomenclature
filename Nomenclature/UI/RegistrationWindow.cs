@@ -7,19 +7,28 @@ using System.Numerics;
 using System;
 using Dalamud.Plugin.Services;
 using NomenclatureCommon.Api;
+using System.Threading.Tasks;
+using System.Text;
+using Dalamud.Utility;
 
 namespace Nomenclature.UI
 {
     public class RegistrationWindow : Window
     {
         private readonly NetworkService _networkService;
+        private readonly CharacterService _characterService;
+        private readonly Configuration _configuration;
+        private readonly IClientState _clientState;
         private string _registrationKey = string.Empty;
         private bool registrationError = false;
         private bool characterError = false;
         private readonly IPluginLog _log;
-        public RegistrationWindow(NetworkService networkService, IPluginLog log) : base("Register Character")
+        public RegistrationWindow(NetworkService networkService, CharacterService characterService, Configuration configuration, IPluginLog log, IClientState clientState) : base("Register Character")
         {
             _networkService = networkService;
+            _characterService = characterService;
+            _clientState = clientState;
+            _configuration = configuration;
             _log = log;
 
             SizeConstraints = new WindowSizeConstraints
@@ -51,7 +60,7 @@ namespace Nomenclature.UI
                 }
                 if (ImGui.Button("Register"))
                 {
-                    Register();
+                    ValidateRegister();
                 }
                 if (registrationError)
                 {
@@ -65,15 +74,17 @@ namespace Nomenclature.UI
 
         public override void OnOpen()
         {
-            Register();
+            InitRegister();
             base.OnOpen();
         }
         
-        private async void Register()
+        private async void InitRegister()
         {
             try
             {
-                var result = await _networkService.RegisterCharacterInitiate("Mora Nightshade", "Diabolos");
+                var name = await _characterService.GetCurrentCharacter()!;
+                if (name.CharacterName is null || name.WorldName is null) return;
+                var result = await _networkService.RegisterCharacterInitiate(name.CharacterName, name.WorldName);
                 _log.Info($"Result: {result}");
                 if(result is not null)
                 {
@@ -86,6 +97,27 @@ namespace Nomenclature.UI
                 }
             }
             catch (Exception e)
+            {
+                _log.Error($"{e}");
+            }
+        }
+
+        private async void ValidateRegister()
+        {
+            try
+            {
+                var name = await _characterService.GetCurrentCharacter()!;
+                if (name.CharacterName is null || name.WorldName is null) return;
+                var charactername = name.CharacterName + "@" + name.WorldName;
+                var result = await _networkService.RegisterCharacterValidate(charactername, _registrationKey);
+                if(result is not null)
+                {
+                    _configuration.LocalCharacters.Add(charactername, result);
+                    _configuration.Save();
+                    await _networkService.Connect().ConfigureAwait(false);
+                }
+            }
+            catch(Exception e)
             {
                 _log.Error($"{e}");
             }

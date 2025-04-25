@@ -33,14 +33,18 @@ public class NetworkService : IHostedService
     /// </summary>
     public readonly HubConnection Connection;
 
+    private readonly CharacterService _characterService;
+    private readonly Configuration _configuration;
     private readonly IPluginLog PluginLog;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService(IPluginLog pluginLog)
+    public NetworkService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
     {
         PluginLog = pluginLog;
+        _configuration = configuration;
+        _characterService = characterService;
 
         Connection = new HubConnectionBuilder()
             .WithUrl(HubUrl, options =>
@@ -125,7 +129,12 @@ public class NetworkService : IHostedService
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
     {
-        var request = new TokenRequest { Secret = "Misty" };
+        var name = await _characterService.GetCurrentCharacter()!;
+        if (name.CharacterName is null || name.WorldName is null) return null;
+        string charworld = name.CharacterName + "@" + name.WorldName;
+        _configuration.LocalCharacters.TryGetValue(charworld, out string? secret);
+        if (secret == null) return null;
+        var request = new TokenRequest { Secret = secret };
         var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
             throw response.StatusCode switch
@@ -153,6 +162,27 @@ public class NetworkService : IHostedService
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
             return response.IsSuccessStatusCode 
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
+                : null;
+        }
+        catch (Exception e)
+        {
+            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
+            return null;
+        }
+    }
+
+    public async Task<string?> RegisterCharacterValidate(string characterName, string validationCode)
+    {
+        try
+        {
+            var request = new RegisterCharacterValidateRequest
+            {
+                CharacterName = characterName,
+                ValidationCode = validationCode
+            };
+            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate);
+            return response.IsSuccessStatusCode
+                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
         }
         catch (Exception e)

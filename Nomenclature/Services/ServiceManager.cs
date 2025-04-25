@@ -39,6 +39,7 @@ namespace Nomenclature.Services
                     collection.AddSingleton(objectTable);
                     collection.AddSingleton(pluginLog);
                     collection.AddSingleton(dataManager);
+                    collection.AddSingleton<CharacterService>();
                     collection.AddSingleton<IdentityService>();
                     collection.AddSingleton<ScanningService>();
                     collection.AddSingleton<FrameworkService>();

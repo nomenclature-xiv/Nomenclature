@@ -8,6 +8,7 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Api;
 
 namespace Nomenclature.Services;
 
@@ -18,6 +19,7 @@ public class ScanningService : IHostedService
 {
     private readonly IPluginLog PluginLog;
     private readonly IObjectTable ObjectTable;
+    private readonly IClientState _clientState;
     private readonly FrameworkService FrameworkService;
     private readonly NetworkService NetworkService;
     private readonly IdentityService IdentityService;
@@ -30,13 +32,14 @@ public class ScanningService : IHostedService
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
     /// </summary>
-    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService)
+    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService)
     {
         PluginLog = pluginLog;
         FrameworkService = frameworkService;
         ObjectTable = objectTable;
         NetworkService = networkService;
         IdentityService = identityService;
+        _clientState = clientState;
 
         _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
     }
@@ -64,7 +67,8 @@ public class ScanningService : IHostedService
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
 
-            IdentityService.Identities = []; //response.ModifiedNames;
+            var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, new() { NamesToQuery = localNames.ToArray() }); //response.ModifiedNames;
+            IdentityService.Identities = response.ModifiedNames;
         }
         catch (Exception e)
         {

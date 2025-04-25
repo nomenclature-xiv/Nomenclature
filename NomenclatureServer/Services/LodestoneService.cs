@@ -36,7 +36,7 @@ public class LodestoneService(RegisteredNamesService registeredNamesService, ILo
                     {
                         string lodestoneId = character.Id!;
                         string key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-                        registeredNamesService.PendingRegistrations[lodestoneId] = key;
+                        registeredNamesService.PendingRegistrations[key] = lodestoneId;
                         return key;
                     }
                 }
@@ -56,17 +56,28 @@ public class LodestoneService(RegisteredNamesService registeredNamesService, ILo
         }
     }
     
-    public async Task<LodestoneErrorCode> Validate(string lodestoneId)
+    public async Task<LodestoneErrorCode> Validate(string characterName, string validationCode)
     {
         try
         {
             _client ??= await LodestoneClient.GetClientAsync();
 
-            if (registeredNamesService.PendingRegistrations.TryGetValue(lodestoneId, out var validationCode) is false)
+            if (registeredNamesService.PendingRegistrations.TryGetValue(validationCode, out var lodestoneId) is false)
                 return LodestoneErrorCode.NoActiveValidation;
 
             if (await _client.GetCharacter(lodestoneId) is not { } character)
                 return LodestoneErrorCode.CharacterNotFound;
+
+            var charworld = characterName.Split("@");
+            if(charworld.Length != 2)
+            {
+                return LodestoneErrorCode.CharacterNotFound;
+            }
+            if (character.Name != charworld[0] || character.Server != charworld[1])
+            {
+                logger.LogError("{c1} : {c2}", character.Name, characterName);
+                return LodestoneErrorCode.IncorrectValidationCode;
+            }
 
             return character.Bio == validationCode
                 ? LodestoneErrorCode.Success

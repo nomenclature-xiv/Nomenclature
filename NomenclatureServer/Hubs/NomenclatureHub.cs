@@ -31,7 +31,7 @@ public class NomenclatureHub(RegisteredNamesService registeredNamesService, ILog
     {
         logger.LogInformation("{Request}", request);
         registeredNamesService.ActiveNameChanges[RegisteredCharacter] = request.Name;
-        return new GenericResponse();
+        return new GenericResponse() { Success = true };
     }
 
     [HubMethodName(ApiMethods.QueryChangedNames)]

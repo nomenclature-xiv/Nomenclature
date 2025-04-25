@@ -9,6 +9,7 @@ using Nomenclature.Types;
 using Serilog;
 using System;
 using Dalamud.Plugin.Services;
+using NomenclatureCommon.Api;
 
 namespace Nomenclature.UI;
 
@@ -177,7 +178,12 @@ public class MainWindow : Window
     {
         try
         {
-            
+            var res = await NetworkService.InvokeAsync<NewNameRequest, GenericResponse>(ApiMethods.SetName, new() { Name = MainWindowController.ChangedName });
+            if(res.Success)
+            {
+                Configuration.Name = MainWindowController.ChangedName;
+                Configuration.Save();
+            }
         }
         catch(Exception ex)
         {

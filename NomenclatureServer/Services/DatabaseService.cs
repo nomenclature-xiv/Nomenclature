@@ -11,6 +11,7 @@ public class DatabaseService
     // Const
     private const string RegisteredCharactersTable = "RegisteredCharacters";
     private const string SecretParam = "@Secret";
+    private const string RegisteredCharacterParam = "@RegisteredCharacter";
 
     // Injected
     private readonly ILogger<DatabaseService> _logger;
@@ -41,6 +42,25 @@ public class DatabaseService
 
         // Initialize
         InitializeDatabaseTables();
+    }
+
+    public async Task<bool> AddRegisteredCharacter(string characterName, string secret)
+    {
+        await using var command = _db.CreateCommand();
+        command.CommandText = $"INSERT INTO {RegisteredCharactersTable} (RegisteredCharacter, Secret) VALUES ({RegisteredCharacterParam}, {SecretParam})";
+        command.Parameters.AddWithValue(RegisteredCharacterParam, characterName);
+        command.Parameters.AddWithValue(SecretParam, secret);
+
+        try
+        {
+            await command.ExecuteNonQueryAsync();
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Failed to add registered character for secret {Secret}, character {RegisteredCharacter}: {Exception}", secret, characterName, e);
+            return false;
+        }
     }
 
     /// <summary>
