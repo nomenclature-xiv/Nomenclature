@@ -6,5 +6,5 @@ namespace NomenclatureCommon.Domain.Api.Server;
 [MessagePackObject]
 public record QueryChangedNamesResponse : Response
 {
-    [Key(0)] public Dictionary<Character, Character> Characters = [];
+    [Key(1)] public Dictionary<Character, Character> Characters = [];
 }
