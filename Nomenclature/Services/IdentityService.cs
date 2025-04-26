@@ -11,6 +11,7 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using Nomenclature.Utils;
 using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Api.Server;
 
 namespace Nomenclature.Services;
 
@@ -49,39 +50,32 @@ public class IdentityService : IHostedService
     private void ChatGuiOnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
         var payloads = sender.Payloads;
-        if(payloads.Count is 1)
+        var self = CharacterService.CurrentCharacter;
+        if (self is null)
+            return;
+        if (payloads.Count is 1)
         {
             //it's you!
-            var self = CharacterService.CurrentCharacter;
-            if(self is null)
-            {
-                return;
-            }
-            if(Identities.ContainsKey(self))
-            {
-                var changedname = Identities[self];
-                payloads.Clear();
-                if(changedname.World != self.World)
-                {
-                    //modified world, show as crossworld!
-                    payloads.Add(new TextPayload(changedname.Name));
-                    payloads.Add(cwpayload);
-                    payloads.Add(new TextPayload(changedname.World));
-                }
-                else
-                {
-                    //same world, just modify name
-                    payloads.Add(new TextPayload(changedname.Name));
-                }
-            }
+            ChangeName(ref payloads, self, self);
         }
         if(payloads.Count is 3)
         {
-            //same world
+            Character senderchar = new Character(((TextPayload)payloads[1]).Text, self.World);
+            Payload player = payloads[0];
+            Payload id = payloads[2];
+            ChangeName(ref payloads, senderchar, self);
+            payloads.Add(player);
+            payloads.Add(id);
         }
         if(payloads.Count is 5)
         {
             //crossworld
+            Character senderchar = new Character((((TextPayload)payloads[1]).Text), ((TextPayload)payloads[4]).Text);
+            Payload player = payloads[0];
+            Payload id = payloads[2];
+            ChangeName(ref payloads, senderchar, self);
+            payloads.Add(player);
+            payloads.Add(id);
         }
     }
 
@@ -108,6 +102,27 @@ public class IdentityService : IHostedService
             {
                 // TODO: Update world? Is this apart of nameplates?
                 handler.Name = $"\"{identity.Name}\"";
+            }
+        }
+    }
+
+    private void ChangeName(ref List<Payload> payloads, Character character, Character self)
+    {
+        if (Identities.ContainsKey(character))
+        {
+            var changedname = Identities[character];
+            payloads.Clear();
+            if (changedname.World != self.World)
+            {
+                //modified world, show as crossworld!
+                payloads.Add(new TextPayload(changedname.Name));
+                payloads.Add(cwpayload);
+                payloads.Add(new TextPayload(changedname.World));
+            }
+            else
+            {
+                //same world, just modify name
+                payloads.Add(new TextPayload(changedname.Name));
             }
         }
     }
