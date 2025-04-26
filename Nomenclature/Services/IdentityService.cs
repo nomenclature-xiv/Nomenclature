@@ -100,8 +100,11 @@ public class IdentityService : IHostedService
 
             if (Identities.TryGetValue(character, out var identity))
             {
-                // TODO: Update world? Is this apart of nameplates?
-                handler.Name = $"\"{identity.Name}\"";
+                if(identity.Name == string.Empty)
+                    handler.Name = string.Empty;
+                else
+                    handler.Name = $"\"{identity.Name}\"";
+                //«{identity.World}»
             }
         }
     }

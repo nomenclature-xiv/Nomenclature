@@ -21,6 +21,7 @@ public class CharacterService : IDisposable
         
         _clientState.Login += OnLogin;
         _clientState.Logout += OnLogout;
+        OnLogin();
     }
 
     public void Dispose()

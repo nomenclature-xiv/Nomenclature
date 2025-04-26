@@ -109,17 +109,40 @@ public class MainWindow : Window
         {
             try
             {
+                if(ImGui.Checkbox("##Enabled", ref MainWindowController.NomenclatureEnabled))
+                {
+                    if(MainWindowController.NomenclatureEnabled)
+                    {
+                        UpdateName();
+                    }
+                    else
+                    {
+                        ClearName();
+                    }
+                }
+                if(ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted("Enables your name to be modified via Nomenclature when checked!");
+                    ImGui.EndTooltip();
+                }
+                ImGui.SameLine();
                 ImGui.SetNextItemWidth(200);
                 if (ImGui.InputTextWithHint("##NomenclatureName", "Name", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    _log.Verbose("Clicked me!");
-                    UpdateName();
+                    if (MainWindowController.NomenclatureEnabled)
+                    {
+                        UpdateName();
+                    }
                 }
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(120);
                 if(ImGui.InputTextWithHint("##NomenclatureWorld", "World", ref MainWindowController.ChangedWorld, 20, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    UpdateName();
+                    if (MainWindowController.NomenclatureEnabled)
+                    {
+                        UpdateName();
+                    }
                 }
 
             }
@@ -232,6 +255,21 @@ public class MainWindow : Window
             // TODO: Populate world too!
             Configuration.Name = MainWindowController.ChangedName;
             Configuration.Save();
+        }
+        catch(Exception ex)
+        {
+            _log.Debug(ex.ToString());
+        }
+    }
+
+    private async void ClearName()
+    {
+        try
+        {
+            var request = new ClearNameRequest();
+            var response = await NetworkService.InvokeAsync<ClearNameRequest, Response>(ApiMethods.ClearName, request);
+            if (response.Success is false) _log.Debug("Could not clear name for some reason!");
+
         }
         catch(Exception ex)
         {
