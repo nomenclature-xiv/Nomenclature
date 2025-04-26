@@ -26,6 +26,7 @@ public class ScanningService : IHostedService
     private readonly FrameworkService FrameworkService;
     private readonly NetworkService NetworkService;
     private readonly IdentityService IdentityService;
+    private readonly Configuration Configuration;
     // Constants
     private const int ScanInternal = 5000; //15000;
     
@@ -35,7 +36,7 @@ public class ScanningService : IHostedService
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
     /// </summary>
-    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService)
+    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService, Configuration configuration)
     {
         PluginLog = pluginLog;
         FrameworkService = frameworkService;
@@ -43,6 +44,7 @@ public class ScanningService : IHostedService
         NetworkService = networkService;
         IdentityService = identityService;
         _clientState = clientState;
+        Configuration = configuration;
 
         _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
     }
@@ -81,7 +83,10 @@ public class ScanningService : IHostedService
             {
                 foreach(var world in name.Value)
                 {
-                    IdentityService.Identities.Add(new Character(name.Key, world.Key), world.Value);
+                    Character modchar = new Character(name.Key, world.Key);
+                    if (Configuration.BlocklistCharacters.Contains(modchar))
+                        continue;
+                    IdentityService.Identities.Add(modchar, world.Value);
                 }
             }
         }
