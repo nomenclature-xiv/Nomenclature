@@ -1,37 +1,64 @@
-﻿using Dalamud.Plugin.Services;
-using NomenclatureCommon.Domain;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
+using NomenclatureCommon.Domain;
 
-namespace Nomenclature.Services
+namespace Nomenclature.Services;
+
+public class CharacterService : IDisposable
 {
-    public class CharacterService
+    public Character? CurrentCharacter;
+
+    private readonly IClientState _clientState;
+    private readonly IFramework _framework;
+    private readonly IPluginLog _pluginLog;
+
+    public CharacterService(IClientState clientState, IFramework framework, IPluginLog pluginLog)
     {
-        private readonly FrameworkService _frameworkService;
-        private readonly IClientState _clientState;
+        _framework = framework;
+        _clientState = clientState;
+        _pluginLog = pluginLog;
+        
+        _clientState.Login += OnLogin;
+        _clientState.Logout += OnLogout;
+    }
 
-        public CharacterService(FrameworkService frameworkService, IClientState clientState)
+    public void Dispose()
+    {
+        _clientState.Login -= OnLogin;
+        _clientState.Logout -= OnLogout;
+        GC.SuppressFinalize(this);
+    }
+    
+    private async void OnLogin()
+    {
+        try
         {
-            _clientState = clientState;
-            _frameworkService = frameworkService;
-        }
-
-        public async Task<Character?> GetCurrentCharacter()
-        {
-            return await _frameworkService.RunOnFramework(GetCurrentCharacterOnThread);
-        }
-
-        private Character? GetCurrentCharacterOnThread()
-        {
-            var local = _clientState.LocalPlayer;
-            if (local is null)
+            if (await RunOnFramework(() => _clientState.LocalPlayer).ConfigureAwait(false) is { } localPlayer)
             {
-                return null;
+                CurrentCharacter = new Character(localPlayer.Name.ToString(), localPlayer.HomeWorld.Value.Name.ToString());
             }
-            return new Character(local.Name.TextValue, local.HomeWorld.Value.Name.ExtractText());
+            else
+            {
+                CurrentCharacter = null;
+            }
         }
+        catch (Exception e)
+        {
+            _pluginLog.Info($"[CharacterService] [OnLogin] {e}");
+        }
+    }
+
+    private void OnLogout(int type, int code)
+    {
+        CurrentCharacter = null;
+    }
+
+    private async Task<T> RunOnFramework<T>(Func<T> func)
+    {
+        if (_framework.IsInFrameworkUpdateThread)
+            return func.Invoke();
+
+        return await _framework.RunOnFrameworkThread(func).ConfigureAwait(false);
     }
 }
