@@ -59,29 +59,22 @@ public class IdentityService : IHostedService
             {
                 return;
             }
-            /*
-            if(Identities.ContainsKey(name))
+            if(Identities.ContainsKey(self))
             {
-                var changedname = Identities[name];
-                var charworld = NameConvert.ToTuple(changedname);
+                var changedname = Identities[self];
                 payloads.Clear();
-                if(charworld.Item2 != self?.WorldName)
+                if(changedname.World != self.World)
                 {
                     //modified world, show as crossworld!
-                    payloads.Add(new TextPayload(charworld.Item1));
+                    payloads.Add(new TextPayload(changedname.Name));
                     payloads.Add(cwpayload);
-                    payloads.Add(new TextPayload(charworld.Item2));
+                    payloads.Add(new TextPayload(changedname.World));
                 }
                 else
                 {
                     //same world, just modify name
-                    payloads.Add(new TextPayload(charworld.Item1));
+                    payloads.Add(new TextPayload(changedname.Name));
                 }
-            }*/
-            if (Identities.TryGetValue(self, out var identity))
-            {
-                payloads[0] = new TextPayload(identity.Name);
-                
             }
         }
         if(payloads.Count is 3)
