@@ -37,7 +37,7 @@ public class Program
         builder.Services.AddSingleton<RegistrationService>();
         builder.Services.AddSingleton<RegistrationController>();
         builder.Services.AddSingleton<LodestoneService>();
-        builder.Services.AddHostedService<LodestoneService>();
+        builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<LodestoneService>());
 
 #if DEBUG
         builder.WebHost.UseUrls("https://localhost:5006");

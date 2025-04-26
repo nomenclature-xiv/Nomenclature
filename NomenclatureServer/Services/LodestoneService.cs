@@ -44,7 +44,7 @@ public class LodestoneService(ILogger<LodestoneService> logger) : IHostedService
         try
         {
             // If the results null or doesn't have any results
-            if (await _client.SearchCharacter(query) is not { } results || results.HasResults is false)
+            if ((await _client.SearchCharacter(query)) is not { } results || results.HasResults is false)
                 return null;
             
             // Iterate over the results and look for the correct character name
