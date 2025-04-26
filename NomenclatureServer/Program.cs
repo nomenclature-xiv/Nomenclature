@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using NomenclatureServer.Controllers;
 using NomenclatureServer.Hubs;
-using NomenclatureServer.Registration;
 using NomenclatureServer.Services;
 
 namespace NomenclatureServer;
@@ -33,9 +33,10 @@ public class Program
         builder.Services.AddSingleton(configuration);
 
         builder.Services.AddSingleton<DatabaseService>();
-        builder.Services.AddSingleton<RegisteredNamesService>();
-        builder.Services.AddSingleton<LodestoneService>();
+        builder.Services.AddSingleton<NomenclatureService>();
         builder.Services.AddSingleton<RegistrationController>();
+
+        builder.Services.AddHostedService<LodestoneService>();
 
 #if DEBUG
         builder.WebHost.UseUrls("https://localhost:5006");

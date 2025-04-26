@@ -1,51 +1,51 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using NomenclatureCommon.Api;
-using NomenclatureServer.Authentication;
+using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Domain.Api.Base;
+using NomenclatureCommon.Domain.Api.Server;
+using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 
 namespace NomenclatureServer.Hubs;
 
 [Authorize]
-public class NomenclatureHub(RegisteredNamesService registeredNamesService, ILogger<NomenclatureHub> logger) : Hub
+public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<NomenclatureHub> logger) : Hub
 {
-    /// <summary>
-    ///     Registered character obtained from authenticated jwt token claims
-    /// </summary>
-    private string RegisteredCharacter =>
-        Context.User?.Claims.FirstOrDefault(claim =>
-            string.Equals(claim.Type, AuthClaimType.RegisteredCharacter, StringComparison.Ordinal))?.Value ??
-        throw new Exception("RegisteredCharacter is not present in provided claims");
-
     [HubMethodName(ApiMethods.ClearName)]
-    public GenericResponse ClearName(ClearNameRequest request)
+    public Response ClearName(ClearNameRequest request)
     {
         logger.LogInformation("{Request}", request);
-        registeredNamesService.ActiveNameChanges.Remove(RegisteredCharacter);
-        return new GenericResponse();
+        nomenclatureService.Nomenclatures.Remove(GetCharacterFromClaims());
+        return new Response { Success = true };
     }
-    
+
     [HubMethodName(ApiMethods.SetName)]
-    public GenericResponse RegisterName(NewNameRequest request)
+    public Response SetName(SetNameRequest request)
     {
         logger.LogInformation("{Request}", request);
-        registeredNamesService.ActiveNameChanges[RegisteredCharacter] = request.Name;
-        return new GenericResponse() { Success = true };
+        nomenclatureService.Nomenclatures[GetCharacterFromClaims()] = request.Nomenclature;
+        return new Response { Success = true };
     }
 
     [HubMethodName(ApiMethods.QueryChangedNames)]
     public QueryChangedNamesResponse QueryChangedNames(QueryChangedNamesRequest request)
     {
         logger.LogInformation("{Request}", request);
+        var results = new Dictionary<Character, Character>();
+        var characters = request.Characters.AsSpan();
+        foreach (var character in characters)
+            if (nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature))
+                results.Add(character, nomenclature);
         
-        var span = request.NamesToQuery.AsSpan();
-        var output = new Dictionary<string, string>();
-        
-        for (var i = 0; i < span.Length; i++)
-            if (registeredNamesService.ActiveNameChanges.TryGetValue(span[i], out var name))
-                output.Add(span[i], name);
-
-        return new QueryChangedNamesResponse { ModifiedNames = output };
+        return new QueryChangedNamesResponse { Characters = results };
+    }
+    
+    private Character GetCharacterFromClaims()
+    {
+        var name = Context.User?.FindFirst(AuthClaimType.CharacterName)?.Value ?? throw new Exception("CharacterName is not present in claims");
+        var world = Context.User?.FindFirst(AuthClaimType.WorldName)?.Value ?? throw new Exception("WorldName is not present in claims");
+        return new Character(name, world);
     }
 }

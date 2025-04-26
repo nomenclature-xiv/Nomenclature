@@ -2,100 +2,80 @@ using Microsoft.Extensions.Logging;
 using NetStone;
 using NetStone.Search.Character;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Domain;
+using NomenclatureServer.Domain;
 
 namespace NomenclatureServer.Services;
 
-public class LodestoneService(RegisteredNamesService registeredNamesService, ILogger<LodestoneService> logger)
+public class LodestoneService(ILogger<LodestoneService> logger) : IHostedService
 {
-    private LodestoneClient? _client = null;
+    // The lodestone client will only be created from inside the hosted service, so we can assign this null for now
+    private LodestoneClient _client = null!;
 
-    public async Task<string?> Initiate(string characterName, string worldName)
+    /// <summary>
+    ///     Initialize the <see cref="LodestoneClient"/>
+    /// </summary>
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            _client ??= await LodestoneClient.GetClientAsync();
-
-            var query = new CharacterSearchQuery
-            {
-                CharacterName = characterName,
-                World = worldName
-            };
-
-            if (await _client.SearchCharacter(query) is not { } results)
-                return null;
-
-            if (results.HasResults is false)
-                return null;
-
-            foreach (var character in results.Results)
-            {
-                if (character.Name == characterName)
-                {
-                    logger.LogInformation("Got a hit!");
-                    if (await character.GetCharacter() is { } dl)
-                    {
-                        string lodestoneId = character.Id!;
-                        string key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-                        registeredNamesService.PendingRegistrations[key] = lodestoneId;
-                        return key;
-                    }
-                }
-                else
-                {
-                    logger.LogInformation("Got a miss!");
-                }
-            }
-
-            return null;
-
-        }
-        catch (Exception e)
-        {
-            logger.LogError("{Exception}", e);
-            return null;
-        }
+        _client = await LodestoneClient.GetClientAsync();
     }
     
-    public async Task<LodestoneErrorCode> Validate(string characterName, string validationCode)
+    /// <summary>
+    ///     Dispose the <see cref="LodestoneClient"/>
+    /// </summary>
+    public Task StopAsync(CancellationToken cancellationToken)
     {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Searches for a character on the lodestone and returns the corresponding lodestone id if found
+    /// </summary>
+    public async Task<string?> GetCharacterLodestoneIdAsync(Character character)
+    {
+        var query = new CharacterSearchQuery
+        {
+            CharacterName = character.Name,
+            World = character.World
+        };
+
         try
         {
-            _client ??= await LodestoneClient.GetClientAsync();
-
-            if (registeredNamesService.PendingRegistrations.TryGetValue(validationCode, out var lodestoneId) is false)
-                return LodestoneErrorCode.NoActiveValidation;
-
-            if (await _client.GetCharacter(lodestoneId) is not { } character)
-                return LodestoneErrorCode.CharacterNotFound;
-
-            var charworld = characterName.Split("@");
-            if(charworld.Length != 2)
-            {
-                return LodestoneErrorCode.CharacterNotFound;
-            }
-            if (character.Name != charworld[0] || character.Server != charworld[1])
-            {
-                logger.LogError("{c1} : {c2}", character.Name, characterName);
-                return LodestoneErrorCode.IncorrectValidationCode;
-            }
-
-            return character.Bio == validationCode
-                ? LodestoneErrorCode.Success
-                : LodestoneErrorCode.IncorrectValidationCode;
+            // If the results null or doesn't have any results
+            if (await _client.SearchCharacter(query) is not { } results || results.HasResults is false)
+                return null;
+            
+            // Iterate over the results and look for the correct character name
+            foreach (var lodestoneCharacter in results.Results)
+                if (lodestoneCharacter.Name == character.Name && lodestoneCharacter.Id is { } lodestoneId)
+                    return lodestoneId;
         }
         catch (Exception e)
         {
             logger.LogError("{Exception}", e);
-            return LodestoneErrorCode.UnknownException;
+        }
+        
+        return null;
+    }
+
+    /// <summary>
+    ///     Searches for a character by lodestone id and returns their bio if found
+    /// </summary>
+    public async Task<LodestoneCharacterData?> GetLodestoneCharacterByLodestoneId(string lodestoneId)
+    {
+        try
+        {
+            if (await _client.GetCharacter(lodestoneId) is not { } character)
+                return null;
+
+            return new LodestoneCharacterData(character.Name, character.Server, character.Bio);
+        }
+        catch (Exception e)
+        {
+            logger.LogError("{Exception}", e);
+            return null;
         }
     }
-}
-
-public enum LodestoneErrorCode
-{
-    Success,
-    NoActiveValidation,
-    CharacterNotFound,
-    IncorrectValidationCode,
-    UnknownException
 }

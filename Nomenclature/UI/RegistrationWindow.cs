@@ -6,10 +6,6 @@ using Dalamud.Interface;
 using System.Numerics;
 using System;
 using Dalamud.Plugin.Services;
-using NomenclatureCommon.Api;
-using System.Threading.Tasks;
-using System.Text;
-using Dalamud.Utility;
 
 namespace Nomenclature.UI
 {

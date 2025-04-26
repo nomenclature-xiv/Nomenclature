@@ -6,19 +6,18 @@ using System.Threading.Tasks;
 using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Domain;
 
 namespace Nomenclature.Services;
 
 public class IdentityService : IHostedService
 {
     private readonly INamePlateGui NamePlateGui;
-    // Instantiated
-    private readonly StringBuilder _handlerNameBuilder = new();
 
     /// <summary>
     ///     Maps [CharacterName]@[HomeWorld] to [ModifiedCharacterName]
     /// </summary>
-    public Dictionary<string, string> Identities = new();
+    public Dictionary<Character, Character> Identities = new();
 
     public IdentityService(INamePlateGui namePlateGui)
     {
@@ -43,12 +42,13 @@ public class IdentityService : IHostedService
             if (handler.PlayerCharacter is null)
                 continue;
             
-            _handlerNameBuilder.Clear();
-            _handlerNameBuilder.Append(handler.Name);
-            _handlerNameBuilder.Append('@');
-            _handlerNameBuilder.Append(handler.PlayerCharacter.HomeWorld.Value.Name);
-            if (Identities.TryGetValue(_handlerNameBuilder.ToString(), out var identity))
-                handler.Name = identity;
+            var character = new Character(handler.Name.ToString(), handler.PlayerCharacter.HomeWorld.Value.Name.ToString());
+
+            if (Identities.TryGetValue(character, out var identity))
+            {
+                // TODO: Update world? Is this apart of nameplates?
+                handler.Name = identity.Name;
+            }
         }
     }
 

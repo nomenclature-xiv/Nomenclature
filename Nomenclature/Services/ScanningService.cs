@@ -8,7 +8,9 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using NomenclatureCommon.Api;
+using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Domain.Api.Server;
 
 namespace Nomenclature.Services;
 
@@ -61,14 +63,19 @@ public class ScanningService : IHostedService
             var stop = Stopwatch.StartNew();
             //PluginLog.Verbose("Beginning Scan...");
             
-            List<string> localNames = await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
+            List<Character> localNames = await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
             
             //PluginLog.Verbose("Finished Scan...");
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
 
-            var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, new() { NamesToQuery = localNames.ToArray() }); //response.ModifiedNames;
-            IdentityService.Identities = response.ModifiedNames;
+            var request = new QueryChangedNamesRequest
+            {
+                Characters = localNames.ToArray()
+            };
+            
+            var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
+            IdentityService.Identities = response.Characters;
         }
         catch (Exception e)
         {
@@ -82,9 +89,9 @@ public class ScanningService : IHostedService
     ///     Puts all the player characters nearby the local player into a list with format [CharacterName]@[HomeWorld]
     /// </summary>
     /// <returns></returns>
-    private List<string> Scan()
+    private List<Character> Scan()
     {
-        var players = new List<string>();
+        var players = new List<Character>();
         
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ObjectTable.Length; i++)
@@ -92,11 +99,7 @@ public class ScanningService : IHostedService
             if (ObjectTable[i] is not IPlayerCharacter player)
                 continue;
             
-            _identityNameBuilder.Clear();
-            _identityNameBuilder.Append(player.Name);
-            _identityNameBuilder.Append('@');
-            _identityNameBuilder.Append(player.HomeWorld.Value.Name);
-            players.Add(_identityNameBuilder.ToString());
+            players.Add(new Character(player.Name.ToString(), player.HomeWorld.Value.Name.ToString()));
         }
 
         return players;

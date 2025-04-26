@@ -11,7 +11,8 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Nomenclature.Types.Exceptions;
-using NomenclatureCommon.Api;
+using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Api.Controller;
 
 namespace Nomenclature.Services;
 
@@ -134,7 +135,7 @@ public class NetworkService : IHostedService
         string charworld = name.CharacterName + "@" + name.WorldName;
         _configuration.LocalCharacters.TryGetValue(charworld, out string? secret);
         if (secret == null) return null;
-        var request = new TokenRequest { Secret = secret };
+        var request = new GenerateTokenRequest { Secret = secret };
         var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
             throw response.StatusCode switch
@@ -154,11 +155,11 @@ public class NetworkService : IHostedService
     {
         try
         {
-            var request = new RegisterCharacterInitiateRequest
+            var request = new BeginCharacterRegistrationRequest
             {
-                CharacterName = characterName,
-                WorldName = worldName
+                Character = new Character(characterName, worldName)
             };
+            
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
             return response.IsSuccessStatusCode 
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
@@ -175,9 +176,8 @@ public class NetworkService : IHostedService
     {
         try
         {
-            var request = new RegisterCharacterValidateRequest
+            var request = new ValidateCharacterRegistration
             {
-                CharacterName = characterName,
                 ValidationCode = validationCode
             };
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate);

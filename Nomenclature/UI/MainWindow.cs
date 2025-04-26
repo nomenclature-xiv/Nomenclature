@@ -9,7 +9,10 @@ using Nomenclature.Types;
 using Serilog;
 using System;
 using Dalamud.Plugin.Services;
-using NomenclatureCommon.Api;
+using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Domain.Api.Base;
+using NomenclatureCommon.Domain.Api.Server;
 
 namespace Nomenclature.UI;
 
@@ -178,12 +181,19 @@ public class MainWindow : Window
     {
         try
         {
-            var res = await NetworkService.InvokeAsync<NewNameRequest, GenericResponse>(ApiMethods.SetName, new() { Name = MainWindowController.ChangedName });
-            if(res.Success)
+            var request = new SetNameRequest
             {
-                Configuration.Name = MainWindowController.ChangedName;
-                Configuration.Save();
-            }
+                // TODO: Populate these fields with their real values!
+                Nomenclature = new Character(string.Empty, string.Empty)
+            };
+            
+            var response = await NetworkService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
+            if (response.Success is false)
+                return;
+            
+            // TODO: Populate world too!
+            Configuration.Name = MainWindowController.ChangedName;
+            Configuration.Save();
         }
         catch(Exception ex)
         {
