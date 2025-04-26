@@ -18,17 +18,17 @@ namespace Nomenclature.Services
             _frameworkService = frameworkService;
         }
 
-        public async Task<(string? CharacterName, string? WorldName)> GetCurrentCharacter()
+        public async Task<(string CharacterName, string WorldName)?> GetCurrentCharacter()
         {
             return await _frameworkService.RunOnFramework(GetCurrentCharacterOnThread);
         }
 
-        private (string? CharacterName, string? WorldName) GetCurrentCharacterOnThread()
+        private (string CharacterName, string WorldName)? GetCurrentCharacterOnThread()
         {
             var local = _clientState.LocalPlayer;
             if (local is null)
             {
-                return (null, null);
+                return null;
             }
             return (local.Name.TextValue, local.HomeWorld.Value.Name.ExtractText());
         }

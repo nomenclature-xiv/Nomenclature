@@ -13,6 +13,7 @@ using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Nomenclature.UI;
 
@@ -69,7 +70,30 @@ public class MainWindow : Window
             }
             else
             {
-
+                if(NetworkService.Connection.State == HubConnectionState.Connected)
+                {
+                    ImGui.NewLine();
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 0, Y = 255, Z = 0 });
+                    SharedUserInterfaces.TextCentered("Connected!");
+                    ImGui.PopStyleColor();
+                    ImGui.SameLine();
+                    if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Unlink, tooltip: "Disconnect"))
+                    {
+                        NetworkService.Disconnect().ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    ImGui.NewLine();
+                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 255, Y = 0, Z = 0 });
+                    SharedUserInterfaces.TextCentered("Disconnected!");
+                    ImGui.PopStyleColor();
+                    ImGui.SameLine();
+                    if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Link, tooltip: "Connect"))
+                    {
+                        NetworkService.Connect().ConfigureAwait(false);
+                    }
+                }
             }
             ImGui.EndTabItem();
         }
