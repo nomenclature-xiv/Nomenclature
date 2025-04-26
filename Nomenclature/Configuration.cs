@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
+using Newtonsoft.Json;
 using Nomenclature.Types;
 using NomenclatureCommon.Domain;
 
@@ -21,7 +23,8 @@ public class Configuration : IPluginConfiguration
     public string Name { get; set; } = string.Empty;
 
     public List<Character> BlocklistCharacters { get; set; } = new List<Character>();
-    public Dictionary<Character, string> LocalCharacters { get; set; } = new Dictionary<Character, string>();
+
+    public Dictionary<string, Dictionary<string, string>> LocalCharacters { get; set; } = new Dictionary<string, Dictionary<string, string>>();
 
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;

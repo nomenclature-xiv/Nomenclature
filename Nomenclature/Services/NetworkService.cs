@@ -14,6 +14,8 @@ using Nomenclature.Types.Exceptions;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api.Controller;
 using Nomenclature.Utils;
+using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace Nomenclature.Services;
 
@@ -133,7 +135,7 @@ public class NetworkService : IHostedService
     {
         var name = await _characterService.GetCurrentCharacter()!;
         if (name is null) return null;
-        _configuration.LocalCharacters.TryGetValue(name, out string? secret);
+        var secret = GetSecret(name);
         if (secret == null) return null;
         var request = new GenerateTokenRequest { Secret = secret };
         var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
@@ -159,8 +161,6 @@ public class NetworkService : IHostedService
             {
                 Character = characterName
             };
-            string str = JsonSerializer.Serialize(request);
-            PluginLog.Debug(str);
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
             return response.IsSuccessStatusCode 
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
@@ -201,6 +201,17 @@ public class NetworkService : IHostedService
         using var client = new HttpClient();
         var payload = new StringContent(content, Encoding.UTF8, "application/json");
         return await client.PostAsync(url, payload).ConfigureAwait(false);
+    }
+
+    private string? GetSecret(Character character)
+    {
+        _configuration.LocalCharacters.TryGetValue(character.Name, out Dictionary<string, string>? worldsecret);
+        if(worldsecret is null)
+        {
+            return null;
+        }
+        worldsecret.TryGetValue(character.World, out string? secret);
+        return secret;
     }
     
     public async Task StopAsync(CancellationToken cancellationToken)

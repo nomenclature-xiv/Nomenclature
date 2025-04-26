@@ -6,6 +6,7 @@ using Dalamud.Interface;
 using System.Numerics;
 using System;
 using Dalamud.Plugin.Services;
+using System.Collections.Generic;
 
 namespace Nomenclature.UI
 {
@@ -118,7 +119,13 @@ namespace Nomenclature.UI
                 if(result is not null)
                 {
                     registrationError = false;
-                    _configuration.LocalCharacters.Add(name, result);
+                    _configuration.LocalCharacters.TryGetValue(name.Name, out Dictionary<string, string>? worldsecret);
+                    if(worldsecret is null)
+                    {
+                        worldsecret = new Dictionary<string, string>();
+                    }
+                    worldsecret.Add(name.World, result);
+                    _configuration.LocalCharacters[name.Name] = worldsecret;
                     _configuration.Save();
                     await _networkService.Connect().ConfigureAwait(false);
                     this.Toggle();
