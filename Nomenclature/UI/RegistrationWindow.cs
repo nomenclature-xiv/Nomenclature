@@ -89,7 +89,7 @@ namespace Nomenclature.UI
         {
             try
             {
-                var name = await _characterService.GetCurrentCharacter()!;
+                var name = _characterService.CurrentCharacter;
                 if (name is null) return;
                 var result = await _networkService.RegisterCharacterInitiate(name);
                 _log.Info($"Result: {result}");
@@ -113,7 +113,7 @@ namespace Nomenclature.UI
         {
             try
             {
-                var name = await _characterService.GetCurrentCharacter()!;
+                var name = _characterService.CurrentCharacter;
                 if (name is null) return;
                 var result = await _networkService.RegisterCharacterValidate(name, _registrationKey);
                 if(result is not null)

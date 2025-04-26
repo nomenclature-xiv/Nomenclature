@@ -133,7 +133,7 @@ public class NetworkService : IHostedService
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
     {
-        var name = await _characterService.GetCurrentCharacter()!;
+        var name = _characterService.CurrentCharacter;
         if (name is null) return null;
         var secret = GetSecret(name);
         if (secret == null) return null;

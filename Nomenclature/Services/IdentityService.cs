@@ -52,9 +52,7 @@ public class IdentityService : IHostedService
         if(payloads.Count is 1)
         {
             //it's you!
-            var selftask = CharacterService.GetCurrentCharacter();
-            selftask.Wait();
-            var self = selftask.Result;
+            var self = CharacterService.CurrentCharacter;
             if(self is null)
             {
                 return;
@@ -109,7 +107,7 @@ public class IdentityService : IHostedService
             if (Identities.TryGetValue(character, out var identity))
             {
                 // TODO: Update world? Is this apart of nameplates?
-                handler.Name = identity.Name;
+                handler.Name = $"\"{identity.Name}\"";
             }
         }
     }
