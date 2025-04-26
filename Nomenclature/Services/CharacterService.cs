@@ -1,4 +1,5 @@
 ﻿using Dalamud.Plugin.Services;
+using NomenclatureCommon.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,19 +19,19 @@ namespace Nomenclature.Services
             _frameworkService = frameworkService;
         }
 
-        public async Task<(string CharacterName, string WorldName)?> GetCurrentCharacter()
+        public async Task<Character?> GetCurrentCharacter()
         {
             return await _frameworkService.RunOnFramework(GetCurrentCharacterOnThread);
         }
 
-        private (string CharacterName, string WorldName)? GetCurrentCharacterOnThread()
+        private Character? GetCurrentCharacterOnThread()
         {
             var local = _clientState.LocalPlayer;
             if (local is null)
             {
                 return null;
             }
-            return (local.Name.TextValue, local.HomeWorld.Value.Name.ExtractText());
+            return new Character(local.Name.TextValue, local.HomeWorld.Value.Name.ExtractText());
         }
     }
 }

@@ -149,9 +149,9 @@ public class MainWindow : Window
 
                 for(int i = 0; i < Configuration.BlocklistCharacters.Count; i++)
                 {
-                    BlocklistCharacter blocklistChar = Configuration.BlocklistCharacters[i];
+                    Character blocklistChar = Configuration.BlocklistCharacters[i];
 
-                    ImGui.PushID(blocklistChar.GUID.ToString());
+                    ImGui.PushID(new Guid().ToString());
 
                     ImGui.TableNextColumn();
                     ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
@@ -184,7 +184,7 @@ public class MainWindow : Window
                 {
                     if (ValidateName(MainWindowController.BlocklistName))
                     {
-                        Configuration.BlocklistCharacters.Add(new BlocklistCharacter { Name = MainWindowController.BlocklistName, World = worldNames[MainWindowController.BlocklistWorld] });
+                        Configuration.BlocklistCharacters.Add(new Character(MainWindowController.BlocklistName, worldNames[MainWindowController.BlocklistWorld]));
                         Configuration.Save();
                         MainWindowController.BlocklistName = string.Empty;
                         MainWindowController.BlocklistWorld = 0;

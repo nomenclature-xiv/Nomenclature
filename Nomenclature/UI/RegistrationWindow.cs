@@ -90,7 +90,7 @@ namespace Nomenclature.UI
             {
                 var name = await _characterService.GetCurrentCharacter()!;
                 if (name is null) return;
-                var result = await _networkService.RegisterCharacterInitiate(name?.CharacterName!, name?.WorldName!);
+                var result = await _networkService.RegisterCharacterInitiate(name);
                 _log.Info($"Result: {result}");
                 if(result is not null)
                 {
@@ -114,12 +114,11 @@ namespace Nomenclature.UI
             {
                 var name = await _characterService.GetCurrentCharacter()!;
                 if (name is null) return;
-                var charactername = NameConvert.ToString(name.Value);
-                var result = await _networkService.RegisterCharacterValidate(charactername, _registrationKey);
+                var result = await _networkService.RegisterCharacterValidate(name, _registrationKey);
                 if(result is not null)
                 {
                     registrationError = false;
-                    _configuration.LocalCharacters.Add(charactername, result);
+                    _configuration.LocalCharacters.Add(name, result);
                     _configuration.Save();
                     await _networkService.Connect().ConfigureAwait(false);
                     this.Toggle();

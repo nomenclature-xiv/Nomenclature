@@ -133,8 +133,7 @@ public class NetworkService : IHostedService
     {
         var name = await _characterService.GetCurrentCharacter()!;
         if (name is null) return null;
-        string charworld = NameConvert.ToString(name.Value);
-        _configuration.LocalCharacters.TryGetValue(charworld, out string? secret);
+        _configuration.LocalCharacters.TryGetValue(name, out string? secret);
         if (secret == null) return null;
         var request = new GenerateTokenRequest { Secret = secret };
         var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
@@ -152,15 +151,16 @@ public class NetworkService : IHostedService
     /// <summary>
     ///     Begins the registration process on the server
     /// </summary>
-    public async Task<string?> RegisterCharacterInitiate(string characterName, string worldName)
+    public async Task<string?> RegisterCharacterInitiate(Character characterName)
     {
         try
         {
             var request = new BeginCharacterRegistrationRequest
             {
-                Character = new Character(characterName, worldName)
+                Character = characterName
             };
-            
+            string str = JsonSerializer.Serialize(request);
+            PluginLog.Debug(str);
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
             return response.IsSuccessStatusCode 
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
@@ -173,7 +173,7 @@ public class NetworkService : IHostedService
         }
     }
 
-    public async Task<string?> RegisterCharacterValidate(string characterName, string validationCode)
+    public async Task<string?> RegisterCharacterValidate(Character characterName, string validationCode)
     {
         try
         {

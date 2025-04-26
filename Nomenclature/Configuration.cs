@@ -20,8 +20,8 @@ public class Configuration : IPluginConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    public List<BlocklistCharacter> BlocklistCharacters { get; set; } = new List<BlocklistCharacter>();
-    public Dictionary<string, string> LocalCharacters { get; set; } = new Dictionary<string, string>();
+    public List<Character> BlocklistCharacters { get; set; } = new List<Character>();
+    public Dictionary<Character, string> LocalCharacters { get; set; } = new Dictionary<Character, string>();
 
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;

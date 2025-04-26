@@ -34,8 +34,9 @@ public class Program
 
         builder.Services.AddSingleton<DatabaseService>();
         builder.Services.AddSingleton<NomenclatureService>();
+        builder.Services.AddSingleton<RegistrationService>();
         builder.Services.AddSingleton<RegistrationController>();
-
+        builder.Services.AddSingleton<LodestoneService>();
         builder.Services.AddHostedService<LodestoneService>();
 
 #if DEBUG
@@ -67,7 +68,6 @@ public class Program
 
         app.MapHub<NomenclatureHub>("/nomenclature");
         app.MapControllers();
-
         app.Run();
         
     }

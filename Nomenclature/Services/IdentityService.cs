@@ -59,8 +59,6 @@ public class IdentityService : IHostedService
             {
                 return;
             }
-
-            var character = new Character(self.Value.CharacterName, self.Value.WorldName);
             /*
             if(Identities.ContainsKey(name))
             {
@@ -80,7 +78,7 @@ public class IdentityService : IHostedService
                     payloads.Add(new TextPayload(charworld.Item1));
                 }
             }*/
-            if (Identities.TryGetValue(character, out var identity))
+            if (Identities.TryGetValue(self, out var identity))
             {
                 payloads[0] = new TextPayload(identity.Name);
                 
