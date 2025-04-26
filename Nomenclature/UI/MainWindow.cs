@@ -116,7 +116,7 @@ public class MainWindow : Window
                 }
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(120);
-                if(ImGui.Combo("##NomenclatureWorld", ref MainWindowController.ChangedWorld, _worldNames.ToArray(), _worldNames.Count))
+                if(ImGui.InputTextWithHint("##NomenclatureWorld", "World", ref MainWindowController.ChangedWorld, 20, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
                     UpdateName();
                 }
@@ -207,7 +207,7 @@ public class MainWindow : Window
         {
             var request = new SetNameRequest
             {
-                Nomenclature = new Character(MainWindowController.ChangedName, _worldNames[MainWindowController.ChangedWorld])
+                Nomenclature = new Character(MainWindowController.ChangedName, MainWindowController.ChangedWorld)
             };
             
             var response = await NetworkService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
