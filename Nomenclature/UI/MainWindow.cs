@@ -53,6 +53,7 @@ public class MainWindow : Window
             {
                 DrawMainTab();
                 DrawBlocklistTab();
+                DrawSettingsTab();
             }
             ImGui.EndTabBar();
         }
@@ -192,6 +193,20 @@ public class MainWindow : Window
                 }
                 ImGui.EndTable();
             }
+            ImGui.EndTabItem();
+        }
+    }
+
+    private void DrawSettingsTab()
+    {
+        if(ImGui.BeginTabItem("Settings"))
+        {
+            if (ImGui.Checkbox("##AutoConnect", ref Configuration.AutoConnect))
+            {
+                Configuration.Save();
+            }
+            ImGui.SameLine();
+            ImGui.Text("Automatically connect to the server upon login.");
             ImGui.EndTabItem();
         }
     }

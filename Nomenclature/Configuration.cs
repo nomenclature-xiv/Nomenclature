@@ -26,6 +26,8 @@ public class Configuration : IPluginConfiguration
 
     public Dictionary<string, Dictionary<string, string>> LocalCharacters { get; set; } = new Dictionary<string, Dictionary<string, string>>();
 
+    public bool AutoConnect = false;
+
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;
 
