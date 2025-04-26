@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,7 +76,14 @@ public class ScanningService : IHostedService
             };
             
             var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
-            IdentityService.Identities = response.Characters;
+            IdentityService.Identities.Clear();
+            foreach(var name in response.Characters)
+            {
+                foreach(var world in name.Value)
+                {
+                    IdentityService.Identities.Add(new Character(name.Key, world.Key), world.Value);
+                }
+            }
         }
         catch (Exception e)
         {

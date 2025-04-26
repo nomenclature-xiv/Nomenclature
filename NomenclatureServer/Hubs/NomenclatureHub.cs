@@ -35,11 +35,17 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
         logger.LogInformation("{Request}", request);
         var results = new Dictionary<Character, Character>();
         var characters = request.Characters.AsSpan();
+        var charmap = new Dictionary<string, Dictionary<string, Character>>();
         foreach (var character in characters)
             if (nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature))
-                results.Add(character, nomenclature);
-        
-        return new QueryChangedNamesResponse { Characters = results };
+            {
+                Dictionary<string, Character>? worldmap = charmap.GetValueOrDefault(character.Name);
+                worldmap ??= new Dictionary<string, Character>();
+                worldmap[character.World] = nomenclature;
+                charmap[character.Name] = worldmap;
+            }
+        return new QueryChangedNamesResponse() { Characters = charmap, Success = true };
+
     }
     
     private Character GetCharacterFromClaims()

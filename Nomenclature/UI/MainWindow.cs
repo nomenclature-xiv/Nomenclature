@@ -25,6 +25,8 @@ public class MainWindow : Window
     private readonly NetworkService NetworkService;
     private readonly IPluginLog _log;
     private readonly RegistrationWindow RegistrationWindow;
+    private readonly List<string> _worldNames;
+
     public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService, RegistrationWindow registrationWindow) : base("Nomenclature")
     {
         Configuration = configuration;
@@ -33,6 +35,7 @@ public class MainWindow : Window
         NetworkService = networkService;
         _log = log;
         RegistrationWindow = registrationWindow;
+        _worldNames = WorldService.WorldNames;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -103,23 +106,21 @@ public class MainWindow : Window
     {
         if(ImGui.BeginTabItem("Name"))
         {
-            ImGui.Text("Name: ");
-            ImGui.SameLine();
-
             try
             {
-                if(ImGui.InputText("##NomenclatureName", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
+                ImGui.SetNextItemWidth(200);
+                if (ImGui.InputTextWithHint("##NomenclatureName", "Name", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
                     _log.Verbose("Clicked me!");
                     UpdateName();
                 }
-
-                if (ImGui.Button("MIST"))
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(120);
+                if(ImGui.Combo("##NomenclatureWorld", ref MainWindowController.ChangedWorld, _worldNames.ToArray(), _worldNames.Count))
                 {
-                    _log.Verbose("CLICKED ME DAMNIT");
-                    //UpdateName();
+                    UpdateName();
                 }
-                
+
             }
             catch (Exception e)
             {
@@ -169,7 +170,6 @@ public class MainWindow : Window
                     }
                     ImGui.PopID();
                 }
-                List<string> worldNames = WorldService.WorldNames;
 
                 ImGui.TableNextColumn();
                 ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
@@ -177,14 +177,14 @@ public class MainWindow : Window
 
                 ImGui.TableNextColumn();
                 ImGui.SetNextItemWidth(ImGui.GetColumnWidth());
-                ImGui.Combo("##BlocklistWorld", ref MainWindowController.BlocklistWorld, worldNames.ToArray(), worldNames.Count);
+                ImGui.Combo("##BlocklistWorld", ref MainWindowController.BlocklistWorld, _worldNames.ToArray(), _worldNames.Count);
                 
                 ImGui.TableNextColumn();
                 if (SharedUserInterfaces.IconButton(FontAwesomeIcon.Plus))
                 {
                     if (ValidateName(MainWindowController.BlocklistName))
                     {
-                        Configuration.BlocklistCharacters.Add(new Character(MainWindowController.BlocklistName, worldNames[MainWindowController.BlocklistWorld]));
+                        Configuration.BlocklistCharacters.Add(new Character(MainWindowController.BlocklistName, _worldNames[MainWindowController.BlocklistWorld]));
                         Configuration.Save();
                         MainWindowController.BlocklistName = string.Empty;
                         MainWindowController.BlocklistWorld = 0;
@@ -207,8 +207,7 @@ public class MainWindow : Window
         {
             var request = new SetNameRequest
             {
-                // TODO: Populate these fields with their real values!
-                Nomenclature = new Character(string.Empty, string.Empty)
+                Nomenclature = new Character(MainWindowController.ChangedName, _worldNames[MainWindowController.ChangedWorld])
             };
             
             var response = await NetworkService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);

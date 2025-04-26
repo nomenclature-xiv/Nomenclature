@@ -9,6 +9,7 @@ namespace Nomenclature.UI
     public class MainWindowController
     {
         public string ChangedName = string.Empty;
+        public int ChangedWorld = 0;
         public MainWindowController(Configuration configuration)
         {
             ChangedName = configuration.Name;
