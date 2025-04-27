@@ -25,11 +25,14 @@ public class Configuration : IPluginConfiguration
 
     public bool SelfChangeName = true;
 
+    /// <summary>
+    ///     Should the server attempt to connect automatically?
+    /// </summary>
+    public bool AutoConnect = false;
+
     public List<Character> BlocklistCharacters { get; set; } = new List<Character>();
 
     public Dictionary<string, Dictionary<string, string>> LocalCharacters { get; set; } = new Dictionary<string, Dictionary<string, string>>();
-
-    public bool AutoConnect = false;
 
     [NonSerialized]
     private IDalamudPluginInterface? PluginInterface;
