@@ -133,6 +133,7 @@ public class IdentityService : IHostedService
         {
             var changedname = Identities[character];
             payloads.Clear();
+            PluginLog.Debug($"{changedname.World is null}");
             if(changedname.Name is null)
             {
                 changedname = new Nomenclature(character.Name, changedname.World);

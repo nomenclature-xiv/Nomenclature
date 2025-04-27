@@ -43,7 +43,7 @@ namespace NomenclatureClient.Network
             }
         }
 
-        public async void ClearName()
+        public async Task ClearName()
         {
             try
             {

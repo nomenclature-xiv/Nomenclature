@@ -35,6 +35,7 @@ namespace NomenclatureClient.UI
         {
             string? changename = SelfChangeNameEnabled ? ChangedName : null;
             string? changeworld = SelfChangeWorldEnabled ? ChangedWorld : null;
+            await _nameService.ClearName();
             bool res = await _nameService.UpdateName(changename, changeworld);
             if (!res)
                 return;

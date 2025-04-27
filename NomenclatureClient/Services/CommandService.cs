@@ -52,7 +52,7 @@ namespace NomenclatureClient.Services
                 {
                     _nameService.UpdateName(argv[2], null);
                 }
-                if (argv[2] == "world")
+                if (argv[1] == "world")
                 {
                     _nameService.UpdateName(null, argv[2]);
                 }
