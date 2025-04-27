@@ -5,6 +5,7 @@ using ImGuiNET;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Nomenclature.Network;
 using Nomenclature.UI;
 
 namespace Nomenclature.Services
@@ -47,7 +48,8 @@ namespace Nomenclature.Services
                     collection.AddSingleton<FrameworkService>();
                     collection.AddSingleton<CommandService>();
                     collection.AddSingleton<WorldService>();
-                    collection.AddSingleton<NetworkService>();
+                    collection.AddSingleton<NetworkHubService>();
+                    collection.AddSingleton<NetworkRegisterService>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
@@ -56,7 +58,7 @@ namespace Nomenclature.Services
                     collection.AddHostedService(p => p.GetRequiredService<WindowService>());
                     collection.AddHostedService(p => p.GetRequiredService<InstallerWindowService>());
                     collection.AddHostedService(p => p.GetRequiredService<CommandService>());
-                    collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
+                    collection.AddHostedService(p => p.GetRequiredService<NetworkHubService>());
                 }).Build();
 
         }
@@ -64,6 +66,7 @@ namespace Nomenclature.Services
         {
             collection.AddSingleton<WindowService>();
             collection.AddSingleton<InstallerWindowService>();
+            collection.AddSingleton<RegistrationWindowController>();
             collection.AddSingleton<RegistrationWindow>();
             collection.AddSingleton<MainWindowController>();
             collection.AddSingleton<MainWindow>();

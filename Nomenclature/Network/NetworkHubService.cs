@@ -16,22 +16,21 @@ using NomenclatureCommon.Domain.Api.Controller;
 using Nomenclature.Utils;
 using System.Xml.Linq;
 using System.Collections.Generic;
+using Nomenclature.Services;
 
-namespace Nomenclature.Services;
+namespace Nomenclature.Network;
 
 /// <summary>
 ///     TODO
 /// </summary>
-public class NetworkService : IHostedService
+public class NetworkHubService : IHostedService
 {
-    // Server Url
+    // Server URL
     private const string HubUrl = "https://localhost:5006/nomenclature";
-    
+
     // Post Url
     private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
-    private const string RegisterPostUrlInit = "https://localhost:5006/registration/initiate";
-    private const string RegisterPostUrlValidate = "https://localhost:5006/registration/validate";
-    
+
     /// <summary>
     ///     TODO
     /// </summary>
@@ -42,9 +41,9 @@ public class NetworkService : IHostedService
     private readonly IPluginLog PluginLog;
 
     /// <summary>
-    ///     <inheritdoc cref="NetworkService"/>
+    ///     <inheritdoc cref="NetworkHubService"/>
     /// </summary>
-    public NetworkService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
+    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
     {
         PluginLog = pluginLog;
         _configuration = configuration;
@@ -138,7 +137,7 @@ public class NetworkService : IHostedService
         var secret = GetSecret(name);
         if (secret == null) return null;
         var request = new GenerateTokenRequest { Secret = secret };
-        var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
+        var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
             throw response.StatusCode switch
             {
@@ -148,59 +147,6 @@ public class NetworkService : IHostedService
         
         PluginLog.Verbose("[NetworkHelper] Successfully authenticated");
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    ///     Begins the registration process on the server
-    /// </summary>
-    public async Task<string?> RegisterCharacterInitiate(Character characterName)
-    {
-        try
-        {
-            var request = new BeginCharacterRegistrationRequest
-            {
-                Character = characterName
-            };
-            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
-            return response.IsSuccessStatusCode 
-                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
-                : null;
-        }
-        catch (Exception e)
-        {
-            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
-            return null;
-        }
-    }
-
-    public async Task<string?> RegisterCharacterValidate(Character characterName, string validationCode)
-    {
-        try
-        {
-            var request = new ValidateCharacterRegistration
-            {
-                ValidationCode = validationCode
-            };
-            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
-                : null;
-        }
-        catch (Exception e)
-        {
-            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
-            return null;
-        }
-    }
-
-    /// <summary>
-    ///     Posts a request to the server
-    /// </summary>
-    private static async Task<HttpResponseMessage> PostRequest(string content, string url)
-    {
-        using var client = new HttpClient();
-        var payload = new StringContent(content, Encoding.UTF8, "application/json");
-        return await client.PostAsync(url, payload).ConfigureAwait(false);
     }
 
     private string? GetSecret(Character character)

@@ -9,6 +9,7 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using Nomenclature.Network;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Server;
@@ -24,7 +25,7 @@ public class ScanningService : IHostedService
     private readonly IObjectTable ObjectTable;
     private readonly IClientState _clientState;
     private readonly FrameworkService FrameworkService;
-    private readonly NetworkService NetworkService;
+    private readonly NetworkHubService NetworkService;
     private readonly IdentityService IdentityService;
     private readonly Configuration Configuration;
     // Constants
@@ -36,7 +37,7 @@ public class ScanningService : IHostedService
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
     /// </summary>
-    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkService networkService, IdentityService identityService, Configuration configuration)
+    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkHubService networkService, IdentityService identityService, Configuration configuration)
     {
         PluginLog = pluginLog;
         FrameworkService = frameworkService;

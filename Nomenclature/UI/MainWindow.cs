@@ -14,6 +14,7 @@ using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 using Microsoft.AspNetCore.SignalR.Client;
+using Nomenclature.Network;
 
 namespace Nomenclature.UI;
 
@@ -22,12 +23,12 @@ public class MainWindow : Window
     private readonly Configuration Configuration;
     private readonly WorldService WorldService;
     private readonly MainWindowController MainWindowController;
-    private readonly NetworkService NetworkService;
+    private readonly NetworkHubService NetworkService;
     private readonly IPluginLog _log;
     private readonly RegistrationWindow RegistrationWindow;
     private readonly List<string> _worldNames;
 
-    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkService networkService, RegistrationWindow registrationWindow) : base("Nomenclature")
+    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkHubService networkService, RegistrationWindow registrationWindow) : base("Nomenclature")
     {
         Configuration = configuration;
         WorldService = worldService;
@@ -109,9 +110,9 @@ public class MainWindow : Window
         {
             try
             {
-                if(ImGui.Checkbox("##Enabled", ref MainWindowController.NomenclatureEnabled))
+                if(ImGui.Checkbox("##Enabled", ref MainWindowController.SelfChangeNameEnabled))
                 {
-                    if(MainWindowController.NomenclatureEnabled)
+                    if(MainWindowController.SelfChangeNameEnabled)
                     {
                         UpdateName();
                     }
@@ -119,6 +120,8 @@ public class MainWindow : Window
                     {
                         ClearName();
                     }
+                    Configuration.SelfChangeName = MainWindowController.SelfChangeNameEnabled;
+                    Configuration.Save();
                 }
                 if(ImGui.IsItemHovered())
                 {
@@ -130,7 +133,7 @@ public class MainWindow : Window
                 ImGui.SetNextItemWidth(200);
                 if (ImGui.InputTextWithHint("##NomenclatureName", "Name", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    if (MainWindowController.NomenclatureEnabled)
+                    if (MainWindowController.SelfChangeNameEnabled)
                     {
                         UpdateName();
                     }
@@ -139,7 +142,7 @@ public class MainWindow : Window
                 ImGui.SetNextItemWidth(120);
                 if(ImGui.InputTextWithHint("##NomenclatureWorld", "World", ref MainWindowController.ChangedWorld, 20, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    if (MainWindowController.NomenclatureEnabled)
+                    if (MainWindowController.SelfChangeNameEnabled)
                     {
                         UpdateName();
                     }
@@ -252,8 +255,8 @@ public class MainWindow : Window
             if (response.Success is false)
                 return;
             
-            // TODO: Populate world too!
             Configuration.Name = MainWindowController.ChangedName;
+            Configuration.World = MainWindowController.ChangedWorld;
             Configuration.Save();
         }
         catch(Exception ex)

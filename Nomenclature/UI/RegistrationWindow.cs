@@ -7,25 +7,17 @@ using System.Numerics;
 using System;
 using Dalamud.Plugin.Services;
 using System.Collections.Generic;
+using Nomenclature.Network;
 
 namespace Nomenclature.UI
 {
     public class RegistrationWindow : Window
     {
-        private readonly NetworkService _networkService;
-        private readonly CharacterService _characterService;
-        private readonly Configuration _configuration;
-        private readonly IClientState _clientState;
-        private string _registrationKey = string.Empty;
-        private bool registrationError = false;
-        private bool characterError = false;
+        private readonly RegistrationWindowController _controller;
         private readonly IPluginLog _log;
-        public RegistrationWindow(NetworkService networkService, CharacterService characterService, Configuration configuration, IPluginLog log, IClientState clientState) : base("Register Character")
+        public RegistrationWindow(RegistrationWindowController controller, IPluginLog log) : base("Register Character")
         {
-            _networkService = networkService;
-            _characterService = characterService;
-            _clientState = clientState;
-            _configuration = configuration;
+            _controller = controller;
             _log = log;
 
             SizeConstraints = new WindowSizeConstraints
@@ -37,7 +29,7 @@ namespace Nomenclature.UI
 
         public override void Draw()
         {
-            if (_registrationKey == string.Empty)
+            if (_controller.RegistrationKey == string.Empty)
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 0, Y = 255, Z = 0 });
                 ImGui.Text("Fetching character data from lodestone...");
@@ -49,27 +41,27 @@ namespace Nomenclature.UI
                 ImGui.NewLine();
 
                 ImGui.SetNextItemWidth(200);
-                ImGui.InputText("##RegistrationKey", ref _registrationKey, 64);
+                ImGui.InputText("##RegistrationKey", ref _controller.RegistrationKey, 64);
                 ImGui.SameLine();
                 if (SharedUserInterfaces.IconButton(FontAwesomeIcon.Clipboard, tooltip: "Copy to Clipboard"))
                 {
-                    ImGui.SetClipboardText(_registrationKey);
+                    ImGui.SetClipboardText(_controller.RegistrationKey);
                 }
                 if (ImGui.Button("Register"))
                 {
-                    ValidateRegister();
+                    Validate();
                 }
-                if (characterError)
+                if (_controller.CharacterError)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 255, Y = 0, Z = 0 });
                     ImGui.TextWrapped("Your character somehow doesn't exist! You shouldn't be seeing this, but if you do, try clicking the 'Regenerate Secret' button.");
                     ImGui.PopStyleColor();
                     if(ImGui.Button("Regenerate Secret"))
                     {
-                        InitRegister();
+                        _controller.InitRegister();
                     }
                 }
-                if (registrationError)
+                if (_controller.RegistrationError)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 255, Y = 0, Z = 0 });
                     ImGui.TextWrapped("Could not find code in character's profile! Ensure that it is saved before trying again.");
@@ -79,66 +71,19 @@ namespace Nomenclature.UI
             
         }
 
-        public override void OnOpen()
+        private async void Validate()
         {
-            InitRegister();
-            base.OnOpen();
-        }
-        
-        private async void InitRegister()
-        {
-            try
+            bool res = await _controller.ValidateRegister();
+            if(res)
             {
-                var name = _characterService.CurrentCharacter;
-                if (name is null) return;
-                var result = await _networkService.RegisterCharacterInitiate(name);
-                _log.Info($"Result: {result}");
-                if(result is not null)
-                {
-                    _registrationKey = result;
-                    characterError = false;
-                }
-                else
-                {
-                    characterError = true;
-                }
-            }
-            catch (Exception e)
-            {
-                _log.Error($"{e}");
+                this.Toggle();
             }
         }
 
-        private async void ValidateRegister()
+        public override void OnOpen()
         {
-            try
-            {
-                var name = _characterService.CurrentCharacter;
-                if (name is null) return;
-                var result = await _networkService.RegisterCharacterValidate(name, _registrationKey);
-                if(result is not null)
-                {
-                    registrationError = false;
-                    _configuration.LocalCharacters.TryGetValue(name.Name, out Dictionary<string, string>? worldsecret);
-                    if(worldsecret is null)
-                    {
-                        worldsecret = new Dictionary<string, string>();
-                    }
-                    worldsecret.Add(name.World, result);
-                    _configuration.LocalCharacters[name.Name] = worldsecret;
-                    _configuration.Save();
-                    await _networkService.Connect().ConfigureAwait(false);
-                    this.Toggle();
-                }
-                else
-                {
-                    registrationError = true;
-                }
-            }
-            catch(Exception e)
-            {
-                _log.Error($"{e}");
-            }
+            _controller.InitRegister();
+            base.OnOpen();
         }
     }
 }

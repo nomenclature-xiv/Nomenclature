@@ -10,10 +10,12 @@ namespace Nomenclature.UI
     {
         public string ChangedName = string.Empty;
         public string ChangedWorld = string.Empty;
-        public bool NomenclatureEnabled = false;
+        public bool SelfChangeNameEnabled = true;
         public MainWindowController(Configuration configuration)
         {
             ChangedName = configuration.Name;
+            ChangedWorld = configuration.World;
+            SelfChangeNameEnabled = configuration.SelfChangeName;
         }
 
         public string BlocklistName = string.Empty;

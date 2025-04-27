@@ -21,6 +21,9 @@ public class Configuration : IPluginConfiguration
     ///     Name to replace real name
     /// </summary>
     public string Name { get; set; } = string.Empty;
+    public string World {  get; set; } = string.Empty;
+
+    public bool SelfChangeName = true;
 
     public List<Character> BlocklistCharacters { get; set; } = new List<Character>();
 
