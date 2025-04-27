@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using NomenclatureCommon.Domain;
 
-namespace Nomenclature.Services;
+namespace NomenclatureClient.Services;
 
 public class CharacterService : IDisposable
 {

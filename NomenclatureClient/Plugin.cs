@@ -3,9 +3,9 @@ using System.Reflection;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using Nomenclature.Services;
+using NomenclatureClient.Services;
 
-namespace Nomenclature;
+namespace NomenclatureClient;
 
 // ReSharper disable once ClassNeverInstantiated.Global
 public sealed class Plugin : IDalamudPlugin

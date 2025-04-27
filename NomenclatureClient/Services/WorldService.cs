@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using Dalamud.Plugin.Services;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
-using Nomenclature;
+using NomenclatureClient;
 
-namespace Nomenclature.Services;
+namespace NomenclatureClient.Services;
 
 /// <summary>
 ///     Provides a list of all in game world names accessible to the player

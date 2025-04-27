@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Nomenclature.Services
+namespace NomenclatureClient.Services
 {
     public class FrameworkService
     {

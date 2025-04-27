@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
-using Newtonsoft.Json;
-using Nomenclature.Types;
 using NomenclatureCommon.Domain;
 
-namespace Nomenclature;
+namespace NomenclatureClient;
 
 [Serializable]
 public class Configuration : IPluginConfiguration

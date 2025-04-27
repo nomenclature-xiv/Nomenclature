@@ -1,6 +1,6 @@
 using System;
 
-namespace Nomenclature.Types.Exceptions;
+namespace NomenclatureClient.Types.Exceptions;
 
 /// <summary>
 ///     Exception thrown when a client attempts to connect to the server without having a secret assigned to their local chartacter

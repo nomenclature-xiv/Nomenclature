@@ -1,6 +1,6 @@
 ﻿using Dalamud.Plugin.Services;
-using Nomenclature.Network;
-using Nomenclature.Services;
+using NomenclatureClient.Network;
+using NomenclatureClient.Services;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Nomenclature.UI
+namespace NomenclatureClient.UI
 {
     public class RegistrationWindowController
     {

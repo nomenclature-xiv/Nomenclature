@@ -10,13 +10,13 @@ using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Nomenclature.Types.Exceptions;
+using NomenclatureClient.Types.Exceptions;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api.Controller;
 using System.Collections.Generic;
-using Nomenclature.Services;
+using NomenclatureClient.Services;
 
-namespace Nomenclature.Network;
+namespace NomenclatureClient.Network;
 
 /// <summary>
 ///     Provides access to the Signal R hub connection

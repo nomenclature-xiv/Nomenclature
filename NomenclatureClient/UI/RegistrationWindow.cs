@@ -1,15 +1,15 @@
 ﻿using Dalamud.Interface.Windowing;
 using ImGuiNET;
-using Nomenclature.Services;
-using Nomenclature.Utils;
+using NomenclatureClient.Services;
+using NomenclatureClient.Utils;
 using Dalamud.Interface;
 using System.Numerics;
 using System;
 using Dalamud.Plugin.Services;
 using System.Collections.Generic;
-using Nomenclature.Network;
+using NomenclatureClient.Network;
 
-namespace Nomenclature.UI
+namespace NomenclatureClient.UI
 {
     public class RegistrationWindow : Window
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Nomenclature.Types.Exceptions;
+namespace NomenclatureClient.Types.Exceptions;
 
 /// <summary>
 ///     Exception thrown when a client sends an invalid token when logging into the server

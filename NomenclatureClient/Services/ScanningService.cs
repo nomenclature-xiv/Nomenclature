@@ -9,12 +9,13 @@ using System.Timers;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using Nomenclature.Network;
+using NomenclatureClient.Network;
+using NomenclatureClient.Services;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Server;
 
-namespace Nomenclature.Services;
+namespace NomenclatureClient.Services;
 
 /// <summary>
 ///     TODO

@@ -1,6 +1,6 @@
 using System;
 
-namespace Nomenclature.Types.Exceptions;
+namespace NomenclatureClient.Types.Exceptions;
 
 /// <summary>
 ///     Exception thrown when an unknown response code is provided

@@ -9,11 +9,11 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using Nomenclature.Utils;
+using NomenclatureClient.Utils;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api.Server;
 
-namespace Nomenclature.Services;
+namespace NomenclatureClient.Services;
 
 public class IdentityService : IHostedService
 {
@@ -29,7 +29,7 @@ public class IdentityService : IHostedService
     /// <summary>
     ///     Maps [CharacterName]@[HomeWorld] to [ModifiedCharacterName]
     /// </summary>
-    public Dictionary<Character, Character> Identities = new();
+    public Dictionary<Character, Nomenclature> Identities = new();
 
     public IdentityService(INamePlateGui namePlateGui, IChatGui chatGui, IPluginLog pluginLog, CharacterService characterService)
     {

@@ -3,9 +3,9 @@ using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
-using Nomenclature.Utils;
-using Nomenclature.Services;
-using Nomenclature.Types;
+using NomenclatureClient.Utils;
+using NomenclatureClient.Services;
+using NomenclatureClient.Types;
 using Serilog;
 using System;
 using Dalamud.Plugin.Services;
@@ -14,29 +14,31 @@ using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 using Microsoft.AspNetCore.SignalR.Client;
-using Nomenclature.Network;
+using NomenclatureClient.Network;
 
-namespace Nomenclature.UI;
+namespace NomenclatureClient.UI;
 
 public class MainWindow : Window
 {
     private readonly Configuration Configuration;
-    private readonly WorldService WorldService;
     private readonly MainWindowController MainWindowController;
-    private readonly NetworkHubService NetworkService;
+    private readonly NetworkNameService _nameService;
+    private readonly NetworkHubService _hubService;
+    private readonly WorldService _worldService;
     private readonly IPluginLog _log;
     private readonly RegistrationWindow RegistrationWindow;
     private readonly List<string> _worldNames;
 
-    public MainWindow(IPluginLog log, Configuration configuration, WorldService worldService, MainWindowController mainWindowController, NetworkHubService networkService, RegistrationWindow registrationWindow) : base("Nomenclature")
+    public MainWindow(IPluginLog log, Configuration configuration, MainWindowController mainWindowController, RegistrationWindow registrationWindow, WorldService worldService, NetworkNameService nameService, NetworkHubService hubService) : base("Nomenclature")
     {
         Configuration = configuration;
-        WorldService = worldService;
         MainWindowController = mainWindowController;
-        NetworkService = networkService;
         _log = log;
         RegistrationWindow = registrationWindow;
-        _worldNames = WorldService.WorldNames;
+        _worldService = worldService;
+        _hubService = hubService;
+        _nameService = nameService;
+        _worldNames = _worldService.WorldNames;
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -75,7 +77,7 @@ public class MainWindow : Window
             }
             else
             {
-                if(NetworkService.Connection.State == HubConnectionState.Connected)
+                if(_hubService.Connection.State == HubConnectionState.Connected)
                 {
                     ImGui.NewLine();
                     ImGui.PushStyleColor(ImGuiCol.Text, new Vector4() { W = 255, X = 0, Y = 255, Z = 0 });
@@ -84,7 +86,7 @@ public class MainWindow : Window
                     ImGui.SameLine();
                     if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Unlink, tooltip: "Disconnect"))
                     {
-                        NetworkService.Disconnect().ConfigureAwait(false);
+                        _hubService.Disconnect().ConfigureAwait(false);
                     }
                 }
                 else
@@ -96,7 +98,7 @@ public class MainWindow : Window
                     ImGui.SameLine();
                     if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Link, tooltip: "Connect"))
                     {
-                        NetworkService.Connect().ConfigureAwait(false);
+                        _hubService.Connect().ConfigureAwait(false);
                     }
                 }
             }
@@ -118,7 +120,7 @@ public class MainWindow : Window
                     }
                     else
                     {
-                        ClearName();
+                        _nameService.ClearName();
                     }
                     Configuration.SelfChangeName = MainWindowController.SelfChangeNameEnabled;
                     Configuration.Save();
@@ -242,41 +244,8 @@ public class MainWindow : Window
         return name != null && name.Length > 0;
     }
 
-    private async void UpdateName()
+    private void UpdateName()
     {
-        try
-        {
-            var request = new SetNameRequest
-            {
-                Nomenclature = new Character(MainWindowController.ChangedName, MainWindowController.ChangedWorld)
-            };
-            
-            var response = await NetworkService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
-            if (response.Success is false)
-                return;
-            
-            Configuration.Name = MainWindowController.ChangedName;
-            Configuration.World = MainWindowController.ChangedWorld;
-            Configuration.Save();
-        }
-        catch(Exception ex)
-        {
-            _log.Debug(ex.ToString());
-        }
-    }
-
-    private async void ClearName()
-    {
-        try
-        {
-            var request = new ClearNameRequest();
-            var response = await NetworkService.InvokeAsync<ClearNameRequest, Response>(ApiMethods.ClearName, request);
-            if (response.Success is false) _log.Debug("Could not clear name for some reason!");
-
-        }
-        catch(Exception ex)
-        {
-            _log.Debug(ex.ToString());
-        }
+        _nameService.UpdateName(MainWindowController.ChangedName, MainWindowController.ChangedWorld);
     }
 }

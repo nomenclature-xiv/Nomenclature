@@ -5,10 +5,11 @@ using ImGuiNET;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Nomenclature.Network;
-using Nomenclature.UI;
+using NomenclatureClient.Network;
+using NomenclatureClient.UI;
+using NomenclatureClient.Services;
 
-namespace Nomenclature.Services
+namespace NomenclatureClient.Services
 {
     internal class ServiceManager
     {
@@ -50,6 +51,7 @@ namespace Nomenclature.Services
                     collection.AddSingleton<WorldService>();
                     collection.AddSingleton<NetworkHubService>();
                     collection.AddSingleton<NetworkRegisterService>();
+                    collection.AddSingleton<NetworkNameService>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does

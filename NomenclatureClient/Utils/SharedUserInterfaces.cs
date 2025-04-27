@@ -6,7 +6,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using ImGuiNET;
 
-namespace Nomenclature.Utils;
+namespace NomenclatureClient.Utils;
 
 /// <summary>
 ///     Exposes multiple static methods that simplify the process of many ImGui objects

@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Nomenclature.UI
+namespace NomenclatureClient.UI
 {
     public class InstallerWindowService : IHostedService
     {

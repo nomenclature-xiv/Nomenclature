@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Nomenclature.Network
+namespace NomenclatureClient.Network
 {
     public class NetworkRegisterService
     {
