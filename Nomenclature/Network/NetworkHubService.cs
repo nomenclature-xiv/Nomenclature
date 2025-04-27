@@ -153,8 +153,13 @@ public class NetworkHubService : IHostedService
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 
-    
-    
+    private string? GetCharacterSecret(Character character)
+    {
+        return _configuration.LocalCharacters.TryGetValue(character.Name, out var worlds)
+            ? worlds.GetValueOrDefault(character.World)
+            : null;
+    }
+
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         await Disconnect().ConfigureAwait(false);
