@@ -22,14 +22,13 @@ public class MainWindow : Window
 {
     private readonly Configuration Configuration;
     private readonly MainWindowController MainWindowController;
-    private readonly NetworkNameService _nameService;
     private readonly NetworkHubService _hubService;
     private readonly WorldService _worldService;
     private readonly IPluginLog _log;
     private readonly RegistrationWindow RegistrationWindow;
     private readonly List<string> _worldNames;
 
-    public MainWindow(IPluginLog log, Configuration configuration, MainWindowController mainWindowController, RegistrationWindow registrationWindow, WorldService worldService, NetworkNameService nameService, NetworkHubService hubService) : base("Nomenclature")
+    public MainWindow(IPluginLog log, Configuration configuration, MainWindowController mainWindowController, RegistrationWindow registrationWindow, WorldService worldService, NetworkHubService hubService) : base("Nomenclature")
     {
         Configuration = configuration;
         MainWindowController = mainWindowController;
@@ -37,7 +36,6 @@ public class MainWindow : Window
         RegistrationWindow = registrationWindow;
         _worldService = worldService;
         _hubService = hubService;
-        _nameService = nameService;
         _worldNames = _worldService.WorldNames;
 
         SizeConstraints = new WindowSizeConstraints
@@ -112,15 +110,15 @@ public class MainWindow : Window
         {
             try
             {
-                if(ImGui.Checkbox("##Enabled", ref MainWindowController.SelfChangeNameEnabled))
+                if(ImGui.Checkbox("##NameEnabled", ref MainWindowController.SelfChangeNameEnabled))
                 {
-                    if(MainWindowController.SelfChangeNameEnabled)
+                    if(MainWindowController.SelfChangeNameEnabled || MainWindowController.SelfChangeWorldEnabled)
                     {
-                        UpdateName();
+                        MainWindowController.UpdateName();
                     }
                     else
                     {
-                        _nameService.ClearName();
+                        MainWindowController.ClearName();
                     }
                     Configuration.SelfChangeName = MainWindowController.SelfChangeNameEnabled;
                     Configuration.Save();
@@ -135,18 +133,37 @@ public class MainWindow : Window
                 ImGui.SetNextItemWidth(200);
                 if (ImGui.InputTextWithHint("##NomenclatureName", "Name", ref MainWindowController.ChangedName, 32, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    if (MainWindowController.SelfChangeNameEnabled)
+                    if (MainWindowController.SelfChangeNameEnabled )
                     {
-                        UpdateName();
+                        MainWindowController.UpdateName();
                     }
+                }
+                if (ImGui.Checkbox("##WorldEnabled", ref MainWindowController.SelfChangeWorldEnabled))
+                {
+                    if (MainWindowController.SelfChangeNameEnabled || MainWindowController.SelfChangeWorldEnabled)
+                    {
+                        MainWindowController.UpdateName();
+                    }
+                    else
+                    {
+                        MainWindowController.ClearName();
+                    }
+                    Configuration.SelfChangeWorld = MainWindowController.SelfChangeWorldEnabled;
+                    Configuration.Save();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.BeginTooltip();
+                    ImGui.TextUnformatted("Enables your world to be modified via Nomenclature when checked!");
+                    ImGui.EndTooltip();
                 }
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(120);
                 if(ImGui.InputTextWithHint("##NomenclatureWorld", "World", ref MainWindowController.ChangedWorld, 20, ImGuiInputTextFlags.EnterReturnsTrue))
                 {
-                    if (MainWindowController.SelfChangeNameEnabled)
+                    if (MainWindowController.SelfChangeWorldEnabled)
                     {
-                        UpdateName();
+                        MainWindowController.UpdateName();
                     }
                 }
 
@@ -242,10 +259,5 @@ public class MainWindow : Window
     private bool ValidateName(string name)
     {
         return name != null && name.Length > 0;
-    }
-
-    private void UpdateName()
-    {
-        _nameService.UpdateName(MainWindowController.ChangedName, MainWindowController.ChangedWorld);
     }
 }

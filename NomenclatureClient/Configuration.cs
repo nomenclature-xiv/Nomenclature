@@ -21,6 +21,7 @@ public class Configuration : IPluginConfiguration
     public string World {  get; set; } = string.Empty;
 
     public bool SelfChangeName = true;
+    public bool SelfChangeWorld = true;
 
     /// <summary>
     ///     Should the server attempt to connect automatically?

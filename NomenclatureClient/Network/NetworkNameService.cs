@@ -24,7 +24,7 @@ namespace NomenclatureClient.Network
             _config = config;
             _log = pluginLog;
         }
-        public async void UpdateName(string? name, string? world)
+        public async Task<bool> UpdateName(string? name, string? world)
         {
             try
             {
@@ -34,16 +34,12 @@ namespace NomenclatureClient.Network
                 };
 
                 var response = await _hubService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
-                if (response.Success is false)
-                    return;
-
-                _config.Name = name;
-                _config.World = world;
-                _config.Save();
+                return response.Success;
             }
             catch (Exception ex)
             {
                 _log.Debug(ex.ToString());
+                return false;
             }
         }
 
