@@ -63,11 +63,16 @@ public class IdentityService : IHostedService
         else if(payloads.Count is 3)
         {
             string sendername = ((TextPayload)payloads[1]).Text;
-            sendername = char.IsUpper(sendername[0]) ? sendername : sendername.Substring(1);
+            string icon = "";
+            if (!char.IsUpper(sendername[0]))
+            {
+                icon = sendername.Substring(0, 1);
+                sendername = sendername.Substring(1);
+            }
             Character senderchar = new Character(sendername, self.World);
             Payload player = payloads[0];
             Payload id = payloads[2];
-            ChangeName(ref payloads, senderchar, self);
+            ChangeName(ref payloads, senderchar, self, icon);
             payloads.Insert(0, player);
             payloads.Insert(2, id);
         }
@@ -75,11 +80,16 @@ public class IdentityService : IHostedService
         {
             //crossworld
             string sendername = ((TextPayload)payloads[1]).Text;
-            sendername = char.IsUpper(sendername[0]) ? sendername : sendername.Substring(1);
+            string icon = "";
+            if(!char.IsUpper(sendername[0]))
+            {
+                icon = sendername.Substring(0, 1);
+                sendername = sendername.Substring(1);
+            }
             Character senderchar = new Character(sendername, ((TextPayload)payloads[4]).Text);
             Payload player = payloads[0];
             Payload id = payloads[2];
-            ChangeName(ref payloads, senderchar, self);
+            ChangeName(ref payloads, senderchar, self, icon);
             payloads.Insert(0, player);
             payloads.Insert(2, id);
         }
@@ -106,16 +116,18 @@ public class IdentityService : IHostedService
 
             if (Identities.TryGetValue(character, out var identity))
             {
-                if(identity.Name == string.Empty)
+                if (identity.Name == string.Empty)
                     handler.Name = string.Empty;
                 else
+                {
                     handler.Name = $"\"{identity.Name}\"";
+                }
                 //«{identity.World}»
             }
         }
     }
 
-    private void ChangeName(ref List<Payload> payloads, Character character, Character self)
+    private void ChangeName(ref List<Payload> payloads, Character character, Character self, string icon = "")
     {
         if (Identities.ContainsKey(character))
         {
@@ -131,15 +143,16 @@ public class IdentityService : IHostedService
             }
             if (changedname.World != self.World)
             {
+                PluginLog.Debug($"{changedname.Name} {changedname.World}");
                 //modified world, show as crossworld!
-                payloads.Add(new TextPayload(changedname.Name));
+                payloads.Add(new TextPayload($"{icon}\"{changedname.Name}\""));
                 payloads.Add(cwpayload);
                 payloads.Add(new TextPayload(changedname.World));
             }
             else
             {
                 //same world, just modify name
-                payloads.Add(new TextPayload(changedname.Name));
+                payloads.Add(new TextPayload($"\"{changedname.Name}\""));
             }
         }
     }
