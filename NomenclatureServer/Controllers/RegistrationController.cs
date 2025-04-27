@@ -22,7 +22,7 @@ public class RegistrationController(DatabaseService database, RegistrationServic
     [HttpPost("validate")]
     public async Task<IActionResult> Validate([FromBody] ValidateCharacterRegistration request)
     {
-        var result = await registrationService.ValidateRegistrationAsync(request.ValidationCode);
-        return Ok(result);
+        var secret = await registrationService.ValidateRegistrationAsync(request.ValidationCode).ConfigureAwait(false);
+        return secret is null ? NotFound() : Ok(secret);
     }
 }
