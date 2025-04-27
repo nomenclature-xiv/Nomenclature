@@ -58,7 +58,7 @@ public class IdentityService : IHostedService
             //it's you!
             ChangeName(ref payloads, self, self);
         }
-        if(payloads.Count is 3)
+        else if(payloads.Count is 3)
         {
             Character senderchar = new Character(((TextPayload)payloads[1]).Text, self.World);
             Payload player = payloads[0];
@@ -67,7 +67,7 @@ public class IdentityService : IHostedService
             payloads.Add(player);
             payloads.Add(id);
         }
-        if(payloads.Count is 5)
+        else if(payloads.Count is 5)
         {
             //crossworld
             Character senderchar = new Character((((TextPayload)payloads[1]).Text), ((TextPayload)payloads[4]).Text);
