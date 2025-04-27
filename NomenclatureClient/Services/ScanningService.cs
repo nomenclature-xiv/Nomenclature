@@ -81,15 +81,11 @@ public class ScanningService : IHostedService
             
             var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
             IdentityService.Identities.Clear();
-            foreach(var name in response.Characters)
+            foreach(var name in response.Identities)
             {
-                foreach(var world in name.Value)
-                {
-                    Character modchar = new Character(name.Key, world.Key);
-                    if (Configuration.BlocklistCharacters.Contains(modchar))
-                        continue;
-                    IdentityService.Identities.Add(modchar, world.Value);
-                }
+                if (Configuration.BlocklistCharacters.Contains(name.Character))
+                    continue;
+                IdentityService.Identities.Add(name.Character, name.Nomenclature);
             }
         }
         catch (Exception e)

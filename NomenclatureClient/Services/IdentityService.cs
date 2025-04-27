@@ -115,6 +115,14 @@ public class IdentityService : IHostedService
         {
             var changedname = Identities[character];
             payloads.Clear();
+            if(changedname.Name is null)
+            {
+                changedname = new Nomenclature(character.Name, changedname.World);
+            }
+            if (changedname.World is null)
+            {
+                changedname = new Nomenclature(changedname.Name, character.World);
+            }
             if (changedname.World != self.World)
             {
                 //modified world, show as crossworld!
