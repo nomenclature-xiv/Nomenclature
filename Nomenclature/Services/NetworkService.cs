@@ -13,14 +13,12 @@ using Microsoft.Extensions.Hosting;
 using Nomenclature.Types.Exceptions;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api.Controller;
-using Nomenclature.Utils;
-using System.Xml.Linq;
 using System.Collections.Generic;
 
 namespace Nomenclature.Services;
 
 /// <summary>
-///     TODO
+///     Provides access to the Signal R hub connection
 /// </summary>
 public class NetworkService : IHostedService
 {
@@ -33,20 +31,20 @@ public class NetworkService : IHostedService
     private const string RegisterPostUrlValidate = "https://localhost:5006/registration/validate";
     
     /// <summary>
-    ///     TODO
+    ///     Signal R Hub Connection
     /// </summary>
     public readonly HubConnection Connection;
 
     private readonly CharacterService _characterService;
     private readonly Configuration _configuration;
-    private readonly IPluginLog PluginLog;
+    private readonly IPluginLog _pluginLog;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
     public NetworkService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
     {
-        PluginLog = pluginLog;
+        _pluginLog = pluginLog;
         _configuration = configuration;
         _characterService = characterService;
 
@@ -65,7 +63,7 @@ public class NetworkService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        PluginLog.Verbose("Starting server...");
+        _pluginLog.Verbose("Starting server...");
         await Connect().ConfigureAwait(false);
     }
 
@@ -73,20 +71,20 @@ public class NetworkService : IHostedService
     {
         if (Connection.State is not HubConnectionState.Connected)
         {
-            PluginLog.Verbose($"[NetworkService] Cannot invoke method {method} because connection is not connected]");
+            _pluginLog.Verbose($"[NetworkService] Cannot invoke method {method} because connection is not connected]");
             return Activator.CreateInstance<TU>();
         }
 
         try
         {
-            PluginLog.Verbose($"[NetworkService] Request: {request}");
+            _pluginLog.Verbose($"[NetworkService] Request: {request}");
             var response = await Connection.InvokeAsync<TU>(method, request);
-            PluginLog.Verbose($"[NetworkService] Response: {response}");
+            _pluginLog.Verbose($"[NetworkService] Response: {response}");
             return response;
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[NetworkService] Unexpected error while invoking function on the server, {e}");
+            _pluginLog.Warning($"[NetworkService] Unexpected error while invoking function on the server, {e}");
             return Activator.CreateInstance<TU>();
         }
     }
@@ -100,13 +98,17 @@ public class NetworkService : IHostedService
         {
             await Connection.StartAsync().ConfigureAwait(false);
         }
+        catch (NoSecretForLocalCharacterException)
+        {
+            _pluginLog.Warning("[NetworkService] You do not have a secret assigned to your local character, please register");
+        }
         catch (InvalidSecretException)
         {
-            PluginLog.Warning("[NetworkService] Your secret is invalid. Make sure your current character is registered");
+            _pluginLog.Warning("[NetworkService] Your secret is invalid. Make sure your current character is registered");
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[NetworkService] Unexpected error while connecting, {e}");
+            _pluginLog.Warning($"[NetworkService] Unexpected error while connecting, {e}");
         }
     }
 
@@ -121,7 +123,7 @@ public class NetworkService : IHostedService
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[NetworkService] Unexpected error while disconnecting, {e}");
+            _pluginLog.Warning($"[NetworkService] Unexpected error while disconnecting, {e}");
         }
     }
 
@@ -133,10 +135,12 @@ public class NetworkService : IHostedService
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
     {
-        var name = _characterService.CurrentCharacter;
-        if (name is null) return null;
-        var secret = GetSecret(name);
-        if (secret == null) return null;
+        if (_characterService.CurrentCharacter is not { } currentCharacter)
+            return null;
+        
+        if (GetCharacterSecret(currentCharacter) is not { } secret)
+            throw new NoSecretForLocalCharacterException();
+        
         var request = new GenerateTokenRequest { Secret = secret };
         var response = await PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
@@ -146,7 +150,7 @@ public class NetworkService : IHostedService
                 _ => new UnknownTokenException($"StatusCode was {response.StatusCode}")
             };
         
-        PluginLog.Verbose("[NetworkHelper] Successfully authenticated");
+        _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 
@@ -157,10 +161,7 @@ public class NetworkService : IHostedService
     {
         try
         {
-            var request = new BeginCharacterRegistrationRequest
-            {
-                Character = characterName
-            };
+            var request = new BeginCharacterRegistrationRequest { Character = characterName };
             var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
             return response.IsSuccessStatusCode 
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) 
@@ -168,27 +169,24 @@ public class NetworkService : IHostedService
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
+            _pluginLog.Warning($"[RegisterCharacterInitiate] {e}");
             return null;
         }
     }
 
-    public async Task<string?> RegisterCharacterValidate(Character characterName, string validationCode)
+    public async Task<string?> RegisterCharacterValidate(string validationCode)
     {
         try
         {
-            var request = new ValidateCharacterRegistration
-            {
-                ValidationCode = validationCode
-            };
-            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate);
+            var request = new ValidateCharacterRegistration { ValidationCode = validationCode };
+            var response = await PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate).ConfigureAwait(false);
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
         }
         catch (Exception e)
         {
-            PluginLog.Warning($"[RegisterCharacterInitiate] {e}");
+            _pluginLog.Warning($"[RegisterCharacterInitiate] {e}");
             return null;
         }
     }
@@ -203,15 +201,11 @@ public class NetworkService : IHostedService
         return await client.PostAsync(url, payload).ConfigureAwait(false);
     }
 
-    private string? GetSecret(Character character)
+    private string? GetCharacterSecret(Character character)
     {
-        _configuration.LocalCharacters.TryGetValue(character.Name, out Dictionary<string, string>? worldsecret);
-        if(worldsecret is null)
-        {
-            return null;
-        }
-        worldsecret.TryGetValue(character.World, out string? secret);
-        return secret;
+        return _configuration.LocalCharacters.TryGetValue(character.Name, out var worlds) 
+            ? worlds.GetValueOrDefault(character.World) 
+            : null;
     }
     
     public async Task StopAsync(CancellationToken cancellationToken)

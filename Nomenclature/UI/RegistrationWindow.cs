@@ -115,7 +115,7 @@ namespace Nomenclature.UI
             {
                 var name = _characterService.CurrentCharacter;
                 if (name is null) return;
-                var result = await _networkService.RegisterCharacterValidate(name, _registrationKey);
+                var result = await _networkService.RegisterCharacterValidate(_registrationKey);
                 if(result is not null)
                 {
                     registrationError = false;
