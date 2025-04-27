@@ -24,13 +24,13 @@ namespace NomenclatureClient.Network
             _config = config;
             _log = pluginLog;
         }
-        public async void UpdateName(string name, string world)
+        public async void UpdateName(string? name, string? world)
         {
             try
             {
                 var request = new SetNameRequest
                 {
-                    Nomenclature = new Character(name, world)
+                    Nomenclature = new Nomenclature(name, world)
                 };
 
                 var response = await _hubService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
