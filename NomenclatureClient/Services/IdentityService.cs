@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.Input;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Utils;
 using NomenclatureCommon.Domain;
@@ -60,22 +62,26 @@ public class IdentityService : IHostedService
         }
         else if(payloads.Count is 3)
         {
-            Character senderchar = new Character(((TextPayload)payloads[1]).Text, self.World);
+            string sendername = ((TextPayload)payloads[1]).Text;
+            sendername = char.IsUpper(sendername[0]) ? sendername : sendername.Substring(1);
+            Character senderchar = new Character(sendername, self.World);
             Payload player = payloads[0];
             Payload id = payloads[2];
             ChangeName(ref payloads, senderchar, self);
-            payloads.Add(player);
-            payloads.Add(id);
+            payloads.Insert(0, player);
+            payloads.Insert(2, id);
         }
         else if(payloads.Count is 5)
         {
             //crossworld
-            Character senderchar = new Character((((TextPayload)payloads[1]).Text), ((TextPayload)payloads[4]).Text);
+            string sendername = ((TextPayload)payloads[1]).Text;
+            sendername = char.IsUpper(sendername[0]) ? sendername : sendername.Substring(1);
+            Character senderchar = new Character(sendername, ((TextPayload)payloads[4]).Text);
             Payload player = payloads[0];
             Payload id = payloads[2];
             ChangeName(ref payloads, senderchar, self);
-            payloads.Add(player);
-            payloads.Add(id);
+            payloads.Insert(0, player);
+            payloads.Insert(2, id);
         }
     }
 
