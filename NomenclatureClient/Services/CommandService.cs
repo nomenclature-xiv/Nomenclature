@@ -2,6 +2,7 @@
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient;
+using NomenclatureClient.Network;
 using NomenclatureClient.UI;
 using System.Diagnostics;
 using System.Linq;
@@ -17,11 +18,13 @@ namespace NomenclatureClient.Services
         private readonly IPluginLog _pluginLog;
         public MainWindow MainWindow { get; }
         private readonly Configuration _configuration;
+        private readonly NetworkNameService _nameService;
 
-        public CommandService(ICommandManager commandManager, IPluginLog pluginLog, MainWindow mainWindow, Configuration configuration)
+        public CommandService(ICommandManager commandManager, IPluginLog pluginLog, MainWindow mainWindow, Configuration configuration, NetworkNameService nameService)
         {
             CommandManager = commandManager;
             MainWindow = mainWindow;
+            _nameService = nameService;
             _configuration = configuration;
             _pluginLog = pluginLog;
         }
@@ -47,14 +50,15 @@ namespace NomenclatureClient.Services
             {
                 if (argv[1] == "name")
                 {
-
+                    _nameService.UpdateName(argv[2], null);
                 }
                 if (argv[2] == "world")
                 {
-
+                    _nameService.UpdateName(null, argv[2]);
                 }
             }
-            _pluginLog.Debug("Malformed chat command.");
+            else
+                _pluginLog.Debug("Malformed chat command.");
 
         }
 
