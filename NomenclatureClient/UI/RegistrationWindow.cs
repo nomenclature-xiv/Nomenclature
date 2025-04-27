@@ -74,7 +74,7 @@ namespace NomenclatureClient.UI
         private async void Validate()
         {
             bool res = await _controller.ValidateRegister();
-            if(res)
+            if(!res)
             {
                 this.Toggle();
             }
