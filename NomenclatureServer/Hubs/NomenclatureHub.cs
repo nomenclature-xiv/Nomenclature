@@ -25,7 +25,19 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
     public Response SetName(SetNameRequest request)
     {
         logger.LogInformation("{Request}", request);
-        nomenclatureService.Nomenclatures[GetCharacterFromClaims()] = request.Nomenclature;
+        var character = GetCharacterFromClaims();
+        if (nomenclatureService.Nomenclatures.TryGetValue(character, out var existingNomenclature))
+        {
+            var name = request.Nomenclature.Name ?? existingNomenclature.Name;
+            var world = request.Nomenclature.World ?? existingNomenclature.World;
+            var nomenclature = new Nomenclature(name, world);
+            nomenclatureService.Nomenclatures[character] = nomenclature;
+        }
+        else
+        {
+            nomenclatureService.Nomenclatures[character] = request.Nomenclature;
+        }
+
         return new Response { Success = true };
     }
 
@@ -33,19 +45,14 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
     public QueryChangedNamesResponse QueryChangedNames(QueryChangedNamesRequest request)
     {
         logger.LogInformation("{Request}", request);
-        var results = new Dictionary<Character, Character>();
+
+        var results = new List<CharacterIdentity>();
         var characters = request.Characters.AsSpan();
-        var charmap = new Dictionary<string, Dictionary<string, Character>>();
         foreach (var character in characters)
             if (nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature))
-            {
-                Dictionary<string, Character>? worldmap = charmap.GetValueOrDefault(character.Name);
-                worldmap ??= new Dictionary<string, Character>();
-                worldmap[character.World] = nomenclature;
-                charmap[character.Name] = worldmap;
-            }
-        return new QueryChangedNamesResponse() { Characters = charmap, Success = true };
+                results.Add(new CharacterIdentity(character, nomenclature));
 
+        return new QueryChangedNamesResponse { Success = true, Identities = results };
     }
     
     private Character GetCharacterFromClaims()
