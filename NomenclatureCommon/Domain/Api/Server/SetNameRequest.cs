@@ -1,5 +1,4 @@
 using MessagePack;
-using NomenclatureCommon.Domain.Api.Types;
 
 namespace NomenclatureCommon.Domain.Api.Server;
 
