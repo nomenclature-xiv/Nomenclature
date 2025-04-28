@@ -43,17 +43,18 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
 
             // Update the identifier and nomenclature
             nomenclatureService.Nomenclatures[identifier] = nomenclature;
+            logger.LogInformation($"1 {identifier} {nomenclature.Name}");
 
             // Notify everyone in the group that this nomenclature has been updated
-            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, nomenclature);
+            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, nomenclature);
         }
         else
         {
             // Update the identifier and nomenclature
             nomenclatureService.Nomenclatures[identifier] = request.Nomenclature;
-
+            logger.LogInformation($"2 {identifier} {request.Nomenclature.Name}");
             // Notify everyone in the group that this nomenclature has been updated
-            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, request.Nomenclature);
+            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, request.Nomenclature);
         }
 
         // Return success
@@ -74,7 +75,7 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
 
         // Notify everyone in the group that this nomenclature has been removed
         Clients.Group(identifier)
-            .SendAsync(ApiMethods.RemoveNomenclatureEvent, new RemoveNomenclatureEventRequest(identifier));
+            .SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
 
         // Return success
         return new Response { Success = true };
