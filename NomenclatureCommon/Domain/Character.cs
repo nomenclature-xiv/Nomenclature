@@ -8,4 +8,8 @@ public record Character(
     [property: Key(1)] string World) : IEquatable<Character>
 {
     public override int GetHashCode() => HashCode.Combine(Name, World);
+    public override string ToString()
+    {
+        return $"{Name}@{World}";
+    }
 }

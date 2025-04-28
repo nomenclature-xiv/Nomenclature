@@ -13,6 +13,7 @@ using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 
 namespace NomenclatureClient.Services;
@@ -34,6 +35,7 @@ public class ScanningService : IHostedService
     
     // Instantiated
     private readonly System.Timers.Timer _scanningTimer;
+    private List<Character> _characterList;
 
     /// <summary>
     ///     <inheritdoc cref="ScanningService"/>
@@ -49,6 +51,7 @@ public class ScanningService : IHostedService
         Configuration = configuration;
 
         _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
+        _characterList = new List<Character>();
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -74,19 +77,20 @@ public class ScanningService : IHostedService
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
 
-            var request = new QueryChangedNamesRequest
+            Character[] posdiff = localNames.Except(_characterList).ToArray();
+            Character[] negdiff = _characterList.Except(localNames).ToArray();
+            QueryChangedNamesRequest request = new()
             {
-                Characters = localNames.ToArray()
+                Add = posdiff,
+                Remove = negdiff
             };
             
-            var response = await NetworkService.InvokeAsync<QueryChangedNamesRequest, QueryChangedNamesResponse>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
-            IdentityService.Identities.Clear();
-            foreach(var name in response.Identities)
+            Response res = await NetworkService.InvokeAsync<QueryChangedNamesRequest, Response>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
+            if(res.Success)
             {
-                if (Configuration.BlocklistCharacters.Contains(name.Character))
-                    continue;
-                IdentityService.Identities.Add(name.Character, name.Nomenclature);
+                _characterList = localNames;
             }
+           
         }
         catch (Exception e)
         {

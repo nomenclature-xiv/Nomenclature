@@ -17,7 +17,9 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
     public Response ClearName(ClearNameRequest request)
     {
         logger.LogInformation("{Request}", request);
-        nomenclatureService.Nomenclatures.Remove(GetCharacterFromClaims());
+        Character self = GetCharacterFromClaims();
+        nomenclatureService.Nomenclatures.Remove(self);
+        Clients.Group(self.ToString()).SendAsync(ApiMethods.RemoveNomenclature, self);
         return new Response { Success = true };
     }
 
@@ -26,33 +28,45 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
     {
         logger.LogInformation("{Request}", request);
         var character = GetCharacterFromClaims();
+        Nomenclature nomenclature;
         if (nomenclatureService.Nomenclatures.TryGetValue(character, out var existingNomenclature))
         {
             var name = request.Nomenclature.Name ?? existingNomenclature.Name;
             var world = request.Nomenclature.World ?? existingNomenclature.World;
-            var nomenclature = new Nomenclature(name, world);
+            nomenclature = new Nomenclature(name, world);
             nomenclatureService.Nomenclatures[character] = nomenclature;
         }
         else
         {
             nomenclatureService.Nomenclatures[character] = request.Nomenclature;
+            nomenclature = request.Nomenclature;
         }
+        Clients.Group(character.ToString()).SendAsync(ApiMethods.UpdateNomenclature, character, nomenclature);
 
         return new Response { Success = true };
     }
 
     [HubMethodName(ApiMethods.QueryChangedNames)]
-    public QueryChangedNamesResponse QueryChangedNames(QueryChangedNamesRequest request)
+    public Response QueryChangedNames(QueryChangedNamesRequest request)
     {
         logger.LogInformation("{Request}", request);
 
-        var results = new List<CharacterIdentity>();
-        var characters = request.Characters.AsSpan();
-        foreach (var character in characters)
-            if (nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature))
-                results.Add(new CharacterIdentity(character, nomenclature));
-
-        return new QueryChangedNamesResponse { Success = true, Identities = results };
+        var toremove = request.Remove.AsSpan();
+        foreach (var character in toremove)
+        {
+            Groups.RemoveFromGroupAsync(Context.ConnectionId, character.ToString());
+            Clients.Client(Context.ConnectionId).SendAsync(ApiMethods.RemoveNomenclature, character.ToString());
+        }
+        var toadd = request.Add.AsSpan();
+        foreach (var character in toadd)
+        {
+            Groups.AddToGroupAsync(Context.ConnectionId, character.ToString());
+            nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature);
+            if(nomenclature is not null)
+                Clients.Group(character.ToString()).SendAsync(ApiMethods.UpdateNomenclature, character, nomenclature);
+        }
+        
+        return new Response { Success = true };
     }
     
     private Character GetCharacterFromClaims()

@@ -15,6 +15,8 @@ using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api.Controller;
 using System.Collections.Generic;
 using NomenclatureClient.Services;
+using ImGuiScene;
+using NomenclatureCommon.Domain.Api;
 
 namespace NomenclatureClient.Network;
 
@@ -36,16 +38,18 @@ public class NetworkHubService : IHostedService
 
     private readonly CharacterService _characterService;
     private readonly Configuration _configuration;
+    private readonly IdentityService _identityService;
     private readonly IPluginLog _pluginLog;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkHubService"/>
     /// </summary>
-    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
+    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService, IdentityService identityService)
     {
         _pluginLog = pluginLog;
         _configuration = configuration;
         _characterService = characterService;
+        _identityService = identityService;
 
         Connection = new HubConnectionBuilder()
             .WithUrl(HubUrl, options =>
@@ -58,6 +62,7 @@ public class NetworkHubService : IHostedService
                 options.SerializerOptions = MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
             })
             .Build();
+        AddClientMethods();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -151,6 +156,18 @@ public class NetworkHubService : IHostedService
         
         _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+    }
+
+    private void AddClientMethods()
+    {
+        Connection.On<Character, Nomenclature>(ApiMethods.UpdateNomenclature, (character, nomenclature) =>
+        {
+            _identityService.Identities[character] = nomenclature;
+        });
+        Connection.On<Character>(ApiMethods.RemoveNomenclature, (character) =>
+        {
+            _identityService.Identities.Remove(character);
+        });
     }
 
     private string? GetCharacterSecret(Character character)
