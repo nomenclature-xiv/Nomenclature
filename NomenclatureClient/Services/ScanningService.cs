@@ -79,6 +79,10 @@ public class ScanningService : IHostedService
 
             Character[] posdiff = localNames.Except(_characterList).ToArray();
             Character[] negdiff = _characterList.Except(localNames).ToArray();
+            if (posdiff.Length == 0 && negdiff.Length == 0)
+            {
+                return;
+            }
             QueryChangedNamesRequest request = new()
             {
                 Add = posdiff,
