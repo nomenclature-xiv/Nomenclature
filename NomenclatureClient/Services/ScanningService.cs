@@ -77,22 +77,34 @@ public class ScanningService : IHostedService
             stop.Stop();
             //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
 
-            Character[] posdiff = localNames.Except(_characterList).ToArray();
-            Character[] negdiff = _characterList.Except(localNames).ToArray();
-            if (posdiff.Length == 0 && negdiff.Length == 0)
+            List<string> posdiff = (from character in localNames.Except(_characterList) select character.ToString()).ToList();
+            List<Character> negchars = _characterList.Except(localNames).ToList();
+            List<string> negdiff = (from character in negchars select character.ToString()).ToList();
+            if (posdiff.Count == 0 && negdiff.Count == 0)
             {
                 return;
             }
-            QueryChangedNamesRequest request = new()
+            SyncNomenclatureUpdateSubscriptionsRequest request = new()
             {
-                Add = posdiff,
-                Remove = negdiff
+                namesToSubscribeTo = posdiff,
+                namesToUnsubscribeTo = negdiff
             };
+            foreach(Character character in negchars)
+            {
+                if(IdentityService.Identities.TryGetValue(character, out var nomenclature))
+                {
+                    IdentityService.Identities.Remove(character);
+                }
+            }
             
-            Response res = await NetworkService.InvokeAsync<QueryChangedNamesRequest, Response>(ApiMethods.QueryChangedNames, request); //response.ModifiedNames;
+            var res = await NetworkService.InvokeAsync<SyncNomenclatureUpdateSubscriptionsRequest, SyncNomenclatureUpdateSubscriptionsResponse>(ApiMethods.SyncNomenclatureUpdateSubscriptions, request); //response.ModifiedNames;
             if(res.Success)
             {
                 _characterList = localNames;
+                foreach(var identity in res.newlySubscribedNomenclatures)
+                {
+                    IdentityService.Identities[Character.FromString(identity.Key)] = identity.Value;
+                }
             }
            
         }
