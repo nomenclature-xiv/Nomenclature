@@ -166,7 +166,8 @@ public class NetworkHubService : IHostedService
         });
         Connection.On<Character>(ApiMethods.RemoveNomenclature, (character) =>
         {
-            _identityService.Identities.Remove(character);
+            if(_identityService.Identities.ContainsKey(character))
+                _identityService.Identities.Remove(character);
         });
     }
 
