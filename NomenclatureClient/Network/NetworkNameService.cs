@@ -47,8 +47,8 @@ namespace NomenclatureClient.Network
         {
             try
             {
-                var request = new ResetNomenclatureRequest();
-                var response = await _hubService.InvokeAsync<ResetNomenclatureRequest, Response>(ApiMethods.ResetNomenclature, request);
+                var request = new RemoveNomenclatureRequest();
+                var response = await _hubService.InvokeAsync<RemoveNomenclatureRequest, Response>(ApiMethods.RemoveNomenclature, request);
                 if (response.Success is false) _log.Debug("Could not clear name for some reason!");
 
             }

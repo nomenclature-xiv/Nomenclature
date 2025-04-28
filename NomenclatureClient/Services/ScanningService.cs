@@ -86,8 +86,8 @@ public class ScanningService : IHostedService
             }
             SyncNomenclatureUpdateSubscriptionsRequest request = new()
             {
-                namesToSubscribeTo = posdiff,
-                namesToUnsubscribeTo = negdiff
+                CharacterIdentitiesToSubscribeTo = posdiff,
+                CharacterIdentitiesToUnsubscribeFrom = negdiff
             };
             foreach(Character character in negchars)
             {
@@ -101,7 +101,7 @@ public class ScanningService : IHostedService
             if(res.Success)
             {
                 _characterList = localNames;
-                foreach(var identity in res.newlySubscribedNomenclatures)
+                foreach(var identity in res.NewlySubscribedNomenclatures)
                 {
                     IdentityService.Identities[Character.FromString(identity.Key)] = identity.Value;
                 }

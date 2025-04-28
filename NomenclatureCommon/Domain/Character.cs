@@ -12,4 +12,9 @@ public record Character(
     {
         return $"{Name}@{World}";
     }
+    public static Character FromString(string character)
+    {
+        var charworld = character.Split("@");
+        return new Character(charworld[0], charworld[1]);
+    }
 }
