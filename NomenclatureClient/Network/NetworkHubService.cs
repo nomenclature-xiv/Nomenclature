@@ -160,11 +160,11 @@ public class NetworkHubService : IHostedService
 
     private void AddClientMethods()
     {
-        Connection.On<Character, Nomenclature>(ApiMethods.UpdateNomenclature, (character, nomenclature) =>
+        Connection.On<Character, Nomenclature>(ApiMethods.UpdateNomenclatureEvent, (character, nomenclature) =>
         {
             _identityService.Identities[character] = nomenclature;
         });
-        Connection.On<Character>(ApiMethods.RemoveNomenclature, (character) =>
+        Connection.On<Character>(ApiMethods.RemoveNomenclatureEvent, (character) =>
         {
             if(_identityService.Identities.ContainsKey(character))
                 _identityService.Identities.Remove(character);

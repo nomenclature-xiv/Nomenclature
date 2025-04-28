@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -5,74 +6,115 @@ using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
+using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 
 namespace NomenclatureServer.Hubs;
 
+// ReSharper disable once ForCanBeConvertedToForeach
+
 [Authorize]
 public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<NomenclatureHub> logger) : Hub
 {
-    [HubMethodName(ApiMethods.ClearName)]
-    public Response ClearName(ClearNameRequest request)
-    {
-        logger.LogInformation("{Request}", request);
-        Character self = GetCharacterFromClaims();
-        nomenclatureService.Nomenclatures.Remove(self);
-        Clients.Group(self.ToString()).SendAsync(ApiMethods.RemoveNomenclature, self);
-        return new Response { Success = true };
-    }
+    /// <summary>
+    ///     Gets a character identifier from the claims provided by the sender
+    /// </summary>
+    private string CharacterIdentifier => Context.User?.FindFirst(AuthClaimType.CharacterIdentifier)?.Value ??
+                                          throw new MissingExpectedClaimException(
+                                              "CharacterIdentifier is not present in claims");
 
-    [HubMethodName(ApiMethods.SetName)]
-    public Response SetName(SetNameRequest request)
+    [HubMethodName(ApiMethods.PublishNomenclature)]
+    public Response PublishNomenclature(PublishNomenclatureRequest request)
     {
+        // TODO: Remove after testing
         logger.LogInformation("{Request}", request);
-        var character = GetCharacterFromClaims();
-        Nomenclature nomenclature;
-        if (nomenclatureService.Nomenclatures.TryGetValue(character, out var existingNomenclature))
+
+        // Get identifier from claims
+        var identifier = CharacterIdentifier;
+
+        // Check if the nomenclature already exists
+        if (nomenclatureService.Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
         {
+            // If it does, construct a new nomenclature, only updating values that are non-null
             var name = request.Nomenclature.Name ?? existingNomenclature.Name;
             var world = request.Nomenclature.World ?? existingNomenclature.World;
-            nomenclature = new Nomenclature(name, world);
-            nomenclatureService.Nomenclatures[character] = nomenclature;
+            var nomenclature = new Nomenclature(name, world);
+
+            // Update the identifier and nomenclature
+            nomenclatureService.Nomenclatures[identifier] = nomenclature;
+
+            // Notify everyone in the group that this nomenclature has been updated
+            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, nomenclature);
         }
         else
         {
-            nomenclatureService.Nomenclatures[character] = request.Nomenclature;
-            nomenclature = request.Nomenclature;
-        }
-        Clients.Group(character.ToString()).SendAsync(ApiMethods.UpdateNomenclature, character, nomenclature);
+            // Update the identifier and nomenclature
+            nomenclatureService.Nomenclatures[identifier] = request.Nomenclature;
 
+            // Notify everyone in the group that this nomenclature has been updated
+            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, request.Nomenclature);
+        }
+
+        // Return success
         return new Response { Success = true };
     }
 
-    [HubMethodName(ApiMethods.QueryChangedNames)]
-    public Response QueryChangedNames(QueryChangedNamesRequest request)
+    [HubMethodName(ApiMethods.RemoveNomenclature)]
+    public Response RemoveNomenclature(RemoveNomenclatureRequest request)
     {
+        // TODO: Remove after testing
         logger.LogInformation("{Request}", request);
 
-        var toremove = request.Remove.AsSpan();
-        foreach (var character in toremove)
-        {
-            Groups.RemoveFromGroupAsync(Context.ConnectionId, character.ToString());
-            Clients.Client(Context.ConnectionId).SendAsync(ApiMethods.RemoveNomenclature, character.ToString());
-        }
-        var toadd = request.Add.AsSpan();
-        foreach (var character in toadd)
-        {
-            Groups.AddToGroupAsync(Context.ConnectionId, character.ToString());
-            nomenclatureService.Nomenclatures.TryGetValue(character, out var nomenclature);
-            if(nomenclature is not null)
-                Clients.Group(character.ToString()).SendAsync(ApiMethods.UpdateNomenclature, character, nomenclature);
-        }
-        
+        // Get identifier from claims
+        var identifier = CharacterIdentifier;
+
+        // Remove the identifier from our list of nomenclatures
+        nomenclatureService.Nomenclatures.Remove(identifier);
+
+        // Notify everyone in the group that this nomenclature has been removed
+        Clients.Group(identifier)
+            .SendAsync(ApiMethods.RemoveNomenclatureEvent, new RemoveNomenclatureEventRequest(identifier));
+
+        // Return success
         return new Response { Success = true };
     }
-    
-    private Character GetCharacterFromClaims()
+
+    [HubMethodName(ApiMethods.SyncNomenclatureUpdateSubscriptions)]
+    public SyncNomenclatureUpdateSubscriptionsResponse SyncNomenclatureUpdateSubscriptions(SyncNomenclatureUpdateSubscriptionsRequest request)
     {
-        var name = Context.User?.FindFirst(AuthClaimType.CharacterName)?.Value ?? throw new Exception("CharacterName is not present in claims");
-        var world = Context.User?.FindFirst(AuthClaimType.WorldName)?.Value ?? throw new Exception("WorldName is not present in claims");
-        return new Character(name, world);
+        // TODO: Remove after testing
+        logger.LogInformation("{Request}", request);
+
+        // Process all the subscriptions to remove
+        var unsubscriptions = CollectionsMarshal.AsSpan(request.CharacterIdentitiesToUnsubscribeFrom);
+        
+        for (var i = 0; i < unsubscriptions.Length; i++)
+            Groups.RemoveFromGroupAsync(Context.ConnectionId, unsubscriptions[i]);
+        
+        // TODO: Check the number of subscriptions this client has and prevent them subscribing to more than 128
+
+        // Create a dictionary map to get all the new identities subscribed to immediately
+        var identities = new Dictionary<string, Nomenclature>();
+        
+        // Process all the subscriptions to add
+        var subscriptions = CollectionsMarshal.AsSpan(request.CharacterIdentitiesToSubscribeTo);
+        for (var i = 0; i < subscriptions.Length; i++)
+        {
+            // Add the caller to the group
+            ref var identity = ref subscriptions[i];
+            Groups.AddToGroupAsync(Context.ConnectionId, identity);
+            
+            // Check if there is a nomenclature, and if there is, add it to the return dictionary
+            if (nomenclatureService.Nomenclatures.TryGetValue(identity, out var nomenclature))
+                identities.Add(identity, nomenclature);
+        }
+
+        // Return result with newly subscribed to identities
+        return new SyncNomenclatureUpdateSubscriptionsResponse
+        {
+            Success = true,
+            NewlySubscribedNomenclatures = identities
+        };
     }
 }

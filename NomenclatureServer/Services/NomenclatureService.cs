@@ -4,5 +4,5 @@ namespace NomenclatureServer.Services;
 
 public class NomenclatureService
 {
-    public readonly Dictionary<Character, Nomenclature> Nomenclatures = new();
+    public readonly Dictionary<string, Nomenclature> Nomenclatures = new();
 }

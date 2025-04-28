@@ -2,6 +2,8 @@ namespace NomenclatureServer.Domain;
 
 public static class AuthClaimType
 {
-    public const string CharacterName = "CharacterName";
-    public const string WorldName = "WorldName";
+    /// <summary>
+    ///     A string identifying a character formatted as [Character]@[World]
+    /// </summary>
+    public const string CharacterIdentifier = "CharacterIdentifier";
 }

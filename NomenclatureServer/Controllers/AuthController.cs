@@ -23,15 +23,9 @@ public class AuthController(Configuration config, DatabaseService db) : Controll
             return Unauthorized("There are no registered characters with this secret.");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SigningKey));
-        var claims = new List<Claim>
-        {
-            new(AuthClaimType.CharacterName, registeredCharacter.Name),
-            new(AuthClaimType.WorldName, registeredCharacter.World)
-        };
-        
         var descriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(claims),
+            Subject = new ClaimsIdentity([new Claim(AuthClaimType.CharacterIdentifier, registeredCharacter)]),
             SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
             Expires = DateTime.UtcNow.AddHours(4)
         };

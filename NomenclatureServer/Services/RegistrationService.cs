@@ -42,7 +42,7 @@ public class RegistrationService(DatabaseService database, LodestoneService lode
         _pendingRegistrations.Remove(validationCode);
         
         var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        if (await database.AddCharacter(secret, new Character(character.CharacterName, character.WorldName)))
+        if (await database.RegisterCharacter(secret, character.CharacterName, character.WorldName))
             return secret;
         
         return null;

@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using NomenclatureCommon.Domain;
 
 namespace NomenclatureServer.Services;
 
@@ -12,8 +11,7 @@ public class DatabaseService
     // Const
     private const string RegisteredCharactersTable = "RegisteredCharacters";
     private const string SecretParam = "@Secret";
-    private const string CharacterNameParam = "@CharacterName";
-    private const string WorldNameParam = "@WorldName";
+    private const string CharacterIdentifierParam = "@CharacterIdentifier";
 
     // Injected
     private readonly ILogger<DatabaseService> _logger;
@@ -49,16 +47,16 @@ public class DatabaseService
     /// <summary>
     ///     Registers a character in the database by secret
     /// </summary>
-    public async Task<bool> AddCharacter(string secret, Character character)
+    public async Task<bool> RegisterCharacter(string secret, string name, string world)
     {
+        var identifier = string.Concat(name, "@", world);
         await using var command = _db.CreateCommand();
         command.CommandText = $"""
-                                    INSERT INTO {RegisteredCharactersTable} (Secret, CharacterName, WorldName)
-                                    VALUES ({SecretParam}, {CharacterNameParam}, {WorldNameParam})
+                                    INSERT INTO {RegisteredCharactersTable} (Secret, CharacterIdentifier)
+                                    VALUES ({SecretParam}, {CharacterIdentifierParam})
                               """;
         command.Parameters.AddWithValue(SecretParam, secret);
-        command.Parameters.AddWithValue(CharacterNameParam, character.Name);
-        command.Parameters.AddWithValue(WorldNameParam, character.World);
+        command.Parameters.AddWithValue(CharacterIdentifierParam, identifier);
         
         try
         {
@@ -66,7 +64,7 @@ public class DatabaseService
         }
         catch (Exception e)
         {
-            _logger.LogError("Failed to add character {Character} for secret {Secret}, {Exception}", secret, character, e);
+            _logger.LogError("Failed to add character {CharacterIdentifier} for secret {Secret}, {Exception}", identifier, secret,  e);
             return false;
         }
     }
@@ -74,7 +72,8 @@ public class DatabaseService
     /// <summary>
     ///     Retrieves a registered character from the database by secret
     /// </summary>
-    public async Task<Character?> GetRegisteredCharacter(string secret)
+    /// <returns>A character identifier of the format [CharacterName]@[World] or null</returns>
+    public async Task<string?> GetRegisteredCharacter(string secret)
     {
         await using var command = _db.CreateCommand();
         command.CommandText = $"SELECT * FROM {RegisteredCharactersTable} WHERE Secret = {SecretParam}";
@@ -83,12 +82,7 @@ public class DatabaseService
         try
         {
             await using var reader = await command.ExecuteReaderAsync();
-            if (await reader.ReadAsync() is false)
-                return null;
-            
-            var name = reader.GetString(1);
-            var world = reader.GetString(2);
-            return new Character(name, world);
+            return await reader.ReadAsync() ? reader.GetString(1) : null;
         }
         catch (Exception e)
         {
@@ -107,8 +101,7 @@ public class DatabaseService
             $"""
                  CREATE TABLE IF NOT EXISTS {RegisteredCharactersTable} (
                      Secret TEXT PRIMARY KEY,
-                     CharacterName TEXT NOT NULL,
-                     WorldName TEXT NOT NULL
+                     CharacterIdentifier TEXT NOT NULL UNIQUE
                  )
              """;
 

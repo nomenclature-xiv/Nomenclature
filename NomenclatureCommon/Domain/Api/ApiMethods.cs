@@ -2,9 +2,12 @@ namespace NomenclatureCommon.Domain.Api;
 
 public static class ApiMethods
 {
-    public const string ResetNomenclature = "ResetNomenclature";
+    // Client -> Server
     public const string PublishNomenclature = "PublishNomenclature";
-    public const string SyncNomenclatureUpdateSubscriptions = "SyncNomenclatureUpdateSubscriptions";
-    public const string UpdateNomenclature = "UpdateNomenclature";
     public const string RemoveNomenclature = "RemoveNomenclature";
+    public const string SyncNomenclatureUpdateSubscriptions = "SyncNomenclatureUpdateSubscriptions";
+    
+    // Server -> Client
+    public const string RemoveNomenclatureEvent = "RemoveNomenclatureEvent";
+    public const string UpdateNomenclatureEvent = "UpdateNomenclatureEvent";
 }
