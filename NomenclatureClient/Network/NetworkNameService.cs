@@ -28,12 +28,12 @@ namespace NomenclatureClient.Network
         {
             try
             {
-                var request = new SetNameRequest
+                var request = new PublishNomenclatureRequest
                 {
                     Nomenclature = new Nomenclature(name, world)
                 };
 
-                var response = await _hubService.InvokeAsync<SetNameRequest, Response>(ApiMethods.SetName, request);
+                var response = await _hubService.InvokeAsync<PublishNomenclatureRequest, Response>(ApiMethods.PublishNomenclature, request);
                 return response.Success;
             }
             catch (Exception ex)
@@ -47,8 +47,8 @@ namespace NomenclatureClient.Network
         {
             try
             {
-                var request = new ClearNameRequest();
-                var response = await _hubService.InvokeAsync<ClearNameRequest, Response>(ApiMethods.ClearName, request);
+                var request = new ResetNomenclatureRequest();
+                var response = await _hubService.InvokeAsync<ResetNomenclatureRequest, Response>(ApiMethods.ResetNomenclature, request);
                 if (response.Success is false) _log.Debug("Could not clear name for some reason!");
 
             }
