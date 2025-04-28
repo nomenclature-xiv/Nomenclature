@@ -116,6 +116,10 @@ public class IdentityService : IHostedService
 
             if (Identities.TryGetValue(character, out var identity))
             {
+                if(identity.Name is null)
+                {
+                    continue;
+                }
                 if (identity.Name == string.Empty)
                     handler.Name = string.Empty;
                 else
