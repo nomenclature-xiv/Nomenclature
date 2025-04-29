@@ -8,15 +8,19 @@ using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
-using NomenclatureServer.Services;
 
 namespace NomenclatureServer.Hubs;
 
 // ReSharper disable once ForCanBeConvertedToForeach
 
 [Authorize]
-public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<NomenclatureHub> logger) : Hub
+public class NomenclatureHub(ILogger<NomenclatureHub> logger) : Hub
 {
+    /// <summary>
+    ///     List of currently applied nomenclatures
+    /// </summary>
+    private static readonly Dictionary<string, Nomenclature> Nomenclatures = new();
+    
     /// <summary>
     ///     Gets a character identifier from the claims provided by the sender
     /// </summary>
@@ -34,7 +38,7 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
         var identifier = CharacterIdentifier;
 
         // Check if the nomenclature already exists
-        if (nomenclatureService.Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
+        if (Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
         {
             // If it does, construct a new nomenclature, only updating values that are non-null
             var name = request.Nomenclature.Name ?? existingNomenclature.Name;
@@ -42,8 +46,7 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
             var nomenclature = new Nomenclature(name, world);
 
             // Update the identifier and nomenclature
-            nomenclatureService.Nomenclatures[identifier] = nomenclature;
-            logger.LogInformation($"1 {identifier} {nomenclature.Name}");
+            Nomenclatures[identifier] = nomenclature;
 
             // Notify everyone in the group that this nomenclature has been updated
             Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, nomenclature);
@@ -51,8 +54,8 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
         else
         {
             // Update the identifier and nomenclature
-            nomenclatureService.Nomenclatures[identifier] = request.Nomenclature;
-            logger.LogInformation($"2 {identifier} {request.Nomenclature.Name}");
+            Nomenclatures[identifier] = request.Nomenclature;
+
             // Notify everyone in the group that this nomenclature has been updated
             Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, request.Nomenclature);
         }
@@ -71,11 +74,10 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
         var identifier = CharacterIdentifier;
 
         // Remove the identifier from our list of nomenclatures
-        nomenclatureService.Nomenclatures.Remove(identifier);
+        Nomenclatures.Remove(identifier);
 
         // Notify everyone in the group that this nomenclature has been removed
-        Clients.Group(identifier)
-            .SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
+        Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
 
         // Return success
         return new Response { Success = true };
@@ -107,7 +109,7 @@ public class NomenclatureHub(NomenclatureService nomenclatureService, ILogger<No
             Groups.AddToGroupAsync(Context.ConnectionId, identity);
             
             // Check if there is a nomenclature, and if there is, add it to the return dictionary
-            if (nomenclatureService.Nomenclatures.TryGetValue(identity, out var nomenclature))
+            if (Nomenclatures.TryGetValue(identity, out var nomenclature))
                 identities.Add(identity, nomenclature);
         }
 

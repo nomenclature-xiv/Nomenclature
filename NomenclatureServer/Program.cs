@@ -33,8 +33,6 @@ public class Program
         builder.Services.AddSingleton(configuration);
 
         builder.Services.AddSingleton<DatabaseService>();
-        builder.Services.AddSingleton<NomenclatureService>();
-        builder.Services.AddSingleton<RegistrationService>();
         builder.Services.AddSingleton<RegistrationController>();
         builder.Services.AddSingleton<LodestoneService>();
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<LodestoneService>());

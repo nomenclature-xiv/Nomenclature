@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NetStone;
 using NetStone.Search.Character;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Hosting;
 using NomenclatureCommon.Domain;
 using NomenclatureServer.Domain;
