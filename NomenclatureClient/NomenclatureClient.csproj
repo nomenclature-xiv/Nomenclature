@@ -44,4 +44,11 @@
       <ProjectReference Include="..\NomenclatureCommon\NomenclatureCommon.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="..\Images\power.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Visible>false</Visible>
+        </Content>
+    </ItemGroup>
+
 </Project>

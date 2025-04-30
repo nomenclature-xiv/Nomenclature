@@ -1,13 +1,13 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using ImGuiNET;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NomenclatureClient.Network;
 using NomenclatureClient.UI;
-using NomenclatureClient.Services;
+using NomenclatureClient.UI.New;
+using MainWindowController = NomenclatureClient.UI.New.MainWindowController;
 
 namespace NomenclatureClient.Services
 {
@@ -21,7 +21,8 @@ namespace NomenclatureClient.Services
             IObjectTable objectTable,
             IPluginLog pluginLog,
             IDataManager dataManager,
-            IChatGui chatGui
+            IChatGui chatGui,
+            ITextureProvider textureProvider
             )
         {
             return new HostBuilder()
@@ -43,6 +44,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton(pluginLog);
                     collection.AddSingleton(dataManager);
                     collection.AddSingleton(chatGui);
+                    collection.AddSingleton(textureProvider);
                     collection.AddSingleton<CharacterService>();
                     collection.AddSingleton<IdentityService>();
                     collection.AddSingleton<ScanningService>();
@@ -52,6 +54,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton<NetworkHubService>();
                     collection.AddSingleton<NetworkRegisterService>();
                     collection.AddSingleton<NetworkNameService>();
+                    collection.AddSingleton<FontService>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
@@ -61,6 +64,7 @@ namespace NomenclatureClient.Services
                     collection.AddHostedService(p => p.GetRequiredService<InstallerWindowService>());
                     collection.AddHostedService(p => p.GetRequiredService<CommandService>());
                     collection.AddHostedService(p => p.GetRequiredService<NetworkHubService>());
+                    collection.AddHostedService(p => p.GetRequiredService<FontService>());
                 }).Build();
 
         }

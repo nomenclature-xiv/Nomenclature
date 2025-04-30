@@ -8,49 +8,36 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NomenclatureClient.UI
+namespace NomenclatureClient.UI;
+
+public class WindowService(IDalamudPluginInterface pluginInterface, IEnumerable<Window> pluginWindows, WindowSystem windowSystem) : IHostedService
 {
-    public class WindowService : IHostedService
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        public IDalamudPluginInterface PluginInterface { get; }
-        public IEnumerable<Window> PluginWindows { get; }
-        public WindowSystem WindowSystem { get; }
-
-        public WindowService(IDalamudPluginInterface pluginInterface, IEnumerable<Window> pluginWindows, WindowSystem windowSystem)
+        foreach (var pluginWindow in pluginWindows)
         {
-            PluginInterface = pluginInterface;
-            PluginWindows = pluginWindows;
-            WindowSystem = windowSystem;
+            windowSystem.AddWindow(pluginWindow);
+
+#if DEBUG
+            if (pluginWindow.WindowName == "Nomenclature") pluginWindow.IsOpen = true;
+#endif
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            foreach (var pluginWindow in PluginWindows)
-            {
-                WindowSystem.AddWindow(pluginWindow);
-                
-                #if DEBUG
-                if(pluginWindow.WindowName == "Nomenclature") pluginWindow.IsOpen = true;
-                #endif
-
-            }
-
-            PluginInterface.UiBuilder.Draw += UiBuilderOnDraw;
+        pluginInterface.UiBuilder.Draw += UiBuilderOnDraw;
 
 
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
+    }
 
-        private void UiBuilderOnDraw()
-        {
-            WindowSystem.Draw();
-        }
+    private void UiBuilderOnDraw()
+    {
+        windowSystem.Draw();
+    }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            PluginInterface.UiBuilder.Draw -= UiBuilderOnDraw;
-            WindowSystem.RemoveAllWindows();
-            return Task.CompletedTask;
-        }
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        pluginInterface.UiBuilder.Draw -= UiBuilderOnDraw;
+        windowSystem.RemoveAllWindows();
+        return Task.CompletedTask;
     }
 }
