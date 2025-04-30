@@ -90,7 +90,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger) : Hub
         logger.LogInformation("{Request}", request);
 
         // Process all the subscriptions to remove
-        var unsubscriptions = CollectionsMarshal.AsSpan(request.CharacterIdentitiesToUnsubscribeFrom);
+        var unsubscriptions = request.CharacterIdentitiesToUnsubscribeFrom.AsSpan();
         
         for (var i = 0; i < unsubscriptions.Length; i++)
             Groups.RemoveFromGroupAsync(Context.ConnectionId, unsubscriptions[i]);
@@ -101,7 +101,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger) : Hub
         var identities = new Dictionary<string, Nomenclature>();
         
         // Process all the subscriptions to add
-        var subscriptions = CollectionsMarshal.AsSpan(request.CharacterIdentitiesToSubscribeTo);
+        var subscriptions = request.CharacterIdentitiesToSubscribeTo.AsSpan();
         for (var i = 0; i < subscriptions.Length; i++)
         {
             // Add the caller to the group

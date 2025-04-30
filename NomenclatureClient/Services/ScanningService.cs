@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -10,52 +8,33 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
-using NomenclatureClient.Services;
-using NomenclatureCommon.Domain;
+using NomenclatureClient.Services.New;
 using NomenclatureCommon.Domain.Api;
-using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
+using Timer = System.Timers.Timer;
 
 namespace NomenclatureClient.Services;
 
+// ReSharper disable once ForCanBeConvertedToForeach
+
 /// <summary>
-///     TODO
+///     Handles scanning nearby players to subscribe to on the server
 /// </summary>
-public class ScanningService : IHostedService
+public class ScanningService(
+    IPluginLog logger,
+    IObjectTable objectTable,
+    FrameworkService framework,
+    NetworkHubService network) : IHostedService
 {
-    private readonly IPluginLog PluginLog;
-    private readonly IObjectTable ObjectTable;
-    private readonly IClientState _clientState;
-    private readonly FrameworkService FrameworkService;
-    private readonly NetworkHubService NetworkService;
-    private readonly IdentityService IdentityService;
-    private readonly Configuration Configuration;
     // Constants
-    private const int ScanInternal = 5000; //15000;
-    
+    private const int ScanInternal = 5000;
+
     // Instantiated
-    private readonly System.Timers.Timer _scanningTimer;
-    private List<Character> _characterList;
-
-    /// <summary>
-    ///     <inheritdoc cref="ScanningService"/>
-    /// </summary>
-    public ScanningService(IPluginLog pluginLog, IObjectTable objectTable, IClientState clientState, FrameworkService frameworkService, NetworkHubService networkService, IdentityService identityService, Configuration configuration)
-    {
-        PluginLog = pluginLog;
-        FrameworkService = frameworkService;
-        ObjectTable = objectTable;
-        NetworkService = networkService;
-        IdentityService = identityService;
-        _clientState = clientState;
-        Configuration = configuration;
-
-        _scanningTimer = new System.Timers.Timer { Interval = ScanInternal, Enabled = true };
-        _characterList = new List<Character>();
-    }
+    private readonly Timer _scanningTimer = new() { Interval = ScanInternal, Enabled = true };
+    private HashSet<string> _previousNearbyPlayers = [];
 
     public Task StartAsync(CancellationToken cancellationToken)
-    {        
+    {
         _scanningTimer.Elapsed += Scan;
         _scanningTimer.Start();
         return Task.CompletedTask;
@@ -68,72 +47,61 @@ public class ScanningService : IHostedService
     {
         try
         {
-            var stop = Stopwatch.StartNew();
-            //PluginLog.Verbose("Beginning Scan...");
-            
-            List<Character> localNames = await FrameworkService.RunOnFramework(Scan).ConfigureAwait(false);
-            
-            //PluginLog.Verbose("Finished Scan...");
-            stop.Stop();
-            //PluginLog.Verbose($"Scan took { stop.ElapsedTicks * 1000000 / Stopwatch.Frequency } microseconds ({stop.ElapsedMilliseconds} ms)");
+            var nearbyPlayers = await framework.RunOnFramework(ScanNearbyCharacters).ConfigureAwait(false);
+            var added = nearbyPlayers.Except(_previousNearbyPlayers).ToArray();
+            var removed = _previousNearbyPlayers.Except(nearbyPlayers).ToArray();
 
-            List<string> posdiff = (from character in localNames.Except(_characterList) select character.ToString()).ToList();
-            List<Character> negchars = _characterList.Except(localNames).ToList();
-            List<string> negdiff = (from character in negchars select character.ToString()).ToList();
-            if (posdiff.Count == 0 && negdiff.Count == 0)
-            {
+            if (added.Length is 0 && removed.Length is 0)
                 return;
-            }
-            SyncNomenclatureUpdateSubscriptionsRequest request = new()
+
+            var req = new SyncNomenclatureUpdateSubscriptionsRequest
             {
-                CharacterIdentitiesToSubscribeTo = posdiff,
-                CharacterIdentitiesToUnsubscribeFrom = negdiff
+                CharacterIdentitiesToSubscribeTo = added,
+                CharacterIdentitiesToUnsubscribeFrom = removed
             };
-            foreach(Character character in negchars)
-            {
-                if(IdentityService.Identities.TryGetValue(character, out var nomenclature))
-                {
-                    IdentityService.Identities.Remove(character);
-                }
-            }
-            
-            var res = await NetworkService.InvokeAsync<SyncNomenclatureUpdateSubscriptionsRequest, SyncNomenclatureUpdateSubscriptionsResponse>(ApiMethods.SyncNomenclatureUpdateSubscriptions, request); //response.ModifiedNames;
-            if(res.Success)
-            {
-                _characterList = localNames;
-                foreach(var identity in res.NewlySubscribedNomenclatures)
-                {
-                    IdentityService.Identities[Character.FromString(identity.Key)] = identity.Value;
-                }
-            }
-           
+
+            var response =
+                await network
+                    .InvokeAsync<SyncNomenclatureUpdateSubscriptionsRequest,
+                        SyncNomenclatureUpdateSubscriptionsResponse>(ApiMethods.SyncNomenclatureUpdateSubscriptions,
+                        req);
+
+            if (response.Success is false)
+                return;
+
+            // Remove those in the removed list
+            foreach (var remove in removed)
+                IdentityService.Identities.Remove(remove);
+
+            // Add those from the returned results
+            foreach (var (name, nomenclature) in response.NewlySubscribedNomenclatures)
+                IdentityService.Identities[name] = nomenclature;
+
+            // Assign a list
+            _previousNearbyPlayers = nearbyPlayers;
         }
         catch (Exception e)
         {
-            PluginLog.Fatal($"Unexpected issue occurred while scanning, {e}");
+            logger.Fatal($"Unexpected issue occurred while scanning, {e}");
         }
     }
 
-    private readonly StringBuilder _identityNameBuilder = new();
-    
     /// <summary>
     ///     Puts all the player characters nearby the local player into a list with format [CharacterName]@[HomeWorld]
     /// </summary>
     /// <returns></returns>
-    private List<Character> Scan()
+    private HashSet<string> ScanNearbyCharacters()
     {
-        var players = new List<Character>();
-        
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ObjectTable.Length; i++)
+        var nearby = new HashSet<string>();
+        for (var i = 0; i < objectTable.Length; i++)
         {
-            if (ObjectTable[i] is not IPlayerCharacter player)
+            if (objectTable[i] is not IPlayerCharacter player)
                 continue;
-            
-            players.Add(new Character(player.Name.ToString(), player.HomeWorld.Value.Name.ToString()));
+
+            nearby.Add(string.Concat(player.Name.TextValue, "@", player.HomeWorld.Value.Name.ExtractText()));
         }
 
-        return players;
+        return nearby;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
