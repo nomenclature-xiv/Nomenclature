@@ -18,7 +18,7 @@ using NomenclatureClient.Network;
 
 namespace NomenclatureClient.UI;
 
-public class MainWindow : Window
+public class MainWindow_old : Window
 {
     private readonly Configuration Configuration;
     private readonly MainWindowController MainWindowController;
@@ -28,7 +28,7 @@ public class MainWindow : Window
     private readonly RegistrationWindow RegistrationWindow;
     private readonly List<string> _worldNames;
 
-    public MainWindow(IPluginLog log, Configuration configuration, MainWindowController mainWindowController, RegistrationWindow registrationWindow, WorldService worldService, NetworkHubService hubService) : base("Nomenclature")
+    public MainWindow_old(IPluginLog log, Configuration configuration, MainWindowController mainWindowController, RegistrationWindow registrationWindow, WorldService worldService, NetworkHubService hubService) : base("Nomenclature")
     {
         Configuration = configuration;
         MainWindowController = mainWindowController;

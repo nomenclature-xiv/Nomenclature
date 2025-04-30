@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using ImGuiNET;
+using NomenclatureClient.Services;
 
 namespace NomenclatureClient.Utils;
 
@@ -13,11 +14,39 @@ namespace NomenclatureClient.Utils;
 /// </summary>
 public static class SharedUserInterfaces
 {
-    private const ImGuiWindowFlags PopupWindowFlags =
-        ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
+    private const ImGuiWindowFlags PopupWindowFlags = 
+        ImGuiWindowFlags.NoTitleBar | 
+        ImGuiWindowFlags.NoMove | 
+        ImGuiWindowFlags.NoResize;
+    
+    private static readonly uint PanelBackground = ImGui.ColorConvertFloat4ToU32(new Vector4(0.1294f, 0.1333f, 0.1764f, 1));
+    
+    public static void ContentBox(Action contentToDraw, bool addSpacingAtEnd = true)
+    {
+        var windowPadding = ImGui.GetStyle().WindowPadding;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.ChannelsSplit(2);
+        drawList.ChannelsSetCurrent(1);
 
-    private const ImGuiWindowFlags ComboWithFilterFlags = PopupWindowFlags | ImGuiWindowFlags.ChildWindow;
+        var startPosition = ImGui.GetCursorPos();
+        var anchorPoint = ImGui.GetCursorScreenPos();
+        ImGui.SetCursorPos(startPosition + windowPadding);
 
+        ImGui.BeginGroup();
+        contentToDraw.Invoke();
+        ImGui.EndGroup();
+
+        drawList.ChannelsSetCurrent(0);
+
+        var min = ImGui.GetItemRectMin() - windowPadding;
+        var max = ImGui.GetItemRectMax() + windowPadding;
+        max.X = anchorPoint.X + ImGui.GetWindowWidth();
+
+        ImGui.GetWindowDrawList().AddRectFilled(min, max, PanelBackground, 4);
+        drawList.ChannelsMerge();
+        ImGui.SetCursorPosY(startPosition.Y + (max.Y - min.Y) + (addSpacingAtEnd ? windowPadding.Y : 0));
+    }
+    
     /// <summary>
     ///     Draws a tool tip for the last hovered ImGui component
     /// </summary>
@@ -100,22 +129,5 @@ public static class SharedUserInterfaces
         ImGui.SetCursorPosX((ImGui.GetWindowWidth() - ImGui.CalcTextSize(text).X) * 0.5f);
         return ImGui.Button(text);
     }
-
-    /// <summary>
-    ///     Creates a button the size of a <see cref="ContentBox"/> on the right
-    /// </summary>
-    public static bool ContextBoxButton(FontAwesomeIcon icon, Vector2 padding, float windowWidth)
-    {
-        var previousRectSize = ImGui.GetItemRectSize();
-        var returnPoint = ImGui.GetCursorPosY();
-        var begin = returnPoint - previousRectSize.Y - padding.Y * 2;
-
-        var x = windowWidth - previousRectSize.Y - padding.X;
-        var size = new Vector2(x, begin);
-
-        ImGui.SetCursorPos(size);
-        var clicked = IconButton(icon, new Vector2(previousRectSize.Y));
-        ImGui.SetCursorPosY(returnPoint);
-        return clicked;
-    }
+    
 }

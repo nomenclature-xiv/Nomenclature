@@ -1,48 +1,34 @@
 ﻿using Dalamud.Plugin;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NomenclatureClient.UI.New;
 
-namespace NomenclatureClient.UI
-{
-    public class InstallerWindowService : IHostedService
+namespace NomenclatureClient.UI;
+
+public class InstallerWindowService(IDalamudPluginInterface pluginInterface, MainWindow mainWindow) : IHostedService {
+    
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        public IDalamudPluginInterface PluginInterface { get; }
-        public MainWindow MainWindow { get; }
+        pluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
+        pluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
+        return Task.CompletedTask;
+    }
 
-        public InstallerWindowService(IDalamudPluginInterface pluginInterface, MainWindow mainWindow)
-        {
-            PluginInterface = pluginInterface;
-            MainWindow = mainWindow;
-        }
+    private void ToggleMainUi()
+    {
+        mainWindow.Toggle();
+    }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
-            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
+    private void ToggleConfigUi()
+    {
+        mainWindow.Toggle();
+    }
 
-            return Task.CompletedTask;
-        }
-
-        private void ToggleMainUi()
-        {
-            MainWindow.Toggle();
-        }
-
-        private void ToggleConfigUi()
-        {
-            MainWindow.Toggle();
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
-            PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
-            return Task.CompletedTask;
-        }
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        pluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
+        pluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
+        return Task.CompletedTask;
     }
 }

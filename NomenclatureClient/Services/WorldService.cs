@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Dalamud.Plugin.Services;
-using Lumina.Excel;
 using Lumina.Excel.Sheets;
-using NomenclatureClient;
 
 namespace NomenclatureClient.Services;
 
@@ -12,22 +9,22 @@ namespace NomenclatureClient.Services;
 /// </summary>
 public class WorldService
 {
-    private readonly ExcelSheet<World> _worldSheet;
-    private readonly IPluginLog PluginLog;
-
     /// <summary>
     ///     List of all in game world names accessible to the player
     /// </summary>
     public readonly List<string> WorldNames;
 
-    public WorldService(IDataManager dataManager, IPluginLog pluginLog)
+    /// <summary>
+    ///     <inheritdoc cref="WorldService"/>
+    /// </summary>
+    public WorldService(IDataManager dataManager)
     {
-        _worldSheet = dataManager.Excel.GetSheet<World>();
+        var worldSheet = dataManager.Excel.GetSheet<World>();
 
         var worldList = new List<string>();
-        for (uint i = 0; i < _worldSheet.Count; i++)
+        for (uint i = 0; i < worldSheet.Count; i++)
         {
-            var world = _worldSheet.GetRowOrDefault(i);
+            var world = worldSheet.GetRowOrDefault(i);
             if (world is null) continue;
 
             var name = world.Value.InternalName.ToString();
@@ -37,35 +34,8 @@ public class WorldService
 
         worldList.Sort();
         WorldNames = [.. worldList];
-        PluginLog = pluginLog;
     }
-
-    /// <summary>
-    ///     Attempts to get a world name by world id
-    /// </summary>
-    /// <param name="worldId">
-    ///     The world id provided by
-    ///     <see cref="FFXIVClientStructs.FFXIV.Client.Game.Character.BattleChara.HomeWorld" />
-    /// </param>
-    /// <returns>World name, or null if not found</returns>
-    public string? TryGetWorldById(ushort worldId)
-    {
-        try
-        {
-            var world = _worldSheet.GetRowOrDefault(worldId);
-            if (world is not null)
-                return world.Value.InternalName.ToString();
-
-            PluginLog.Warning($"[WorldProvider] World {worldId} not found.");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Warning($"[WorldProvider] Error during world lookup: {ex}");
-            return null;
-        }
-    }
-
+    
     /// <summary>
     ///     Various worlds are developer, promotional, or incomplete and must be filtered out
     /// </summary>
