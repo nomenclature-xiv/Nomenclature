@@ -14,11 +14,7 @@ namespace NomenclatureClient.Utils;
 /// </summary>
 public static class SharedUserInterfaces
 {
-    private const ImGuiWindowFlags PopupWindowFlags = 
-        ImGuiWindowFlags.NoTitleBar | 
-        ImGuiWindowFlags.NoMove | 
-        ImGuiWindowFlags.NoResize;
-    
+    // Const
     private static readonly uint PanelBackground = ImGui.ColorConvertFloat4ToU32(new Vector4(0.1294f, 0.1333f, 0.1764f, 1));
     
     public static void ContentBox(Action contentToDraw, bool addSpacingAtEnd = true)
@@ -99,10 +95,7 @@ public static class SharedUserInterfaces
         var result = ImGui.Button(icon.ToIconString(), size ?? Vector2.Zero);
         ImGui.PopFont();
 
-        if (tooltip is null)
-            return result;
-
-        if (ImGui.IsItemHovered() is false)
+        if (tooltip is null || ImGui.IsItemHovered() is false)
             return result;
 
         ImGui.BeginTooltip();

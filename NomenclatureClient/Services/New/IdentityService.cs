@@ -8,12 +8,8 @@ namespace NomenclatureClient.Services.New;
 
 public class IdentityService : IHostedService
 {
-    public static readonly Dictionary<string, Nomenclature> Identities = new ()
-    {
-        { "Mora Nightshade@Diabolos", new Nomenclature("Monster", "Cookie") },
-        { "Lu'nara Sipros@Balmung", new Nomenclature("Big Boobs", "World") },
-    };
-
+    public static readonly Dictionary<string, Nomenclature> Identities = new();
+    
     public Task StartAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
