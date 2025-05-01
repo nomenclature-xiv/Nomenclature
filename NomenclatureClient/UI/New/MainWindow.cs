@@ -1,5 +1,15 @@
+using System;
+using System.Linq;
 using System.Numerics;
+using Dalamud.Game.ClientState.Objects;
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
+using Dalamud.Memory;
+using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using Microsoft.AspNetCore.SignalR.Client;
 using NomenclatureClient.Network;
@@ -48,8 +58,8 @@ public class MainWindow : Window
                 break;
 
             default:
-                //DrawConnectedMenu();
-                DrawDisconnectedMenu();
+                DrawConnectedMenu();
+                //DrawDisconnectedMenu();
                 break;
         }
 

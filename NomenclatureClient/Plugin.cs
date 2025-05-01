@@ -30,10 +30,9 @@ public sealed class Plugin : IDalamudPlugin
             IObjectTable objectTable,
             IPluginLog pluginLog,
             IDataManager dataManager,
-            IChatGui chatGui,
-            ITextureProvider textureProvider)
+            IChatGui chatGui)
     {
-        _host = ServiceManager.RegisterServices(pluginInterface, commandManager, clientState, framework, namePlateGui, objectTable, pluginLog, dataManager, chatGui, textureProvider);
+        _host = ServiceManager.RegisterServices(pluginInterface, commandManager, clientState, framework, namePlateGui, objectTable, pluginLog, dataManager, chatGui);
 
         _ = _host.StartAsync();
     }

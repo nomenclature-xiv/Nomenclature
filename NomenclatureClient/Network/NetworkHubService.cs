@@ -1,7 +1,6 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,13 +9,12 @@ using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NomenclatureClient.Services;
+using NomenclatureClient.Services.New;
 using NomenclatureClient.Types.Exceptions;
 using NomenclatureCommon.Domain;
-using NomenclatureCommon.Domain.Api.Controller;
-using System.Collections.Generic;
-using NomenclatureClient.Services;
-using ImGuiScene;
 using NomenclatureCommon.Domain.Api;
+using NomenclatureCommon.Domain.Api.Controller;
 
 namespace NomenclatureClient.Network;
 
@@ -38,28 +36,25 @@ public class NetworkHubService : IHostedService
 
     private readonly CharacterService _characterService;
     private readonly Configuration _configuration;
-    private readonly IdentityService _identityService;
     private readonly IPluginLog _pluginLog;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkHubService"/>
     /// </summary>
-    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService, IdentityService identityService)
+    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
     {
         _pluginLog = pluginLog;
         _configuration = configuration;
         _characterService = characterService;
-        _identityService = identityService;
 
         Connection = new HubConnectionBuilder()
-            .WithUrl(HubUrl, options =>
-            {
-                options.AccessTokenProvider = async () => await Token().ConfigureAwait(false);
-            })
+            .WithUrl(HubUrl,
+                options => { options.AccessTokenProvider = async () => await Token().ConfigureAwait(false); })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol(options =>
             {
-                options.SerializerOptions = MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
+                options.SerializerOptions =
+                    MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
             })
             .Build();
         AddClientMethods();
@@ -71,6 +66,14 @@ public class NetworkHubService : IHostedService
         await Connect().ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Invokes a generic on the SignalR hub
+    /// </summary>
+    /// <param name="method">See <see cref="ApiMethods"/> for available methods</param>
+    /// <param name="request">The request object matching type <see cref="T"/></param>
+    /// <typeparam name="T">The request object type</typeparam>
+    /// <typeparam name="TU">The response object type</typeparam>
+    /// <returns>The response <see cref="TU"/> or <see cref="Nullable"/></returns>
     public async Task<TU> InvokeAsync<T, TU>(string method, T request)
     {
         if (Connection.State is not HubConnectionState.Connected)
@@ -93,6 +96,9 @@ public class NetworkHubService : IHostedService
         }
     }
 
+    /// <summary>
+    ///     Starts a connection to the Signal R server
+    /// </summary>
     public async Task Connect()
     {
         if (Connection.State is not HubConnectionState.Disconnected)
@@ -104,11 +110,13 @@ public class NetworkHubService : IHostedService
         }
         catch (NoSecretForLocalCharacterException)
         {
-            _pluginLog.Warning("[NetworkService] You do not have a secret assigned to your local character, please register");
+            _pluginLog.Warning(
+                "[NetworkService] You do not have a secret assigned to your local character, please register");
         }
         catch (InvalidSecretException)
         {
-            _pluginLog.Warning("[NetworkService] Your secret is invalid. Make sure your current character is registered");
+            _pluginLog.Warning(
+                "[NetworkService] Your secret is invalid. Make sure your current character is registered");
         }
         catch (Exception e)
         {
@@ -116,6 +124,9 @@ public class NetworkHubService : IHostedService
         }
     }
 
+    /// <summary>
+    ///     Stops a connection to the Signal R server
+    /// </summary>
     public async Task Disconnect()
     {
         if (Connection.State is HubConnectionState.Disconnected)
@@ -141,10 +152,10 @@ public class NetworkHubService : IHostedService
     {
         if (_characterService.CurrentCharacter is not { } currentCharacter)
             return null;
-        
+
         if (GetCharacterSecret(currentCharacter) is not { } secret)
             throw new NoSecretForLocalCharacterException();
-        
+
         var request = new GenerateTokenRequest { Secret = secret };
         var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
@@ -153,7 +164,7 @@ public class NetworkHubService : IHostedService
                 HttpStatusCode.Unauthorized => new InvalidSecretException(),
                 _ => new UnknownTokenException($"StatusCode was {response.StatusCode}")
             };
-        
+
         _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
@@ -162,15 +173,14 @@ public class NetworkHubService : IHostedService
     {
         Connection.On<string, Nomenclature>(ApiMethods.UpdateNomenclatureEvent, (charactername, nomenclature) =>
         {
-            var character = Character.FromString(charactername);
-            _pluginLog.Debug($"Updated name {character.Name} to {nomenclature.Name}");
-            _identityService.Identities[character] = nomenclature;
+            _pluginLog.Debug($"Updated Nomenclature for {charactername} to {nomenclature}");
+            IdentityService.Identities[charactername] = nomenclature;
         });
+
         Connection.On<string>(ApiMethods.RemoveNomenclatureEvent, (charactername) =>
         {
-            var character = Character.FromString(charactername);
-            if (_identityService.Identities.ContainsKey(character))
-                _identityService.Identities.Remove(character);
+            _pluginLog.Debug($"Clearing Nomenclature for {charactername}");
+            IdentityService.Identities.Remove(charactername);
         });
     }
 
