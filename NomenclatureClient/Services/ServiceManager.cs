@@ -4,6 +4,7 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NomenclatureClient.Ipc;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services.New;
 using NomenclatureClient.UI;
@@ -56,6 +57,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton<FontService>();
                     collection.AddSingleton<NameplateHandlerService>();
                     collection.AddSingleton<ChatBoxHandlerService>();
+                    collection.AddSingleton<IpcManager>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does

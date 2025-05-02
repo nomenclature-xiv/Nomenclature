@@ -17,6 +17,7 @@ namespace NomenclatureClient.UI
         public string ChangedWorld = string.Empty;
         public bool SelfChangeNameEnabled = true;
         public bool SelfChangeWorldEnabled = true;
+        public bool Locked = false;
         public MainWindowController(Configuration configuration, NetworkNameService nameService)
         {
             ChangedName = configuration.Name;
