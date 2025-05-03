@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NomenclatureClient.UI.New;
 
 namespace NomenclatureClient.Ipc
 {
@@ -50,14 +51,16 @@ namespace NomenclatureClient.Ipc
                 {
                     return;
                 }
-                _mainWindowController.Locked = flags.HasFlag(NomenclatureSetFlag.Lock);
-                _mainWindowController.ChangedName = split[0];
-                _mainWindowController.ChangedWorld = split[1];
+                //_mainWindowController.Locked = flags.HasFlag(NomenclatureSetFlag.Lock);
+                //_mainWindowController.ChangedName = split[0];
+                //_mainWindowController.ChangedWorld = split[1];
                 _networkNameService.UpdateName(split[0], split[1]).ConfigureAwait(false);
             });
+            
             _getNomenclature.RegisterFunc(() =>
             {
-                return String.Concat([_mainWindowController.ChangedName, "@", _mainWindowController.ChangedWorld]);
+                return
+                    "";  //String.Concat([_mainWindowController.ChangedName, "@", _mainWindowController.ChangedWorld]);
             });
         }
     }

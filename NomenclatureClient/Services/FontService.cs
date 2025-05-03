@@ -9,11 +9,9 @@ namespace NomenclatureClient.Services;
 public class FontService(IDalamudPluginInterface pluginInterface) : IHostedService
 {
     private const int BigFontSize = 40;
-    private static bool _bigFontBuilt;
     public static IFontHandle? BigFont;
 
     private const int MediumFontSize = 24;
-    private static bool _mediumFontBuilt;
     public static IFontHandle? MediumFont;
     
     /// <summary>
@@ -34,9 +32,6 @@ public class FontService(IDalamudPluginInterface pluginInterface) : IHostedServi
         await MediumFont.WaitAsync().ConfigureAwait(false);
         await BigFont.WaitAsync().ConfigureAwait(false);
         await pluginInterface.UiBuilder.FontAtlas.BuildFontsAsync().ConfigureAwait(false);
-
-        _bigFontBuilt = true;
-        _mediumFontBuilt = true;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

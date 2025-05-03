@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using NomenclatureCommon.Domain;
@@ -8,13 +9,16 @@ namespace NomenclatureClient.Services;
 public class CharacterService : IDisposable
 {
     public Character? CurrentCharacter;
+    public string? CurrentSecret;
 
+    private readonly Configuration _configuration;
     private readonly IClientState _clientState;
     private readonly IFramework _framework;
     private readonly IPluginLog _pluginLog;
 
-    public CharacterService(IClientState clientState, IFramework framework, IPluginLog pluginLog)
+    public CharacterService(Configuration configuration, IClientState clientState, IFramework framework, IPluginLog pluginLog)
     {
+        _configuration = configuration;
         _framework = framework;
         _clientState = clientState;
         _pluginLog = pluginLog;
@@ -37,22 +41,29 @@ public class CharacterService : IDisposable
         {
             if (await RunOnFramework(() => _clientState.LocalPlayer).ConfigureAwait(false) is { } localPlayer)
             {
-                CurrentCharacter = new Character(localPlayer.Name.ToString(), localPlayer.HomeWorld.Value.Name.ToString());
+                var name = localPlayer.Name.ToString();
+                var world = localPlayer.HomeWorld.Value.Name.ToString();
+                CurrentCharacter = new Character(name, world);
+                CurrentSecret = _configuration.LocalCharacterSecrets.GetValueOrDefault(string.Concat(name, "@", world));
             }
             else
             {
                 CurrentCharacter = null;
+                CurrentSecret = null;
             }
         }
         catch (Exception e)
         {
             _pluginLog.Info($"[CharacterService] [OnLogin] {e}");
+            CurrentCharacter = null;
+            CurrentSecret = null;
         }
     }
 
     private void OnLogout(int type, int code)
     {
         CurrentCharacter = null;
+        CurrentSecret = null;
     }
 
     private async Task<T> RunOnFramework<T>(Func<T> func)

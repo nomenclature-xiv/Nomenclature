@@ -1,15 +1,7 @@
 using System;
-using System.Linq;
 using System.Numerics;
-using Dalamud.Game.ClientState.Objects;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.Text;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using Dalamud.Memory;
-using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using Microsoft.AspNetCore.SignalR.Client;
 using NomenclatureClient.Network;
@@ -23,16 +15,22 @@ public class MainWindow : Window
     // Injected
     private readonly CharacterService _characterService;
     private readonly Configuration _configuration;
+    private readonly MainWindowController _controller;
     private readonly NetworkHubService _networkHubService;
-
+    private readonly RegistrationWindow _registrationWindow;
+    
     // Instantiated
     private string _newName = string.Empty;
     private string _newWorld = string.Empty;
     private bool _shouldChangeName;
     private bool _shouldChangeWorld;
-    
-    public MainWindow(CharacterService characterService, Configuration configuration,
-        NetworkHubService networkHubService) : base("Nomenclature")
+
+    public MainWindow(
+        CharacterService characterService, 
+        Configuration configuration,
+        MainWindowController controller,
+        NetworkHubService networkHubService,
+        RegistrationWindow registrationWindow) : base($"Nomenclature - Version {Plugin.Version}")
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -42,9 +40,11 @@ public class MainWindow : Window
 
         _characterService = characterService;
         _configuration = configuration;
+        _controller = controller;
         _networkHubService = networkHubService;
+        _registrationWindow = registrationWindow;
     }
-    
+
     public override void Draw()
     {
         if (ImGui.BeginChild("##NomenclatureMainWindow", Vector2.Zero, false) is false)
@@ -58,8 +58,7 @@ public class MainWindow : Window
                 break;
 
             default:
-                DrawConnectedMenu();
-                //DrawDisconnectedMenu();
+                DrawDisconnectedMenu();
                 break;
         }
 
@@ -79,7 +78,7 @@ public class MainWindow : Window
             FontService.BigFont?.Push();
             SharedUserInterfaces.TextCentered("Nomenclature");
             FontService.BigFont?.Pop();
-            
+
             SharedUserInterfaces.TextCentered("0 Corpse Puppets Online");
         });
 
@@ -156,35 +155,62 @@ public class MainWindow : Window
             FontService.BigFont?.Push();
             SharedUserInterfaces.TextCentered("Nomenclature");
             FontService.BigFont?.Pop();
-            
+
             SharedUserInterfaces.TextCentered($"{_networkHubService.Connection.State}");
         });
-
-        SharedUserInterfaces.ContentBox(() =>
+        
+        var dimension = new Vector2(size.X - padding.X * 2, 0);
+        if (_characterService.CurrentSecret is null)
         {
-            // TODO: Change these buttons to only show connect if the client has a secret for this character, or register instead
+            SharedUserInterfaces.ContentBox(() =>
+            {
+                ImGui.TextWrapped("This character is not registered with nomenclature. Please click \"Register\" to start using the plugin.");
+            });
             
-            var dimension = new Vector2((size.X - padding.X * 3) * 0.5f, 0);
-            ImGui.Button("Connect", dimension);
-            ImGui.SameLine();
-            ImGui.Button("Register", dimension);
-        });
-
-        SharedUserInterfaces.ContentBox(() =>
+            SharedUserInterfaces.ContentBox(() =>
+            {
+                if (ImGui.Button("Register", dimension))
+                    _registrationWindow.IsOpen = true;
+            });
+        }
+        else
         {
-            if (ImGui.Checkbox("Auto connect?", ref _configuration.AutoConnect))
-                _configuration.Save();
-        });
-
-        SharedUserInterfaces.ContentBox(() =>
-        {
-            ImGui.TextWrapped(
-                "If you are a new character, please click the \"Register\" to start using the plugin.");
-        });
+            SharedUserInterfaces.ContentBox(() =>
+            {
+                if (ImGui.Checkbox("Auto connect?", ref _configuration.AutoConnect))
+                    _configuration.Save();
+            });
+            
+            SharedUserInterfaces.ContentBox(() =>
+            {
+                if (_networkHubService.Connection.State is HubConnectionState.Disconnected)
+                {
+                    if (ImGui.Button("Connect", dimension))
+                        TryConnect();
+                }
+                else
+                {
+                    ImGui.BeginDisabled();
+                    ImGui.Button("Connect", dimension);
+                    ImGui.EndDisabled();
+                }
+            });
+        }
     }
-}
 
-public class MainWindowController2
-{
+    private async void TryConnect()
+    {
+        try
+        {
+            await _networkHubService.Connect();
+        }
+        catch (Exception)
+        {
+            // Ignore
+        }
+    }
     
+    private void Debug()
+    {
+    }
 }

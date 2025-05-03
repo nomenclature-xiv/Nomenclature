@@ -9,39 +9,34 @@ namespace NomenclatureClient;
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
+    [NonSerialized] private IDalamudPluginInterface? _pluginInterface;
+    public void Initialize(IDalamudPluginInterface pluginInterface)
+    {
+        _pluginInterface = pluginInterface;
+    }
+    
     /// <summary>
     ///     Configuration version
     /// </summary>
     public int Version { get; set; } = 1;
 
     /// <summary>
-    ///     Name to replace real name
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
-    public string World {  get; set; } = string.Empty;
-
-    public bool SelfChangeName = true;
-    public bool SelfChangeWorld = true;
-
-    /// <summary>
     ///     Should the server attempt to connect automatically?
     /// </summary>
     public bool AutoConnect = false;
 
-    public List<Character> BlocklistCharacters { get; set; } = new List<Character>();
-
-    public Dictionary<string, Dictionary<string, string>> LocalCharacters { get; set; } = new Dictionary<string, Dictionary<string, string>>();
-
-    [NonSerialized]
-    private IDalamudPluginInterface? PluginInterface;
-
-    public void Initialize(IDalamudPluginInterface pluginInterface)
-    {
-        PluginInterface = pluginInterface;
-    }
-
+    /// <summary>
+    ///     Map of [Character]@[World] to Secret
+    /// </summary>
+    public readonly Dictionary<string, string> LocalCharacterSecrets = new();
+    
+    /// <summary>
+    ///     List of [Character]@[World] the local client has blocked
+    /// </summary>
+    public readonly List<Character> BlocklistCharacters = [];
+    
     public void Save()
     {
-        PluginInterface!.SavePluginConfig(this);
+        _pluginInterface!.SavePluginConfig(this);
     }
 }

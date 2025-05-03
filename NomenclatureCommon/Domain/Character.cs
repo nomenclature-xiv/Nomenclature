@@ -11,6 +11,6 @@ public record Character(
     
     public override string ToString()
     {
-        return $"{Name}@{World}";
+        return string.Concat(Name, "@", World);
     }
 }

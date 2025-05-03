@@ -150,10 +150,7 @@ public class NetworkHubService : IHostedService
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
     {
-        if (_characterService.CurrentCharacter is not { } currentCharacter)
-            return null;
-
-        if (GetCharacterSecret(currentCharacter) is not { } secret)
+        if(_characterService.CurrentSecret is not { } secret)
             throw new NoSecretForLocalCharacterException();
 
         var request = new GenerateTokenRequest { Secret = secret };
@@ -182,13 +179,6 @@ public class NetworkHubService : IHostedService
             _pluginLog.Debug($"Clearing Nomenclature for {charactername}");
             IdentityService.Identities.Remove(charactername);
         });
-    }
-
-    private string? GetCharacterSecret(Character character)
-    {
-        return _configuration.LocalCharacters.TryGetValue(character.Name, out var worlds)
-            ? worlds.GetValueOrDefault(character.World)
-            : null;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
