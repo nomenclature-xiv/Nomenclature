@@ -38,18 +38,16 @@ public class NetworkHubService : IHostedService
     public readonly HubConnection Connection;
 
     private readonly CharacterService _characterService;
-    private readonly Configuration _configuration;
     private readonly IPluginLog _pluginLog;
     private readonly INamePlateGui _namePlateGui;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkHubService"/>
     /// </summary>
-    public NetworkHubService(IPluginLog pluginLog, INamePlateGui namePlateGui, Configuration configuration, CharacterService characterService)
+    public NetworkHubService(IPluginLog pluginLog, INamePlateGui namePlateGui, CharacterService characterService)
     {
         _pluginLog = pluginLog;
         _namePlateGui = namePlateGui;
-        _configuration = configuration;
         _characterService = characterService;
 
         Connection = new HubConnectionBuilder()
