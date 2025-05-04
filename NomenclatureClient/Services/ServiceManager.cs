@@ -46,6 +46,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton(dataManager);
                     collection.AddSingleton(chatGui);
                     collection.AddSingleton<CharacterService>();
+                    collection.AddSingleton<LoginService>();
                     collection.AddSingleton<IdentityService>();
                     collection.AddSingleton<ScanningService>();
                     collection.AddSingleton<FrameworkService>();
@@ -61,6 +62,7 @@ namespace NomenclatureClient.Services
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
+                    collection.AddHostedService(p => p.GetRequiredService<LoginService>());
                     collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
                     collection.AddHostedService(p => p.GetRequiredService<ScanningService>());
                     collection.AddHostedService(p => p.GetRequiredService<WindowService>());

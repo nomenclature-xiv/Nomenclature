@@ -6,7 +6,7 @@ using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Services;
 
-public class CharacterService : IDisposable
+public class CharacterService
 {
     public Character? CurrentCharacter;
     public string? CurrentSecret;
@@ -23,19 +23,9 @@ public class CharacterService : IDisposable
         _clientState = clientState;
         _pluginLog = pluginLog;
         
-        _clientState.Login += OnLogin;
-        _clientState.Logout += OnLogout;
-        OnLogin();
-    }
-
-    public void Dispose()
-    {
-        _clientState.Login -= OnLogin;
-        _clientState.Logout -= OnLogout;
-        GC.SuppressFinalize(this);
     }
     
-    private async void OnLogin()
+    public async Task<bool> OnLogin()
     {
         try
         {
@@ -45,11 +35,13 @@ public class CharacterService : IDisposable
                 var world = localPlayer.HomeWorld.Value.Name.ToString();
                 CurrentCharacter = new Character(name, world);
                 CurrentSecret = _configuration.LocalCharacterSecrets.GetValueOrDefault(string.Concat(name, "@", world));
+                return true;
             }
             else
             {
                 CurrentCharacter = null;
                 CurrentSecret = null;
+                return false;
             }
         }
         catch (Exception e)
@@ -57,10 +49,11 @@ public class CharacterService : IDisposable
             _pluginLog.Info($"[CharacterService] [OnLogin] {e}");
             CurrentCharacter = null;
             CurrentSecret = null;
+            return false;
         }
     }
 
-    private void OnLogout(int type, int code)
+    public void OnLogout(int type, int code)
     {
         CurrentCharacter = null;
         CurrentSecret = null;
