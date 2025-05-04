@@ -78,6 +78,7 @@ public class RegistrationWindowController(IPluginLog log, Configuration configur
 
             SuccessfulValidation = true;
             ValidateRegistrationError = false;
+            characterService.CurrentSecret = secret;
             networkHubService.Connect().ConfigureAwait(false);
         }
         catch (Exception)
