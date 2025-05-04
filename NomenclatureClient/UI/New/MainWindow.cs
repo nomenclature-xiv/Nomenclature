@@ -79,13 +79,16 @@ public class MainWindow : Window
             SharedUserInterfaces.TextCentered("Nomenclature");
             FontService.BigFont?.Pop();
 
-            SharedUserInterfaces.TextCentered("0 Corpse Puppets Online");
+            SharedUserInterfaces.TextCentered($"{_networkHubService.UserCount} Corpse Puppets Online");
         });
 
         SharedUserInterfaces.ContentBox(() =>
         {
             var dimensions = new Vector2((size.X - padding.X * 3) * 0.5f, 0);
-            ImGui.Button("Disconnect", dimensions);
+            if(ImGui.Button("Disconnect", dimensions))
+            {
+                _networkHubService.Disconnect();
+            }
             ImGui.SameLine();
             ImGui.Button("Blocklist", dimensions);
         });
@@ -136,8 +139,14 @@ public class MainWindow : Window
         SharedUserInterfaces.ContentBox(() =>
         {
             FontService.MediumFont?.Push();
-            ImGui.Button("Change Name",
-                new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY()));
+            if(ImGui.Button("Change Name",
+                new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
+            {
+               _controller.ChangeName(
+                    _shouldChangeName ? _newName : _characterService.CurrentCharacter?.Name ?? string.Empty,
+                    _shouldChangeWorld ? _newWorld : _characterService.CurrentCharacter?.World ?? string.Empty
+                    );
+            }
             FontService.MediumFont?.Pop();
         }, false);
     }

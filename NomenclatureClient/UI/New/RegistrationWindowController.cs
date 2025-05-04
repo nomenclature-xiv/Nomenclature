@@ -5,7 +5,7 @@ using NomenclatureClient.Services;
 
 namespace NomenclatureClient.UI.New;
 
-public class RegistrationWindowController(IPluginLog log, Configuration configuration, CharacterService characterService, NetworkRegisterService networkRegisterService)
+public class RegistrationWindowController(IPluginLog log, Configuration configuration, CharacterService characterService, NetworkRegisterService networkRegisterService, NetworkHubService networkHubService)
 {
     /// <summary>
     ///     The registration key generated from <see cref="BeginRegistration"/>
@@ -63,25 +63,22 @@ public class RegistrationWindowController(IPluginLog log, Configuration configur
             SuccessfulValidation = false;
             if (characterService.CurrentCharacter is not { } character)
                 return;
-            log.Info("A");
             
             if (RegistrationKey is null)
                 return;
-            log.Info("B");
             
             if (await networkRegisterService.RegisterCharacterValidate(RegistrationKey) is not { } secret)
             {
-                log.Info("C");
                 ValidateRegistrationError = true;
                 return;
             }
             
-            log.Info("D");
             configuration.LocalCharacterSecrets.Add(character.ToString(), secret);
             configuration.Save();
 
             SuccessfulValidation = true;
             ValidateRegistrationError = false;
+            networkHubService.Connect().ConfigureAwait(false);
         }
         catch (Exception)
         {

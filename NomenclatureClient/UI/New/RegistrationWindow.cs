@@ -61,7 +61,7 @@ public class RegistrationWindow : Window
 
             if (_controller.SuccessfulValidation)
             {
-                ImGui.TextColored(ImGuiColors.ParsedGreen, "Registration succeeded! You may close this window.");
+                this.Toggle();
             }
         });
 

@@ -7,19 +7,37 @@ using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
+using System.Timers;
 
 namespace NomenclatureServer.Hubs;
 
 // ReSharper disable once ForCanBeConvertedToForeach
 
 [Authorize]
-public class NomenclatureHub(ILogger<NomenclatureHub> logger) : Hub
+public class NomenclatureHub : Hub
 {
+    private readonly ILogger<NomenclatureHub> logger;
+
+    public NomenclatureHub(ILogger<NomenclatureHub> ilogger)
+    {
+        logger = ilogger;
+        _userCountTimer.Elapsed += UserCount;
+        _userCountTimer.Start();
+    }
+
     /// <summary>
     ///     List of currently applied nomenclatures
     /// </summary>
     private static readonly Dictionary<string, Nomenclature> Nomenclatures = new();
-    
+
+    /// <summary>
+    ///     List of all connection IDs currently connected
+    /// </summary>
+    private HashSet<string> Connections = new();
+
+    private const int UserCountInternal = 5000;
+    private readonly System.Timers.Timer _userCountTimer = new() { Interval = UserCountInternal, Enabled = true };
+
     /// <summary>
     ///     Gets a character identifier from the claims provided by the sender
     /// </summary>
@@ -118,5 +136,22 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger) : Hub
             Success = true,
             NewlySubscribedNomenclatures = identities
         };
+    }
+
+    public override Task OnConnectedAsync()
+    {
+        Connections.Add(Context.ConnectionId);
+        return base.OnConnectedAsync();
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        Connections.Remove(Context.ConnectionId);
+        return base.OnDisconnectedAsync(exception);
+    }
+
+    public void UserCount(object? sender, ElapsedEventArgs e)
+    {
+        Clients.All.SendAsync(ApiMethods.UpdateUserCountEvent, Connections.Count);
     }
 }

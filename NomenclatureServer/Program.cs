@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NomenclatureServer.Controllers;
 using NomenclatureServer.Hubs;
@@ -24,7 +25,7 @@ public class Program
         ConfigureJwtAuthentication(builder.Services, configuration);
 
         builder.Services.AddControllers();
-        builder.Services.AddSignalR(options => options.EnableDetailedErrors = true)
+        builder.Services.AddSignalR(options => options.EnableDetailedErrors = true) 
             .AddMessagePackProtocol(options =>
             {
                 options.SerializerOptions =

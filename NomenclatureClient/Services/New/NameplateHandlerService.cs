@@ -29,7 +29,6 @@ public class NameplateHandlerService(INamePlateGui namePlateGui, IPluginLog logg
                 continue;
             
             var identifier = $"{handler.Name}@{handler.PlayerCharacter.HomeWorld.Value.Name}";
-            logger.Info(identifier);
             if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
                 continue;
 

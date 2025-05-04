@@ -29,6 +29,8 @@ public class NetworkHubService : IHostedService
     // Post Url
     private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
 
+    public int UserCount;
+
     /// <summary>
     ///     Signal R Hub Connection
     /// </summary>
@@ -51,6 +53,9 @@ public class NetworkHubService : IHostedService
             .WithUrl(HubUrl,
                 options => { options.AccessTokenProvider = async () => await Token().ConfigureAwait(false); })
             .WithAutomaticReconnect()
+            .ConfigureLogging(logging =>
+            {
+            })
             .AddMessagePackProtocol(options =>
             {
                 options.SerializerOptions =
@@ -58,6 +63,7 @@ public class NetworkHubService : IHostedService
             })
             .Build();
         AddClientMethods();
+        
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -178,6 +184,11 @@ public class NetworkHubService : IHostedService
         {
             _pluginLog.Debug($"Clearing Nomenclature for {charactername}");
             IdentityService.Identities.Remove(charactername);
+        });
+        Connection.On<int>(ApiMethods.UpdateUserCountEvent, (usercount) =>
+        {
+            _pluginLog.Verbose($"Current user count: {usercount}");
+            this.UserCount = usercount;
         });
     }
 

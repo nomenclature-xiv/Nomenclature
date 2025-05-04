@@ -11,6 +11,7 @@ using NomenclatureClient.Network;
 using NomenclatureClient.Services.New;
 using NomenclatureCommon.Domain.Api;
 using NomenclatureCommon.Domain.Api.Server;
+using Microsoft.AspNetCore.SignalR.Client;
 using Timer = System.Timers.Timer;
 
 namespace NomenclatureClient.Services;
@@ -47,6 +48,12 @@ public class ScanningService(
     {
         try
         {
+            if(network.Connection.State == HubConnectionState.Disconnected)
+            {
+                IdentityService.Identities.Clear();
+                _previousNearbyPlayers.Clear();
+                return;
+            }
             var nearbyPlayers = await framework.RunOnFramework(ScanNearbyCharacters).ConfigureAwait(false);
             var added = nearbyPlayers.Except(_previousNearbyPlayers).ToArray();
             var removed = _previousNearbyPlayers.Except(nearbyPlayers).ToArray();
