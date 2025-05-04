@@ -40,13 +40,15 @@ public class NetworkHubService : IHostedService
     private readonly CharacterService _characterService;
     private readonly Configuration _configuration;
     private readonly IPluginLog _pluginLog;
+    private readonly INamePlateGui _namePlateGui;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkHubService"/>
     /// </summary>
-    public NetworkHubService(IPluginLog pluginLog, Configuration configuration, CharacterService characterService)
+    public NetworkHubService(IPluginLog pluginLog, INamePlateGui namePlateGui, Configuration configuration, CharacterService characterService)
     {
         _pluginLog = pluginLog;
+        _namePlateGui = namePlateGui;
         _configuration = configuration;
         _characterService = characterService;
 
@@ -176,12 +178,14 @@ public class NetworkHubService : IHostedService
         {
             _pluginLog.Debug($"Updated Nomenclature for {charactername} to {nomenclature}");
             IdentityService.Identities[charactername] = nomenclature;
+            _namePlateGui.RequestRedraw();
         });
 
         Connection.On<string>(ApiMethods.RemoveNomenclatureEvent, (charactername) =>
         {
             _pluginLog.Debug($"Clearing Nomenclature for {charactername}");
             IdentityService.Identities.Remove(charactername);
+            _namePlateGui.RequestRedraw();
         });
         Connection.On<int>(ApiMethods.UpdateUserCountEvent, (usercount) =>
         {
