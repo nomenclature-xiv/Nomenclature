@@ -7,6 +7,7 @@
     "InternalName": "Nomenclature",
     "ApplicableVersion": "any",
     "Tags": ["name", "ui"],
+    "InternalName": "NomenclatureClient",
     "RepoUrl": "https://github.com/nomenclature-xiv/Nomenclature",
     "DownloadCount": 0,
     "LastUpdated": 1746332595,
