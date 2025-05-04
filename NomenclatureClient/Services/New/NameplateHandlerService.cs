@@ -6,11 +6,12 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Domain;
 using Serilog;
 
 namespace NomenclatureClient.Services.New;
 
-public class NameplateHandlerService(INamePlateGui namePlateGui, IPluginLog logger) : IHostedService
+public class NameplateHandlerService(INamePlateGui namePlateGui, IPluginLog logger, Configuration config) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -27,7 +28,8 @@ public class NameplateHandlerService(INamePlateGui namePlateGui, IPluginLog logg
             
             if (handler.PlayerCharacter is null)
                 continue;
-            
+            if (config.BlocklistCharacters.Contains(new Character(handler.Name.TextValue, handler.PlayerCharacter.HomeWorld.Value.Name.ExtractText())))
+                return;
             var identifier = $"{handler.Name}@{handler.PlayerCharacter.HomeWorld.Value.Name}";
             if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
                 continue;

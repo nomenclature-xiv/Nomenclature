@@ -10,7 +10,7 @@ using static FFXIVClientStructs.FFXIV.Client.System.String.Utf8String.Delegates;
 
 namespace NomenclatureClient.Services.New;
 
-public class ChatBoxHandlerService(CharacterService characterService, IChatGui chatGui, IPluginLog logger) : IHostedService
+public class ChatBoxHandlerService(CharacterService characterService, Configuration configuration, IChatGui chatGui, IPluginLog logger) : IHostedService
 {
     private readonly IconPayload cwpayload = new IconPayload(BitmapFontIcon.CrossWorld);
     public Task StartAsync(CancellationToken cancellationToken)
@@ -55,7 +55,9 @@ public class ChatBoxHandlerService(CharacterService characterService, IChatGui c
 
                 if (sender.Payloads[0] is not PlayerPayload info)
                     return;
-                
+
+                if (configuration.BlocklistCharacters.Contains(new Character(info.PlayerName, info.World.Value.Name.ExtractText())))
+                    return;
                 var identifier2 = string.Concat(info.PlayerName, "@", info.World.Value.Name.ExtractText());
                 if (IdentityService.Identities.TryGetValue(identifier2, out var nomenclature2) is false)
                     return;
@@ -78,7 +80,8 @@ public class ChatBoxHandlerService(CharacterService characterService, IChatGui c
 
                 if (sender.Payloads[0] is not PlayerPayload info2)
                     return;
-                
+                if (configuration.BlocklistCharacters.Contains(new Character(info2.PlayerName, info2.World.Value.Name.ExtractText())))
+                    return;
                 var identifier3 = string.Concat(info2.PlayerName, "@", info2.World.Value.Name.ExtractText());
                 if (IdentityService.Identities.TryGetValue(identifier3, out var nomenclature3) is false)
                     return;
