@@ -9,6 +9,7 @@ using MessagePack;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NomenclatureClient.Services;
 using NomenclatureClient.Services.New;
 using NomenclatureClient.Types.Exceptions;
@@ -53,9 +54,6 @@ public class NetworkHubService : IHostedService
             .WithUrl(HubUrl,
                 options => { options.AccessTokenProvider = async () => await Token().ConfigureAwait(false); })
             .WithAutomaticReconnect()
-            .ConfigureLogging(logging =>
-            {
-            })
             .AddMessagePackProtocol(options =>
             {
                 options.SerializerOptions =

@@ -7,6 +7,7 @@ using NomenclatureCommon.Domain.Api.Base;
 using NomenclatureCommon.Domain.Api.Server;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
+using NomenclatureServer.Services;
 using System.Timers;
 
 namespace NomenclatureServer.Hubs;
@@ -14,29 +15,13 @@ namespace NomenclatureServer.Hubs;
 // ReSharper disable once ForCanBeConvertedToForeach
 
 [Authorize]
-public class NomenclatureHub : Hub
+public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService connectionService) : Hub
 {
-    private readonly ILogger<NomenclatureHub> logger;
-
-    public NomenclatureHub(ILogger<NomenclatureHub> ilogger)
-    {
-        logger = ilogger;
-        _userCountTimer.Elapsed += UserCount;
-        _userCountTimer.Start();
-    }
 
     /// <summary>
     ///     List of currently applied nomenclatures
     /// </summary>
     private static readonly Dictionary<string, Nomenclature> Nomenclatures = new();
-
-    /// <summary>
-    ///     List of all connection IDs currently connected
-    /// </summary>
-    private HashSet<string> Connections = new();
-
-    private const int UserCountInternal = 5000;
-    private readonly System.Timers.Timer _userCountTimer = new() { Interval = UserCountInternal, Enabled = true };
 
     /// <summary>
     ///     Gets a character identifier from the claims provided by the sender
@@ -108,15 +93,15 @@ public class NomenclatureHub : Hub
 
         // Process all the subscriptions to remove
         var unsubscriptions = request.CharacterIdentitiesToUnsubscribeFrom.AsSpan();
-        
+
         for (var i = 0; i < unsubscriptions.Length; i++)
             Groups.RemoveFromGroupAsync(Context.ConnectionId, unsubscriptions[i]);
-        
+
         // TODO: Check the number of subscriptions this client has and prevent them subscribing to more than 128
 
         // Create a dictionary map to get all the new identities subscribed to immediately
         var identities = new Dictionary<string, Nomenclature>();
-        
+
         // Process all the subscriptions to add
         var subscriptions = request.CharacterIdentitiesToSubscribeTo.AsSpan();
         for (var i = 0; i < subscriptions.Length; i++)
@@ -124,7 +109,7 @@ public class NomenclatureHub : Hub
             // Add the caller to the group
             ref var identity = ref subscriptions[i];
             Groups.AddToGroupAsync(Context.ConnectionId, identity);
-            
+
             // Check if there is a nomenclature, and if there is, add it to the return dictionary
             if (Nomenclatures.TryGetValue(identity, out var nomenclature))
                 identities.Add(identity, nomenclature);
@@ -140,18 +125,13 @@ public class NomenclatureHub : Hub
 
     public override Task OnConnectedAsync()
     {
-        Connections.Add(Context.ConnectionId);
+        connectionService.Connections.Add(Context.ConnectionId);
         return base.OnConnectedAsync();
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)
     {
-        Connections.Remove(Context.ConnectionId);
+        connectionService.Connections.Remove(Context.ConnectionId);
         return base.OnDisconnectedAsync(exception);
-    }
-
-    public void UserCount(object? sender, ElapsedEventArgs e)
-    {
-        Clients.All.SendAsync(ApiMethods.UpdateUserCountEvent, Connections.Count);
     }
 }
