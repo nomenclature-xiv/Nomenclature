@@ -6,7 +6,7 @@ namespace NomenclatureServer;
 
 public class Configuration
 {
-    public const int Port = 5006;
+    public const int Port = 5017;
     private const string DefaultValue = "DEFAULT_VALUE";
     public static readonly IPAddress Ip = IPAddress.Parse("127.0.0.1");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };

@@ -25,10 +25,10 @@ namespace NomenclatureClient.Network;
 public class NetworkHubService : IHostedService
 {
     // Server URL
-    private const string HubUrl = "https://localhost:5006/nomenclature";
+    private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
 
     // Post Url
-    private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
+    private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
 
     public int UserCount;
 
