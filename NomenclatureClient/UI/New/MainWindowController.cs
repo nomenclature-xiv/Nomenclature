@@ -18,8 +18,13 @@ public class MainWindowController
     }
 
 
-    public async void ChangeName(string name, string world)
+    public async void ChangeName(string? name, string? world)
     {
+        await _networkNameService.ClearName();
+        if (name is null && world is null)
+        {
+            return;
+        }
         var result = await _networkNameService.UpdateName(name, world);
     }
 }

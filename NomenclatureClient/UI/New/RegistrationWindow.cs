@@ -58,11 +58,6 @@ public class RegistrationWindow : Window
                 ImGui.TextWrapped("Could not find code in character's profile! Ensure that it is saved before trying again.");
                 ImGui.PopStyleColor();
             }
-
-            if (_controller.SuccessfulValidation)
-            {
-                this.Toggle();
-            }
         });
 
         SharedUserInterfaces.ContentBox(() =>
@@ -75,10 +70,16 @@ public class RegistrationWindow : Window
                 ImGui.SetClipboardText(_controller.RegistrationKey);
         });
 
-        SharedUserInterfaces.ContentBox(() =>
+        SharedUserInterfaces.ContentBox(async () =>
         {
             if (ImGui.Button("Validate", new Vector2(ImGui.GetWindowWidth() - ImGui.GetStyle().WindowPadding.X * 2, 0)))
-                _controller.ValidateRegistration();
+            {
+                bool res = await _controller.ValidateRegistration();
+                if(res)
+                {
+                    this.Toggle();
+                }
+            }
         });
         
         ImGui.EndChild();

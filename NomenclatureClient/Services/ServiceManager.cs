@@ -81,9 +81,12 @@ namespace NomenclatureClient.Services
             collection.AddSingleton<RegistrationWindow>();
             collection.AddSingleton<MainWindowController>();
             collection.AddSingleton<MainWindow>();
+            collection.AddSingleton<BlocklistWindowController>();
+            collection.AddSingleton<BlocklistWindow>();
 
             //Easier to do using autofac
             collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
+            collection.AddSingleton<Window>(provider => provider.GetRequiredService<BlocklistWindow>());
             collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
 
             //Add configuration

@@ -18,6 +18,7 @@ public class MainWindow : Window
     private readonly MainWindowController _controller;
     private readonly NetworkHubService _networkHubService;
     private readonly RegistrationWindow _registrationWindow;
+    private readonly BlocklistWindow _blocklistWindow;
     
     // Instantiated
     private string _newName = string.Empty;
@@ -30,7 +31,8 @@ public class MainWindow : Window
         Configuration configuration,
         MainWindowController controller,
         NetworkHubService networkHubService,
-        RegistrationWindow registrationWindow) : base($"Nomenclature - Version {Plugin.Version}")
+        RegistrationWindow registrationWindow,
+        BlocklistWindow blocklistWindow) : base($"Nomenclature - Version {Plugin.Version}")
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -43,6 +45,7 @@ public class MainWindow : Window
         _controller = controller;
         _networkHubService = networkHubService;
         _registrationWindow = registrationWindow;
+        _blocklistWindow = blocklistWindow;
     }
 
     public override void Draw()
@@ -90,7 +93,10 @@ public class MainWindow : Window
                 _networkHubService.Disconnect();
             }
             ImGui.SameLine();
-            ImGui.Button("Blocklist", dimensions);
+            if(ImGui.Button("Blocklist", dimensions))
+            {
+                _blocklistWindow.Toggle();
+            }
         });
 
         SharedUserInterfaces.ContentBox(() =>
@@ -143,8 +149,8 @@ public class MainWindow : Window
                 new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
             {
                _controller.ChangeName(
-                    _shouldChangeName ? _newName : _characterService.CurrentCharacter?.Name ?? string.Empty,
-                    _shouldChangeWorld ? _newWorld : _characterService.CurrentCharacter?.World ?? string.Empty
+                    _shouldChangeName ? _newName : null,
+                    _shouldChangeWorld ? _newWorld : null
                     );
             }
             FontService.MediumFont?.Pop();

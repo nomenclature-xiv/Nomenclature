@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
@@ -56,34 +57,35 @@ public class RegistrationWindowController(IPluginLog log, Configuration configur
     /// <summary>
     ///     Attempts to validate the local character's generated code from <see cref="BeginRegistration"/> on their lodestone profile
     /// </summary>
-    public async void ValidateRegistration()
+    public async Task<bool> ValidateRegistration()
     {
         try
         {
             SuccessfulValidation = false;
             if (characterService.CurrentCharacter is not { } character)
-                return;
+                return false;
             
             if (RegistrationKey is null)
-                return;
+                return false;
             
             if (await networkRegisterService.RegisterCharacterValidate(RegistrationKey) is not { } secret)
             {
                 ValidateRegistrationError = true;
-                return;
+                return false;
             }
             
             configuration.LocalCharacterSecrets.Add(character.ToString(), secret);
             configuration.Save();
 
-            SuccessfulValidation = true;
             ValidateRegistrationError = false;
             characterService.CurrentSecret = secret;
             networkHubService.Connect().ConfigureAwait(false);
+            return true;
         }
         catch (Exception)
         {
             ValidateRegistrationError = true;
+            return false;
         }
     }
 }
