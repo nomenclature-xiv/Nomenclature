@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Net.Cache;
+using System.Text;
 using MessagePack;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +22,8 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         var configuration = new Configuration();
+
+        HttpWebRequest.DefaultCachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
 
         // Configuration Authentication and Authorization
         ConfigureJwtAuthentication(builder.Services, configuration);
