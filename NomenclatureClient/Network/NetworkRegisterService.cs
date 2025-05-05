@@ -24,6 +24,7 @@ public class NetworkRegisterService(IPluginLog pluginLog)
                 Character = characterName
             };
             var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlInit);
+            pluginLog.Verbose($"Registration request returned. Status: {response.StatusCode}");
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
@@ -44,6 +45,7 @@ public class NetworkRegisterService(IPluginLog pluginLog)
                 ValidationCode = validationCode
             };
             var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), RegisterPostUrlValidate);
+            pluginLog.Verbose($"Validation request returned. Status: {response.StatusCode}");
             return response.IsSuccessStatusCode
                 ? await response.Content.ReadAsStringAsync().ConfigureAwait(false)
                 : null;
