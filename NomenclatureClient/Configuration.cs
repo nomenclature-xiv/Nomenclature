@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
+using NomenclatureClient.Types;
 using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient;
@@ -18,7 +19,7 @@ public class Configuration : IPluginConfiguration
     /// <summary>
     ///     Configuration version
     /// </summary>
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
 
     /// <summary>
     ///     Should the server attempt to connect automatically?
@@ -26,9 +27,14 @@ public class Configuration : IPluginConfiguration
     public bool AutoConnect = false;
 
     /// <summary>
-    ///     Map of [Character]@[World] to Secret
+    ///     [deprecated] Map of [Character]@[World] to Secret
     /// </summary>
-    public readonly Dictionary<string, string> LocalCharacterSecrets = new();
+    public Dictionary<string, string> LocalCharacterSecrets = new();
+
+    /// <summary>
+    ///     Map of [Character]@[World] to all per-character config values, including secrets.
+    /// </summary>
+    public readonly Dictionary<string, CharConfig> LocalCharacters = new();
     
     /// <summary>
     ///     List of [Character]@[World] the local client has blocked
@@ -38,5 +44,18 @@ public class Configuration : IPluginConfiguration
     public void Save()
     {
         _pluginInterface!.SavePluginConfig(this);
+    }
+
+    public void Migrate()
+    {
+        if(Version == 1)
+        {
+            foreach(string key in LocalCharacterSecrets.Keys)
+            {
+                LocalCharacters.Add(key, new CharConfig() { Secret = LocalCharacterSecrets[key] });
+            }
+            Version = 2;
+        }
+        Save();
     }
 }

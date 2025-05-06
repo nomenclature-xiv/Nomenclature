@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
+using NomenclatureClient.Types;
 using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Services;
@@ -9,7 +10,8 @@ namespace NomenclatureClient.Services;
 public class CharacterService
 {
     public Character? CurrentCharacter;
-    public string? CurrentSecret;
+    public CharConfig? CurrentConfig;
+
 
     private readonly Configuration _configuration;
     private readonly IClientState _clientState;
@@ -34,13 +36,13 @@ public class CharacterService
                 var name = localPlayer.Name.ToString();
                 var world = localPlayer.HomeWorld.Value.Name.ToString();
                 CurrentCharacter = new Character(name, world);
-                CurrentSecret = _configuration.LocalCharacterSecrets.GetValueOrDefault(string.Concat(name, "@", world));
+                CurrentConfig = _configuration.LocalCharacters.GetValueOrDefault(string.Concat(name, "@", world));
                 return true;
             }
             else
             {
                 CurrentCharacter = null;
-                CurrentSecret = null;
+                CurrentConfig = null;
                 return false;
             }
         }
@@ -48,7 +50,7 @@ public class CharacterService
         {
             _pluginLog.Info($"[CharacterService] [OnLogin] {e}");
             CurrentCharacter = null;
-            CurrentSecret = null;
+            CurrentConfig = null;
             return false;
         }
     }
@@ -56,7 +58,7 @@ public class CharacterService
     public void OnLogout(int type, int code)
     {
         CurrentCharacter = null;
-        CurrentSecret = null;
+        CurrentConfig = null;
     }
 
     private async Task<T> RunOnFramework<T>(Func<T> func)

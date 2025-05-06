@@ -21,13 +21,12 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
 
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
+        if (characterService.CurrentCharacter is not { } character)
+            return;
         // Consider using `type` to filter out things?
         switch (sender.Payloads.Count)
         {
             case 1: // Self
-                if (characterService.CurrentCharacter is not { } character)
-                    return;
-                
                 if (sender.TextValue.Equals(character.Name) is false)
                     return;
 
@@ -50,9 +49,6 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                 break;
             
             case 3: // Same World
-                if (characterService.CurrentCharacter is not { })
-                    return;
-
                 if (sender.Payloads[0] is not PlayerPayload info)
                     return;
 
@@ -75,9 +71,6 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                 break;
             
             case 5: // Cross World
-                if (characterService.CurrentCharacter is not { })
-                    return;
-
                 if (sender.Payloads[0] is not PlayerPayload info2)
                     return;
                 if (configuration.BlocklistCharacters.Contains(new Character(info2.PlayerName, info2.World.Value.Name.ExtractText())))

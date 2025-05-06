@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
@@ -19,12 +20,6 @@ public class MainWindow : Window
     private readonly NetworkHubService _networkHubService;
     private readonly RegistrationWindow _registrationWindow;
     private readonly BlocklistWindow _blocklistWindow;
-    
-    // Instantiated
-    private string _newName = string.Empty;
-    private string _newWorld = string.Empty;
-    private bool _shouldChangeName;
-    private bool _shouldChangeWorld;
 
     public MainWindow(
         CharacterService characterService, 
@@ -105,28 +100,28 @@ public class MainWindow : Window
             ImGui.TextUnformatted("Change Name & World");
             FontService.MediumFont?.Pop();
 
-            ImGui.Checkbox("##EnableNameChange", ref _shouldChangeName);
+            ImGui.Checkbox("##EnableNameChange", ref _characterService.CurrentConfig.UseName);
             ImGui.SameLine();
 
-            if (_shouldChangeName is false)
+            if (_characterService.CurrentConfig.UseName is false)
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
-            ImGui.InputTextWithHint("##A2", "Name", ref _newName, 100);
+            ImGui.InputTextWithHint("##A2", "Name", ref _characterService.CurrentConfig.Name, 100);
 
-            if (_shouldChangeName is false)
+            if (_characterService.CurrentConfig.UseName is false)
                 ImGui.EndDisabled();
 
-            ImGui.Checkbox("##EnableWorldChange", ref _shouldChangeWorld);
+            ImGui.Checkbox("##EnableWorldChange", ref _characterService.CurrentConfig.UseWorld);
             ImGui.SameLine();
 
-            if (_shouldChangeWorld is false)
+            if (_characterService.CurrentConfig.UseWorld is false)
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
-            ImGui.InputTextWithHint("##A3", "World", ref _newWorld, 100);
+            ImGui.InputTextWithHint("##A3", "World", ref _characterService.CurrentConfig.World, 100);
 
-            if (_shouldChangeWorld is false)
+            if (_characterService.CurrentConfig.UseWorld is false)
                 ImGui.EndDisabled();
         });
 
@@ -136,8 +131,8 @@ public class MainWindow : Window
             ImGui.TextUnformatted("Appearing as");
             FontService.MediumFont?.Pop();
 
-            var name = _shouldChangeName ? _newName : _characterService.CurrentCharacter?.Name ?? string.Empty;
-            var world = _shouldChangeWorld ? _newWorld : _characterService.CurrentCharacter?.World ?? string.Empty;
+            var name = _characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : _characterService.CurrentCharacter?.Name ?? string.Empty;
+            var world = _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : _characterService.CurrentCharacter?.World ?? string.Empty;
 
             ImGui.TextUnformatted($"{name} «{world}»");
         });
@@ -149,8 +144,8 @@ public class MainWindow : Window
                 new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
             {
                _controller.ChangeName(
-                    _shouldChangeName ? _newName : null,
-                    _shouldChangeWorld ? _newWorld : null
+                    _characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : null,
+                    _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : null
                     );
             }
             FontService.MediumFont?.Pop();
@@ -175,11 +170,14 @@ public class MainWindow : Window
         });
         
         var dimension = new Vector2(size.X - padding.X * 2, 0);
-        if (_characterService.CurrentSecret is null)
+        if (_characterService.CurrentConfig is null)
         {
             SharedUserInterfaces.ContentBox(() =>
             {
                 ImGui.TextWrapped("This character is not registered with nomenclature. Please click \"Register\" to start using the plugin.");
+                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                ImGui.TextWrapped("Please ensure that your character lodestone profile is not private and that you can view it as not-privated BEFORE cliucking Register.");
+                ImGui.PopStyleColor();
             });
             
             SharedUserInterfaces.ContentBox(() =>

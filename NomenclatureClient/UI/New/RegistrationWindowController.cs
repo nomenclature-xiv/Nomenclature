@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types;
 
 namespace NomenclatureClient.UI.New;
 
@@ -73,12 +74,13 @@ public class RegistrationWindowController(IPluginLog log, Configuration configur
                 ValidateRegistrationError = true;
                 return false;
             }
-            
-            configuration.LocalCharacterSecrets.Add(character.ToString(), secret);
+            CharConfig charconfig = new CharConfig() { Secret = secret };
+
+            configuration.LocalCharacters.Add(character.ToString(), charconfig);
             configuration.Save();
 
             ValidateRegistrationError = false;
-            characterService.CurrentSecret = secret;
+            characterService.CurrentConfig = charconfig;
             networkHubService.Connect().ConfigureAwait(false);
             return true;
         }

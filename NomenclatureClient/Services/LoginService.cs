@@ -43,7 +43,7 @@ namespace NomenclatureClient.Services
 
         private async void OnLogin()
         {
-            if(await _characterService.OnLogin() && _config.AutoConnect && _characterService.CurrentSecret is not null)
+            if(await _characterService.OnLogin() && _config.AutoConnect && _characterService.CurrentConfig.Secret is not null)
             {
                 await _hubService.Connect();
             }

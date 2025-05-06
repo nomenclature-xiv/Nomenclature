@@ -154,10 +154,10 @@ public class NetworkHubService : IHostedService
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
     private async Task<string?> Token()
     {
-        if(_characterService.CurrentSecret is not { } secret)
+        if(_characterService.CurrentConfig is not { } config)
             throw new NoSecretForLocalCharacterException();
 
-        var request = new GenerateTokenRequest { Secret = secret };
+        var request = new GenerateTokenRequest { Secret = config.Secret };
         var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
             throw response.StatusCode switch

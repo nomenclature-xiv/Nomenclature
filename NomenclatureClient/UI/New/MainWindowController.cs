@@ -5,16 +5,13 @@ namespace NomenclatureClient.UI.New;
 
 public class MainWindowController
 {
-    public string NewName = string.Empty;
-    public string NewWorld = string.Empty;
-    public bool ShouldChangeName;
-    public bool ShouldChangeWorld;
-    
     private readonly NetworkNameService _networkNameService;
+    private readonly Configuration _configuration;
 
-    public MainWindowController(NetworkNameService networkNameService)
+    public MainWindowController(NetworkNameService networkNameService, Configuration config)
     {
         _networkNameService = networkNameService;
+        _configuration = config;
     }
 
 
@@ -25,6 +22,9 @@ public class MainWindowController
         {
             return;
         }
-        var result = await _networkNameService.UpdateName(name, world);
+        if(await _networkNameService.UpdateName(name, world))
+        {
+            _configuration.Save();
+        }
     }
 }

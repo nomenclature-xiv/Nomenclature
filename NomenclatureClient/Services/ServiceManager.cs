@@ -97,6 +97,7 @@ namespace NomenclatureClient.Services
                 var dalamudPluginInterface = s.GetRequiredService<IDalamudPluginInterface>();
                 var configuration = dalamudPluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
                 configuration.Initialize(dalamudPluginInterface);
+                configuration.Migrate();
                 return configuration;
             });
 
