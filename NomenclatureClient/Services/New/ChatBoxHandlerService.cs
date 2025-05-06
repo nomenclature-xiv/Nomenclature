@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.Text;
@@ -6,6 +7,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureCommon.Domain;
+using static FFXIVClientStructs.FFXIV.Client.LayoutEngine.ILayoutInstance;
 using static FFXIVClientStructs.FFXIV.Client.System.String.Utf8String.Delegates;
 
 namespace NomenclatureClient.Services.New;
@@ -23,87 +25,75 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
     {
         if (characterService.CurrentCharacter is not { } character)
             return;
+
+        string name = character.Name;
+        string world = character.World;
+        bool characterset = false;
+        int worldindex = -1;
+        Nomenclature? nomenclature = null;
+
         // Consider using `type` to filter out things?
-        switch (sender.Payloads.Count)
+        foreach(Payload payload in sender.Payloads)
         {
-            case 1: // Self
-                if (sender.TextValue.Equals(character.Name) is false)
-                    return;
+            if(payload is PlayerPayload ppayload)
+            {
+                name = ppayload.PlayerName;
+                world = ppayload.World.Value.Name.ExtractText();
+            }
 
-                // TODO: This should have the current nomenclature too
-                var identifier = string.Concat(character.Name, "@", character.World);
-                if (IdentityService.Identities.TryGetValue(identifier, out var nomenclature) is false)
+            if(payload is TextPayload tpayload)
+            {
+                if (configuration.BlocklistCharacters.Contains(new Character(name, world)))
                     return;
+                var identifier = string.Concat(name, "@", world);
+                if (IdentityService.Identities.TryGetValue(identifier, out nomenclature) is false)
+                    continue;
 
-                if (nomenclature.Name is not null)
-                    sender.Payloads[0] = new TextPayload(string.Concat("\"", nomenclature.Name, "\""));
-                if (nomenclature.World is not null)
-                {
-                    if (HandleWorld(nomenclature.World, characterService.CurrentCharacter) is { } payload)
-                    {
-                        sender.Payloads.Add(cwpayload);
-                        sender.Payloads.Add(payload);
-                    }
-                }
-
-                break;
-            
-            case 3: // Same World
-                if (sender.Payloads[0] is not PlayerPayload info)
-                    return;
-
-                if (configuration.BlocklistCharacters.Contains(new Character(info.PlayerName, info.World.Value.Name.ExtractText())))
-                    return;
-                var identifier2 = string.Concat(info.PlayerName, "@", info.World.Value.Name.ExtractText());
-                if (IdentityService.Identities.TryGetValue(identifier2, out var nomenclature2) is false)
-                    return;
                 
-                if (nomenclature2.Name is not null)
-                    sender.Payloads[1] = new TextPayload(string.Concat("\"", nomenclature2.Name, "\""));
-                if (nomenclature2.World is not null)
+                if (!characterset)
                 {
-                    if (HandleWorld(nomenclature2.World, characterService.CurrentCharacter) is { } payload)
+                    //handling for friend group icons!
+                    string testtext = tpayload.Text ?? string.Empty;
+                    string prefix = string.Empty;
+                    if (!Char.IsUpper(testtext[0]))
                     {
-                        sender.Payloads.Add(cwpayload);
-                        sender.Payloads.Add(payload);
+                        prefix = testtext.Substring(0, 1);
+                        testtext = testtext.Substring(1);
+                    }
+                    if (name == testtext)
+                    {
+                        if (nomenclature.Name is not null)
+                        {
+                            tpayload.Text = string.Concat("\"", prefix, nomenclature.Name, "\"");
+                        }
+                        characterset = true;
                     }
                 }
-                break;
-            
-            case 5: // Cross World
-                if (sender.Payloads[0] is not PlayerPayload info2)
-                    return;
-                if (configuration.BlocklistCharacters.Contains(new Character(info2.PlayerName, info2.World.Value.Name.ExtractText())))
-                    return;
-                var identifier3 = string.Concat(info2.PlayerName, "@", info2.World.Value.Name.ExtractText());
-                if (IdentityService.Identities.TryGetValue(identifier3, out var nomenclature3) is false)
-                    return;
-                
-                if (nomenclature3.Name is not null)
-                    sender.Payloads[1] = new TextPayload(string.Concat("\"", nomenclature3.Name, "\""));
-
-                if (nomenclature3.World is not null)
+                else
                 {
-                    if (HandleWorld(nomenclature3.World, characterService.CurrentCharacter) is { } payload)
+                    if(nomenclature.World is not null)
                     {
-                        sender.Payloads[4] = payload;
+                        worldindex = sender.Payloads.IndexOf(payload);
+                        tpayload.Text = nomenclature.World;
                     }
                 }
-
-                break;
-            
-            default:
-                return;
+            }
         }
-    }
-
-    private TextPayload? HandleWorld(string world, Character self)
-    {
-        if(world == self.World)
+        if (nomenclature?.World is not null)
         {
-            return null;
+            if (worldindex is not -1)
+            {
+                sender.Payloads.Insert(worldindex, new UIForegroundPayload(9));
+                sender.Payloads.Insert(worldindex + 2, UIForegroundPayload.UIForegroundOff);
+            }
+            else
+            {
+                sender.Payloads.Add(cwpayload);
+                sender.Payloads.Add(new UIForegroundPayload(9));
+                sender.Payloads.Add(new TextPayload(nomenclature.World));
+                sender.Payloads.Add(UIForegroundPayload.UIForegroundOff);
+            }
         }
-        return new TextPayload(world);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
