@@ -33,6 +33,13 @@ public class NameplateHandlerService(INamePlateGui namePlateGui, IPluginLog logg
             var identifier = $"{handler.Name}@{handler.PlayerCharacter.HomeWorld.Value.Name}";
             if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
                 continue;
+            if(identity.Name is not null && identity.Name == string.Empty && identity.World is not null && identity.World == string.Empty)
+            {
+                handler.Name = new SeString(new TextPayload(string.Empty));
+                handler.FreeCompanyTag = new SeString(new TextPayload(string.Empty));
+                handler.NameIconId = -1;
+                continue;
+            }
 
             if (identity.Name is not null)
                 handler.Name = new SeString(new TextPayload(string.Concat("\"", identity.Name, "\"")));

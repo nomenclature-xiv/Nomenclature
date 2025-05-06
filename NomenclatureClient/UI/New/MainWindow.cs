@@ -176,7 +176,7 @@ public class MainWindow : Window
             {
                 ImGui.TextWrapped("This character is not registered with nomenclature. Please click \"Register\" to start using the plugin.");
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped("Please ensure that your character lodestone profile is not private and that you can view it as not-privated BEFORE cliucking Register.");
+                ImGui.TextWrapped("Please ensure that your character lodestone profile is not private and that you can view it as not-privated BEFORE clicking Register.");
                 ImGui.PopStyleColor();
             });
             
