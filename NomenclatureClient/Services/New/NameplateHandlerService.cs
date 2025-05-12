@@ -43,26 +43,16 @@ public class NameplateHandlerService(INamePlateGui namePlateGui, Configuration c
                 continue;
             }
 
+            var name = handler.Name;
             if (identity.Name is not null)
             {
-                var payloads = new List<Payload>
-                {
-                    new EmphasisItalicPayload(true),
-                    new TextPayload(identity.Name),
-                    new EmphasisItalicPayload(false)
-                };
-                handler.Name = new SeString(payloads);
+                name = identity.Name;
             }
+            handler.Name = new SeString(new TextPayload(string.Concat(name, "*")));
 
             if (identity.World is not null)
             {
-                var payloads = new List<Payload>
-                {
-                    new EmphasisItalicPayload(true),
-                    new TextPayload(string.Concat(" «", identity.World, "»")),
-                    new EmphasisItalicPayload(false)
-                };
-                handler.FreeCompanyTag = new SeString(payloads);
+                handler.FreeCompanyTag = new SeString(new TextPayload(string.Concat(" «", identity.World, "»")));
             }
         }
     }

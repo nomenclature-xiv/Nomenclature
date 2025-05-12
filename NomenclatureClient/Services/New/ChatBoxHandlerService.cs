@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -5,7 +6,9 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Microsoft.Extensions.Hosting;
+using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Services.New;
 
@@ -21,6 +24,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
 
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
+        
         switch (type)
         {
             case XivChatType.Say:
@@ -56,7 +60,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
             case XivChatType.Party:
             case XivChatType.CrossParty:
             case XivChatType.Alliance:
-                HandleParty(sender.Payloads);
+                HandleDefault(sender.Payloads);
                 break;
             
             case XivChatType.None:
@@ -78,168 +82,107 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
         }
     }
 
-    // == Self ==
-    // Text
-            
-    // == Other, Same World ==
-    // Player
-    // Text
-    // Unknown
-            
-    // == Other, Different World ==
-    // Player
-    // Text
-    // Unknown
-    // Icon
-    // Text
     private void HandleDefault(List<Payload> payloads)
     {
-        if (payloads[0] is PlayerPayload playerPayload)
+        if (characterService.CurrentCharacter is not { } character)
+            return;
+
+        string name = character.Name;
+        string world = character.World;
+        bool characterset = false;
+        bool playerflag = false;
+        bool worldflag = false;
+        Nomenclature? nomenclature = null;
+
+        // Consider using `type` to filter out things?
+        for(int i = 0; i < payloads.Count; i++)
         {
-            var identifier = string.Concat(playerPayload.PlayerName, "@", playerPayload.World.Value.Name.ExtractText());
-            if (IdentityService.Identities.TryGetValue(identifier, out var nomenclature) is false)
-                return;
+            if (payloads[i] is PlayerPayload ppayload)
+            {
+                name = ppayload.PlayerName;
+                string tworld = ppayload.World.Value.Name.ExtractText();
+                worldflag = tworld != world;
+                world = tworld;
+                playerflag = true;
+            }
 
-            var modified = new List<Payload> { payloads[0] };
-            if (nomenclature.Name is not null)
+            //self doesn't have playerflag, so manually check the cases
+            if(playerflag || payloads.Count is 1 || payloads.Count is 6)
             {
-                modified.Add(new EmphasisItalicPayload(true));
-                modified.Add(new TextPayload(string.Concat(nomenclature.Name, "  ")));
-                modified.Add(new EmphasisItalicPayload(false));
-            }
-            else
-            {
-                modified.Add(payloads[1]);
-            }
-            
-            modified.Add(payloads[2]);
-
-            if (nomenclature.World is not null)
-            {
-                modified.Add(_crossWorldIconPayload);
-                modified.Add(new EmphasisItalicPayload(true));
-                modified.Add(new TextPayload(nomenclature.World));
-                modified.Add(new EmphasisItalicPayload(false));
-            }
-            else
-            {
-                if (payloads.Count is 5)
+                if (characterset && !worldflag)
                 {
-                    modified.Add(payloads[3]);
-                    modified.Add(payloads[4]);
+                    //playerdata, insert after
+                    if (payloads[i] is RawPayload)
+                    {
+                        payloads.Insert(i + 1, new IconPayload(BitmapFontIcon.CrossWorld));
+                        payloads.Insert(i + 2, new TextPayload(nomenclature?.World));
+                        i += 2;
+                    }
+                    else
+                    {
+                        payloads.Insert(i, new IconPayload(BitmapFontIcon.CrossWorld));
+                        payloads.Insert(i + 1, new TextPayload(nomenclature.World));
+                    }
+                    playerflag = false;
+                    characterset = false;
+                }
+
+                else if (payloads[i] is IconPayload && worldflag && characterset)
+                {
+                    TextPayload tpayload = (TextPayload)payloads[i+1];
+                    //we need to parse this because sqex hates me specifically
+                    var tsplit = tpayload.Text!.Split(" ");
+                    string postfix = tsplit[0].EndsWith('.') ? "." : "";
+                    tsplit[0] = string.Concat(nomenclature?.World!, postfix);
+                    tpayload.Text = string.Join(" ", tsplit);
+                    worldflag = false;
+                    characterset = false;
+                    playerflag = false;
+                }
+
+                else if (payloads[i] is TextPayload tpayload)
+                {
+                    if (configuration.BlocklistCharacters.Contains(new Character(name, world)))
+                        return;
+                    var identifier = string.Concat(name, "@", world);
+                    if (IdentityService.Identities.TryGetValue(identifier, out nomenclature) is false)
+                        continue;
+
+
+                    if (!characterset)
+                    {
+                        //handling for friend group icons!
+                        string testtext = tpayload.Text ?? string.Empty;
+                        string prefix = string.Empty;
+                        if (!Char.IsUpper(testtext[0]))
+                        {
+                            prefix = testtext.Substring(0, 1);
+                            testtext = testtext.Substring(1);
+                        }
+                        if (name == testtext)
+                        {
+                            if (nomenclature.Name is not null)
+                            {
+                                tpayload.Text = string.Concat(prefix, nomenclature.Name);
+                            }
+                            tpayload.Text = string.Concat(tpayload.Text, "*");
+                            if (nomenclature.World is not null)
+                            {
+                                characterset = true;
+                            }
+                            else
+                            {
+                                playerflag = false;
+                            }
+                        }
+                    }
                 }
             }
-            
-            payloads.Clear();
-            payloads.AddRange(modified);
         }
-        else
+        if (characterset)
         {
-            if (characterService.CurrentCharacter is not { } character)
-                return;
-            
-            var identifier = string.Concat(character.Name, "@", character.World);
-            if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
-                return;
-
-            if (identity.Name is null)
-                return;
-            
-            payloads.Clear();
-            payloads.Add(new EmphasisItalicPayload(true));
-            payloads.Add(new TextPayload(identity.Name));
-            payloads.Add(new EmphasisItalicPayload(false));
-        }
-    }
-    
-    // == Self ==
-    // Unknown
-    // Text
-    // Unknown
-    // Unknown
-    // Text
-    // Unknown
-            
-    // == Other, Same World ==
-    // 0 Unknown
-    // 1 Player
-    // 2 Text
-    // 3 Unknown
-    // 4 Unknown
-    // 5 Text
-    // 6 Unknown
-    // 7 Unknown
-            
-    // == Other, Different World ==
-    // 0 Unknown
-    // 1 Player
-    // 2 Text
-    // 3 Unknown
-    // 4 Unknown
-    // 5 Text
-    // 6 Unknown
-    // 7 Icon
-    // 8 Text
-    // 9 Unknown
-    private void HandleParty(List<Payload> payloads)
-    {
-        if (payloads[1] is PlayerPayload playerPayload)
-        {
-            var identifier = string.Concat(playerPayload.PlayerName, "@", playerPayload.World.Value.Name.ExtractText());
-            if (IdentityService.Identities.TryGetValue(identifier, out var nomenclature) is false)
-                return;
-            
-            var modified = new List<Payload> { payloads[2], payloads[3], payloads[4] };
-            if (nomenclature.Name is not null)
-            {
-                modified.Add(new EmphasisItalicPayload(true));
-                modified.Add(new TextPayload(string.Concat(nomenclature.Name, "  ")));
-                modified.Add(new EmphasisItalicPayload(false));
-            }
-            else
-            {
-                modified.Add(payloads[5]);
-            }
-            
-            modified.Add(payloads[6]);
-
-            if (nomenclature.World is not null)
-            {
-                modified.Add(_crossWorldIconPayload);
-                modified.Add(new EmphasisItalicPayload(true));
-                modified.Add(new TextPayload(nomenclature.World));
-                modified.Add(new EmphasisItalicPayload(false));
-            }
-            else
-            {
-                if (payloads.Count is 9)
-                {
-                    modified.Add(payloads[7]);
-                    modified.Add(payloads[8]);
-                }
-            }
-            
-            payloads.Clear();
-            payloads.AddRange(modified);
-        }
-        else
-        {
-            if (characterService.CurrentCharacter is not { } character)
-                return;
-            
-            var identifier = string.Concat(character.Name, "@", character.World);
-            if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
-                return;
-
-            if (identity.Name is null)
-                return;
-
-            var icon = payloads[1];
-            payloads.Clear();
-            payloads.Add(icon);
-            payloads.Add(new EmphasisItalicPayload(true));
-            payloads.Add(new TextPayload(identity.Name));
-            payloads.Add(new EmphasisItalicPayload(false));
+            payloads.Add(new IconPayload(BitmapFontIcon.CrossWorld));
+            payloads.Add(new TextPayload(nomenclature?.World));
         }
     }
     
