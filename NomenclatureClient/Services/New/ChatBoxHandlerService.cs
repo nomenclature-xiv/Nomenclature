@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.Text;
@@ -89,6 +90,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
 
         string name = character.Name;
         string world = character.World;
+        bool hasplayer = payloads.Where(p => p is PlayerPayload).Count() > 0;
         bool characterset = false;
         bool playerflag = false;
         bool worldflag = false;
@@ -107,7 +109,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
             }
 
             //self doesn't have playerflag, so manually check the cases
-            if(playerflag || payloads.Count is 1 || payloads.Count is 6)
+            if(playerflag || !hasplayer)
             {
                 if (characterset && !worldflag)
                 {
@@ -127,7 +129,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                     characterset = false;
                 }
 
-                else if (payloads[i] is IconPayload && worldflag && characterset)
+                else if (payloads[i] is IconPayload && ((IconPayload)payloads[i]).Icon == BitmapFontIcon.CrossWorld && worldflag && characterset)
                 {
                     TextPayload tpayload = (TextPayload)payloads[i+1];
                     //we need to parse this because sqex hates me specifically
