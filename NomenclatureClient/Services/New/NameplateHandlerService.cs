@@ -35,24 +35,21 @@ public class NameplateHandlerService(INamePlateGui namePlateGui, Configuration c
             if (IdentityService.Identities.TryGetValue(identifier, out var identity) is false)
                 continue;
             
-            if(identity.Name is not null && identity.Name == string.Empty && identity.World is not null && identity.World == string.Empty)
-            {
-                handler.Name = new SeString(new TextPayload(string.Empty));
-                handler.FreeCompanyTag = new SeString(new TextPayload(string.Empty));
-                handler.NameIconId = -1;
-                continue;
-            }
-
             var name = handler.Name;
             if (identity.Name is not null)
-            {
                 name = identity.Name;
-            }
-            handler.Name = new SeString(new TextPayload(string.Concat(name, "*")));
+
+            if (identity.Name != string.Empty)
+                handler.Name = new SeString(new TextPayload(string.Concat(name, "*")));
+            else
+                handler.Name = new SeString(new TextPayload(string.Empty));
 
             if (identity.World is not null)
             {
-                handler.FreeCompanyTag = new SeString(new TextPayload(string.Concat(" «", identity.World, "»")));
+                if (identity.World == string.Empty)
+                    handler.FreeCompanyTag = new SeString(new TextPayload(string.Empty));
+                else
+                    handler.FreeCompanyTag = new SeString(new TextPayload(string.Concat(" «", identity.World, "»")));
             }
         }
     }

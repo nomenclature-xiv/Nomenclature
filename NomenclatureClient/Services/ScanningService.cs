@@ -25,7 +25,8 @@ public class ScanningService(
     IPluginLog logger,
     IObjectTable objectTable,
     FrameworkService framework,
-    NetworkHubService network) : IHostedService
+    NetworkHubService network,
+    CharacterService characterService) : IHostedService
 {
     // Constants
     private const int ScanInternal = 5000;
@@ -33,11 +34,29 @@ public class ScanningService(
     // Instantiated
     private readonly Timer _scanningTimer = new() { Interval = ScanInternal, Enabled = true };
     private HashSet<string> _previousNearbyPlayers = [];
+    private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _scanningTimer.Elapsed += Scan;
         _scanningTimer.Start();
+
+        network.Connection.Closed += ClosedReset;
+        return Task.CompletedTask;
+    }
+
+    private Task ClosedReset(Exception? exception)
+    {
+        semaphore.Wait();
+        try
+        {
+            IdentityService.Identities.Clear();
+            _previousNearbyPlayers.Clear();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
         return Task.CompletedTask;
     }
 
@@ -46,14 +65,9 @@ public class ScanningService(
     /// </summary>
     private async void Scan(object? sender, ElapsedEventArgs _)
     {
+        semaphore.Wait();
         try
         {
-            if(network.Connection.State == HubConnectionState.Disconnected)
-            {
-                IdentityService.Identities.Clear();
-                _previousNearbyPlayers.Clear();
-                return;
-            }
             var nearbyPlayers = await framework.RunOnFramework(ScanNearbyCharacters).ConfigureAwait(false);
             var added = nearbyPlayers.Except(_previousNearbyPlayers).ToArray();
             var removed = _previousNearbyPlayers.Except(nearbyPlayers).ToArray();
@@ -78,11 +92,18 @@ public class ScanningService(
 
             // Remove those in the removed list
             foreach (var remove in removed)
-                IdentityService.Identities.Remove(remove);
+                IdentityService.Identities.TryRemove(remove, out var _);
 
+            string charstring = characterService.CurrentCharacter.ToString();
             // Add those from the returned results
             foreach (var (name, nomenclature) in response.NewlySubscribedNomenclatures)
+            {
                 IdentityService.Identities[name] = nomenclature;
+                if(name == charstring)
+                {
+                    IdentityService.CurrentNomenclature = nomenclature;
+                }
+            }
 
             // Assign a list
             _previousNearbyPlayers = nearbyPlayers;
@@ -90,6 +111,10 @@ public class ScanningService(
         catch (Exception e)
         {
             logger.Fatal($"Unexpected issue occurred while scanning, {e}");
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
 
@@ -114,6 +139,7 @@ public class ScanningService(
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _scanningTimer.Dispose();
+        network.Connection.Closed -= ClosedReset;
         return Task.CompletedTask;
     }
 }

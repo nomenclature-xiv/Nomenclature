@@ -7,6 +7,7 @@ using ImGuiNET;
 using Microsoft.AspNetCore.SignalR.Client;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureClient.Services.New;
 using NomenclatureClient.Utils;
 
 namespace NomenclatureClient.UI.New;
@@ -15,6 +16,7 @@ public class MainWindow : Window
 {
     // Injected
     private readonly CharacterService _characterService;
+    private readonly IdentityService _identityService;
     private readonly Configuration _configuration;
     private readonly MainWindowController _controller;
     private readonly NetworkHubService _networkHubService;
@@ -22,7 +24,8 @@ public class MainWindow : Window
     private readonly BlocklistWindow _blocklistWindow;
 
     public MainWindow(
-        CharacterService characterService, 
+        CharacterService characterService,
+        IdentityService identityService,
         Configuration configuration,
         MainWindowController controller,
         NetworkHubService networkHubService,
@@ -31,11 +34,12 @@ public class MainWindow : Window
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(280, 400),
+            MinimumSize = new Vector2(280, 450),
             MaximumSize = ImGui.GetIO().DisplaySize
         };
 
         _characterService = characterService;
+        _identityService = identityService;
         _configuration = configuration;
         _controller = controller;
         _networkHubService = networkHubService;
@@ -128,13 +132,16 @@ public class MainWindow : Window
         SharedUserInterfaces.ContentBox(() =>
         {
             FontService.MediumFont?.Push();
+            ImGui.TextUnformatted("Pending changes");
+            FontService.MediumFont?.Pop();
+
+            DisplayName(_characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : null, _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : null);
+
+            FontService.MediumFont?.Push();
             ImGui.TextUnformatted("Appearing as");
             FontService.MediumFont?.Pop();
 
-            var name = _characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : _characterService.CurrentCharacter?.Name ?? string.Empty;
-            var world = _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : _characterService.CurrentCharacter?.World ?? string.Empty;
-
-            ImGui.TextUnformatted($"{name} «{world}»");
+            DisplayName(IdentityService.CurrentNomenclature?.Name, IdentityService.CurrentNomenclature?.World);
         });
 
         SharedUserInterfaces.ContentBox(() =>
@@ -209,6 +216,16 @@ public class MainWindow : Window
                 }
             });
         }
+    }
+
+    private void DisplayName(string? name, string? world)
+    {
+        string outname = name ?? _characterService.CurrentCharacter.Name;
+        outname = name is null && world is null ? outname : outname == string.Empty ? outname : String.Concat(outname, "*");
+        string outworld = world ?? _characterService.CurrentCharacter.World;
+        outworld = outworld == string.Empty ? outworld : string.Concat("«", outworld, "»");
+
+        ImGui.TextUnformatted($"{outname} {outworld}");
     }
 
     private async void TryConnect()

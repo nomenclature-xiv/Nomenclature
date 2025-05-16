@@ -175,6 +175,10 @@ public class NetworkHubService : IHostedService
         Connection.On<string, Nomenclature>(ApiMethods.UpdateNomenclatureEvent, (charactername, nomenclature) =>
         {
             _pluginLog.Debug($"Updated Nomenclature for {charactername} to {nomenclature}");
+            if(charactername == _characterService.CurrentCharacter.ToString())
+            {
+                IdentityService.CurrentNomenclature = nomenclature;
+            }
             IdentityService.Identities[charactername] = nomenclature;
             _namePlateGui.RequestRedraw();
         });
@@ -182,7 +186,11 @@ public class NetworkHubService : IHostedService
         Connection.On<string>(ApiMethods.RemoveNomenclatureEvent, (charactername) =>
         {
             _pluginLog.Debug($"Clearing Nomenclature for {charactername}");
-            IdentityService.Identities.Remove(charactername);
+            if (charactername == _characterService.CurrentCharacter.ToString())
+            {
+                IdentityService.CurrentNomenclature = null;
+            }
+            IdentityService.Identities.Remove(charactername, out var _);
             _namePlateGui.RequestRedraw();
         });
         Connection.On<int>(ApiMethods.UpdateUserCountEvent, (usercount) =>
