@@ -132,6 +132,16 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         connectionService.Connections.Remove(Context.ConnectionId);
+
+        // Get identifier from claims
+        var identifier = CharacterIdentifier;
+
+        // Remove the identifier from our list of nomenclatures
+        Nomenclatures.Remove(identifier);
+
+        // Notify everyone in the group that this nomenclature has been removed
+        Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
+
         return base.OnDisconnectedAsync(exception);
     }
 }
