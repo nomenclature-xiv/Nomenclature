@@ -32,6 +32,8 @@ public class NetworkHubService : IHostedService
 
     public int UserCount;
 
+    public event Func<Task>? Connected;
+
     /// <summary>
     ///     Signal R Hub Connection
     /// </summary>
@@ -67,7 +69,12 @@ public class NetworkHubService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _pluginLog.Verbose("Starting server...");
-        await Connect().ConfigureAwait(false);
+
+        await Connection.StartAsync().ConfigureAwait(false);
+        if(Connection.State == HubConnectionState.Connected)
+        {
+            Connected?.Invoke();
+        }
     }
 
     /// <summary>

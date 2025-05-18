@@ -9,7 +9,6 @@ using NomenclatureClient.Network;
 using NomenclatureClient.Services.New;
 using NomenclatureClient.UI;
 using NomenclatureClient.UI.New;
-using MainWindowController = NomenclatureClient.UI.New.MainWindowController;
 
 namespace NomenclatureClient.Services
 {
@@ -48,6 +47,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton<CharacterService>();
                     collection.AddSingleton<LoginService>();
                     collection.AddSingleton<IdentityService>();
+                    collection.AddSingleton<NameService>();
                     collection.AddSingleton<ScanningService>();
                     collection.AddSingleton<FrameworkService>();
                     collection.AddSingleton<CommandService>();
@@ -81,7 +81,6 @@ namespace NomenclatureClient.Services
             collection.AddSingleton<InstallerWindowService>();
             collection.AddSingleton<RegistrationWindowController>();
             collection.AddSingleton<RegistrationWindow>();
-            collection.AddSingleton<MainWindowController>();
             collection.AddSingleton<MainWindow>();
             collection.AddSingleton<BlocklistWindowController>();
             collection.AddSingleton<BlocklistWindow>();

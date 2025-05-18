@@ -18,7 +18,7 @@ public class MainWindow : Window
     private readonly CharacterService _characterService;
     private readonly IdentityService _identityService;
     private readonly Configuration _configuration;
-    private readonly MainWindowController _controller;
+    private readonly NameService _nameService;
     private readonly NetworkHubService _networkHubService;
     private readonly RegistrationWindow _registrationWindow;
     private readonly BlocklistWindow _blocklistWindow;
@@ -27,7 +27,7 @@ public class MainWindow : Window
         CharacterService characterService,
         IdentityService identityService,
         Configuration configuration,
-        MainWindowController controller,
+        NameService nameService,
         NetworkHubService networkHubService,
         RegistrationWindow registrationWindow,
         BlocklistWindow blocklistWindow) : base($"Nomenclature - Version {Plugin.Version}")
@@ -41,7 +41,7 @@ public class MainWindow : Window
         _characterService = characterService;
         _identityService = identityService;
         _configuration = configuration;
-        _controller = controller;
+        _nameService = nameService;
         _networkHubService = networkHubService;
         _registrationWindow = registrationWindow;
         _blocklistWindow = blocklistWindow;
@@ -150,10 +150,7 @@ public class MainWindow : Window
             if(ImGui.Button("Change Name",
                 new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
             {
-               _controller.ChangeName(
-                    _characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : null,
-                    _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : null
-                    );
+                _nameService.ChangeName();
             }
             FontService.MediumFont?.Pop();
         }, false);
@@ -233,6 +230,8 @@ public class MainWindow : Window
         try
         {
             await _networkHubService.Connect();
+            if(_networkHubService.Connection.State == HubConnectionState.Connected)
+                await _nameService.ChangeName();
         }
         catch (Exception)
         {

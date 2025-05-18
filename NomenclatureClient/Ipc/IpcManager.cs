@@ -15,7 +15,6 @@ namespace NomenclatureClient.Ipc
     public class IpcManager : IDisposable
     {
         private readonly IDalamudPluginInterface _pluginInterface;
-        private readonly MainWindowController _mainWindowController;
         private readonly NetworkNameService _networkNameService;
 
         public const string SetNomenclature = "Nomenclature.SetNomenclature";
@@ -24,10 +23,9 @@ namespace NomenclatureClient.Ipc
         private ICallGateProvider<string, ushort, object?> _setNomenclature;
         private ICallGateProvider<string> _getNomenclature;
 
-        public IpcManager(IDalamudPluginInterface pluginInterface, MainWindowController mainWindowController, NetworkNameService nameService)
+        public IpcManager(IDalamudPluginInterface pluginInterface, NetworkNameService nameService)
         {
             _pluginInterface = pluginInterface;
-            _mainWindowController = mainWindowController;
             _networkNameService = nameService;
             _setNomenclature = _pluginInterface.GetIpcProvider<string, ushort, object?>(SetNomenclature);
             _getNomenclature = _pluginInterface.GetIpcProvider<string>(GetNomenclature);

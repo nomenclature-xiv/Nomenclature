@@ -1,4 +1,5 @@
 ﻿using Dalamud.Plugin.Services;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using System;
@@ -17,19 +18,22 @@ namespace NomenclatureClient.Services
         private readonly CharacterService _characterService;
         private readonly Configuration _config;
         private readonly NetworkHubService _hubService;
+        private readonly NameService _nameService;
 
-        public LoginService(IClientState clientState, CharacterService characterService, Configuration configuration, NetworkHubService hubService, IPluginLog pluginLog)
+        public LoginService(IClientState clientState, CharacterService characterService, Configuration configuration, NetworkHubService hubService, NameService nameService, IPluginLog pluginLog)
         {
             _clientState = clientState;
             _characterService = characterService;
             _config = configuration;
             _hubService = hubService;
+            _nameService = nameService;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _clientState.Login += OnLogin;
             _clientState.Logout += OnLogout;
+            _hubService.Connected += OnConnected;
             OnLogin();
             return Task.CompletedTask;
         }
@@ -41,12 +45,17 @@ namespace NomenclatureClient.Services
             return Task.CompletedTask;
         }
 
+        private async Task OnConnected()
+        {
+            if (_config.AutoConnect && _characterService.CurrentConfig is not null)
+            {
+                await _nameService.ChangeName();
+            }
+        }
+
         private async void OnLogin()
         {
-            if(await _characterService.OnLogin() && _config.AutoConnect && _characterService.CurrentConfig is not null)
-            {
-                await _hubService.Connect();
-            }
+            await _characterService.OnLogin();
         }
         private async void OnLogout(int type, int code)
         {
