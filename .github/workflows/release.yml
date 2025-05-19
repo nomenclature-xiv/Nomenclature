@@ -30,27 +30,27 @@ jobs:
       uses: gittools/actions/gitversion/execute@v3.2.1
     - name: write version into json
       run: |
-        $ver = '${{ env.fullSemVer }}'
-        $path = './NomenclatureClient/bin/Release/NomenclatureClient.json'
+        $ver = '${{ env.majorMinorPatch }}'
+        $path = './NomenclatureClient/bin/x64/Release/NomenclatureClient.json'
         $json = Get-Content -Raw $path | ConvertFrom-Json
         $json.AssemblyVersion = $ver
         $content = $json | ConvertTo-Json
         set-content -Path $path -Value $content
     - name: Archive
-      run: Compress-Archive -Path NomenclatureClient/bin/Debug/* -DestinationPath Nomenclature.zip
+      run: Compress-Archive -Path NomenclatureClient/bin/Release/* -DestinationPath Nomenclature.zip
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
         path: |
-          ./NomenclatureClient/bin/Release/*
+          ./NomenclatureClient/bin/x64/Release/*
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.fullSemVer }}
-        release_name: v${{ env.fullSemVer }}
+        tag_name: v${{ env.majorMinorPatch }}
+        release_name: v${{ env.majorMinorPatch }}
         draft: false
         prerelease: false
     - name: Upload Release Asset
@@ -66,7 +66,7 @@ jobs:
 
     - name: Write out repo.json
       run: |
-        $ver = '${{ env.fullSemVer }}'
+        $ver = '${{ env.majorMinorPatch }}'
         $path = './repo.json'
         $json = Get-Content -Raw $path | ConvertFrom-Json
         $json[0].AssemblyVersion = $ver
@@ -85,5 +85,5 @@ jobs:
         git branch -f master ${{ github.sha }}
         git checkout master
         git add repo.json
-        git commit -m "[CI] Updating repo.json for ${{ env.fullSemVer }}" || true
+        git commit -m "[CI] Updating repo.json for ${{ env.majorMinorPatch }}" || true
         git push origin master
