@@ -31,7 +31,7 @@ jobs:
     - name: write version into json
       run: |
         $ver = '${{ env.fullSemVer }}'
-        $path = './NomenclatureClient/bin/Debug/NomenclatureClient.json'
+        $path = './NomenclatureClient/bin/Release/NomenclatureClient.json'
         $json = Get-Content -Raw $path | ConvertFrom-Json
         $json.AssemblyVersion = $ver
         $content = $json | ConvertTo-Json
