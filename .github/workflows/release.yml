@@ -1,0 +1,86 @@
+name: Manual Release
+on: workflow_dispatch
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.x.x
+    - name: Download Dalamud
+      run: |
+        Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+        Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
+    - name: Build
+      run: dotnet build -c Release
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v3.2.1
+      with:
+        versionSpec: '6.3.x'
+    - name: Determine Version
+      id: version_step # step id used as a reference for output values
+      uses: gittools/actions/gitversion/execute@v3.2.1
+    - name: write version into json
+      run: |
+        $ver = '${{ env.fullSemVer }}'
+        $path = './NomenclatureClient/bin/Debug/NomenclatureClient.json'
+        $json = Get-Content -Raw $path | ConvertFrom-Json
+        $json.AssemblyVersion = $ver
+        $content = $json | ConvertTo-Json
+        set-content -Path $path -Value $content
+    - name: Archive
+      run: Compress-Archive -Path NomenclatureClient/bin/Debug/* -DestinationPath Nomenclature.zip
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: |
+          ./NomenclatureClient/bin/Release/*
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ env.fullSemVer }}
+        release_name: v${{ env.fullSemVer }}
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ./Nomenclature.zip
+        asset_name: Nomenclature.zip
+        asset_content_type: application/zip
+
+    - name: Write out repo.json
+      run: |
+        $ver = '${{ env.fullSemVer }}'
+        $path = './repo.json'
+        $json = Get-Content -Raw $path | ConvertFrom-Json
+        $json[0].AssemblyVersion = $ver
+        $json[0].TestingAssemblyVersion = $ver
+        $json[0].DownloadLinkInstall = $json.DownloadLinkInstall -replace '[^/]+/Nomenclature.zip',"$ver/Nomenclature.zip"
+        $json[0].DownloadLinkTesting = $json.DownloadLinkTesting -replace '[^/]+/Nomenclature.zip',"$ver/Nomenclature.zip"
+        $json[0].DownloadLinkUpdate = $json.DownloadLinkUpdate -replace '[^/]+/Nomenclature.zip',"$ver/Nomenclature.zip"
+        $content = $json | ConvertTo-Json -AsArray
+        set-content -Path $path -Value $content
+
+    - name: Commit repo.json
+      run: |
+        git config --global user.name "Actions User"
+        git config --global user.email "actions@github.com"
+        git fetch origin master
+        git branch -f master ${{ github.sha }}
+        git checkout master
+        git add repo.json
+        git commit -m "[CI] Updating repo.json for ${{ env.fullSemVer }}" || true
+        git push origin master
