@@ -56,6 +56,8 @@ namespace NomenclatureClient.Services
         private async void OnLogin()
         {
             await _characterService.OnLogin();
+            if (_hubService.Connection.State != HubConnectionState.Connecting && _hubService.Connection.State != HubConnectionState.Connected)
+                await _hubService.Connect();
         }
         private async void OnLogout(int type, int code)
         {

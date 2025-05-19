@@ -70,7 +70,7 @@ public class NetworkHubService : IHostedService
     {
         _pluginLog.Verbose("Starting server...");
 
-        await Connection.StartAsync().ConfigureAwait(false);
+        await Connect();
         if(Connection.State == HubConnectionState.Connected)
         {
             Connected?.Invoke();
