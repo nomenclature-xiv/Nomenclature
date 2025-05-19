@@ -37,7 +37,7 @@ jobs:
         $content = $json | ConvertTo-Json
         set-content -Path $path -Value $content
     - name: Archive
-      run: Compress-Archive -Path NomenclatureClient/bin/Release/* -DestinationPath Nomenclature.zip
+      run: Compress-Archive -Path NomenclatureClient/bin/x64/Release/* -DestinationPath Nomenclature.zip
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
