@@ -4,19 +4,20 @@
     "Name": "Nomenclature",
     "Punchline": "What's in a name?",
     "Description": "This plugin allows you to view names of others, as set by themselves!",
-    "InternalName": "Nomenclature",
-    "ApplicableVersion": "any",
-    "Tags": ["name", "ui"],
+    "Tags": [
+      "name",
+      "ui"
+    ],
     "InternalName": "NomenclatureClient",
     "RepoUrl": "https://github.com/nomenclature-xiv/Nomenclature",
     "DownloadCount": 0,
     "LastUpdated": 1746332595,
     "DownloadLinkInstall": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.2.4/latest.zip",
     "DownloadLinkUpdate": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.2.4/latest.zip",
-    "AssemblyVersion": "0.2.4",
+    "AssemblyVersion": "0.2.6",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 12,
     "Changelog": "",
-    "TestingAssemblyVersion": "0.2.4"
+    "TestingAssemblyVersion": "0.2.6"
   }
 ]
