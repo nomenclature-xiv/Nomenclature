@@ -16,7 +16,6 @@ public class MainWindow : Window
 {
     // Injected
     private readonly CharacterService _characterService;
-    private readonly IdentityService _identityService;
     private readonly Configuration _configuration;
     private readonly NameService _nameService;
     private readonly NetworkHubService _networkHubService;
@@ -26,7 +25,6 @@ public class MainWindow : Window
 
     public MainWindow(
         CharacterService characterService,
-        IdentityService identityService,
         Configuration configuration,
         NameService nameService,
         NetworkHubService networkHubService,
@@ -41,7 +39,6 @@ public class MainWindow : Window
         };
 
         _characterService = characterService;
-        _identityService = identityService;
         _configuration = configuration;
         _nameService = nameService;
         _networkHubService = networkHubService;

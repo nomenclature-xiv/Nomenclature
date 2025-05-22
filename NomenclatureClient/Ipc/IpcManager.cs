@@ -2,17 +2,17 @@
 using Dalamud.Plugin.Ipc;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
-using NomenclatureClient.UI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using NomenclatureClient.UI.New;
+using Microsoft.Extensions.Hosting;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using NomenclatureClient.Services.New;
 
 namespace NomenclatureClient.Ipc
 {
-    public class IpcManager : IDisposable
+    public class IpcManager : IHostedService
     {
         private readonly IDalamudPluginInterface _pluginInterface;
         private readonly NetworkNameService _networkNameService;
@@ -36,11 +36,17 @@ namespace NomenclatureClient.Ipc
             AddActions();
         }
 
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            AddActions();
+            return Task.CompletedTask;
+        }
 
-        public void Dispose()
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             _setNomenclature.UnregisterAction();
             _getNomenclature.UnregisterAction();
+            return Task.CompletedTask;
         }
 
         private void AddActions()
@@ -59,11 +65,9 @@ namespace NomenclatureClient.Ipc
             
             _getNomenclature.RegisterFunc(() =>
             {
-                if (_characterService.CurrentConfig is null || _characterService.CurrentCharacter is null)
+                if (IdentityService.CurrentNomenclature is null)
                     return "";
-                return String.Concat([_characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : _characterService.CurrentCharacter.Name, 
-                    "@", 
-                    _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : _characterService.CurrentCharacter.World]);
+                return String.Concat([IdentityService.CurrentNomenclature.Name, "@", IdentityService.CurrentNomenclature.World]);
 
             });
         }

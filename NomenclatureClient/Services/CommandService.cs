@@ -12,6 +12,7 @@ using NomenclatureClient.UI.New;
 using System;
 using NomenclatureClient.Services.New;
 using NomenclatureCommon.Domain;
+using NomenclatureClient.Debug;
 
 namespace NomenclatureClient.Services
 {
@@ -23,14 +24,16 @@ namespace NomenclatureClient.Services
         public MainWindow MainWindow { get; }
         private readonly Configuration _configuration;
         private readonly NetworkNameService _nameService;
+        private readonly IpcWindow _ipcWindow;
 
-        public CommandService(ICommandManager commandManager, IPluginLog pluginLog, MainWindow mainWindow, Configuration configuration, NetworkNameService nameService)
+        public CommandService(ICommandManager commandManager, IPluginLog pluginLog, MainWindow mainWindow, Configuration configuration, NetworkNameService nameService, IpcWindow ipcWindow)
         {
             CommandManager = commandManager;
             MainWindow = mainWindow;
             _nameService = nameService;
             _configuration = configuration;
             _pluginLog = pluginLog;
+            _ipcWindow = ipcWindow;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -64,6 +67,10 @@ namespace NomenclatureClient.Services
                     if(await _nameService.UpdateName(null, argv[2]))
                         IdentityService.CurrentNomenclature = new Nomenclature(IdentityService.CurrentNomenclature?.Name, joinedworld);
                 }
+            }
+            else if (argv[0] == "debug")
+            {
+                _ipcWindow.Toggle();
             }
             else
                 _pluginLog.Debug("Malformed chat command.");

@@ -4,6 +4,7 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NomenclatureClient.Debug;
 using NomenclatureClient.Ipc;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services.New;
@@ -59,6 +60,7 @@ namespace NomenclatureClient.Services
                     collection.AddSingleton<NameplateHandlerService>();
                     collection.AddSingleton<ChatBoxHandlerService>();
                     collection.AddSingleton<IpcManager>();
+                    collection.AddSingleton<IpcTester>();
                     collection = AddUiServices(collection);
 
                     //Services to automatically start when the plugin does
@@ -72,6 +74,7 @@ namespace NomenclatureClient.Services
                     collection.AddHostedService(p => p.GetRequiredService<FontService>());
                     collection.AddHostedService(p => p.GetRequiredService<NameplateHandlerService>());
                     collection.AddHostedService(p => p.GetRequiredService<ChatBoxHandlerService>());
+                    collection.AddHostedService(p => p.GetRequiredService<IpcManager>());
                 }).Build();
 
         }
@@ -85,6 +88,8 @@ namespace NomenclatureClient.Services
             collection.AddSingleton<MainWindow>();
             collection.AddSingleton<BlocklistWindowController>();
             collection.AddSingleton<BlocklistWindow>();
+            collection.AddSingleton<IpcWindow>();
+            collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
             //Easier to do using autofac
             collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
