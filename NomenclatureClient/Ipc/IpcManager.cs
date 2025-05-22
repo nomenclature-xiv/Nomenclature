@@ -16,6 +16,8 @@ namespace NomenclatureClient.Ipc
     {
         private readonly IDalamudPluginInterface _pluginInterface;
         private readonly NetworkNameService _networkNameService;
+        private readonly CharacterService _characterService;
+        private readonly MainWindowController _mainWindowController;
 
         public const string SetNomenclature = "Nomenclature.SetNomenclature";
         public const string GetNomenclature = "Nomenclature.GetNomenclature";
@@ -23,10 +25,12 @@ namespace NomenclatureClient.Ipc
         private ICallGateProvider<string, ushort, object?> _setNomenclature;
         private ICallGateProvider<string> _getNomenclature;
 
-        public IpcManager(IDalamudPluginInterface pluginInterface, NetworkNameService nameService)
+        public IpcManager(IDalamudPluginInterface pluginInterface, NetworkNameService nameService, CharacterService characterService, MainWindowController mainWindowController)
         {
             _pluginInterface = pluginInterface;
             _networkNameService = nameService;
+            _characterService = characterService;
+            _mainWindowController = mainWindowController;
             _setNomenclature = _pluginInterface.GetIpcProvider<string, ushort, object?>(SetNomenclature);
             _getNomenclature = _pluginInterface.GetIpcProvider<string>(GetNomenclature);
             AddActions();
@@ -49,16 +53,18 @@ namespace NomenclatureClient.Ipc
                 {
                     return;
                 }
-                //_mainWindowController.Locked = flags.HasFlag(NomenclatureSetFlag.Lock);
-                //_mainWindowController.ChangedName = split[0];
-                //_mainWindowController.ChangedWorld = split[1];
+                _mainWindowController.Locked = flags.HasFlag(NomenclatureSetFlag.Lock);
                 _networkNameService.UpdateName(split[0], split[1]).ConfigureAwait(false);
             });
             
             _getNomenclature.RegisterFunc(() =>
             {
-                return
-                    "";  //String.Concat([_mainWindowController.ChangedName, "@", _mainWindowController.ChangedWorld]);
+                if (_characterService.CurrentConfig is null || _characterService.CurrentCharacter is null)
+                    return "";
+                return String.Concat([_characterService.CurrentConfig.UseName ? _characterService.CurrentConfig.Name : _characterService.CurrentCharacter.Name, 
+                    "@", 
+                    _characterService.CurrentConfig.UseWorld ? _characterService.CurrentConfig.World : _characterService.CurrentCharacter.World]);
+
             });
         }
     }

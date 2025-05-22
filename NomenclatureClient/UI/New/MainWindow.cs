@@ -22,6 +22,7 @@ public class MainWindow : Window
     private readonly NetworkHubService _networkHubService;
     private readonly RegistrationWindow _registrationWindow;
     private readonly BlocklistWindow _blocklistWindow;
+    private readonly MainWindowController _mainWindowController;
 
     public MainWindow(
         CharacterService characterService,
@@ -30,7 +31,8 @@ public class MainWindow : Window
         NameService nameService,
         NetworkHubService networkHubService,
         RegistrationWindow registrationWindow,
-        BlocklistWindow blocklistWindow) : base($"Nomenclature - Version {Plugin.Version}")
+        BlocklistWindow blocklistWindow,
+        MainWindowController mainWindowController) : base($"Nomenclature - Version {Plugin.Version}")
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -45,6 +47,7 @@ public class MainWindow : Window
         _networkHubService = networkHubService;
         _registrationWindow = registrationWindow;
         _blocklistWindow = blocklistWindow;
+        _mainWindowController = mainWindowController;
     }
 
     public override void Draw()
@@ -104,28 +107,31 @@ public class MainWindow : Window
             ImGui.TextUnformatted("Change Name & World");
             FontService.MediumFont?.Pop();
 
+            if(_mainWindowController.Locked)
+                ImGui.BeginDisabled();
+
             ImGui.Checkbox("##EnableNameChange", ref _characterService.CurrentConfig.UseName);
             ImGui.SameLine();
 
-            if (_characterService.CurrentConfig.UseName is false)
+            if (_characterService.CurrentConfig.UseName is false && !_mainWindowController.Locked)
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
             ImGui.InputTextWithHint("##A2", "Name", ref _characterService.CurrentConfig.Name, 100);
 
-            if (_characterService.CurrentConfig.UseName is false)
+            if (_characterService.CurrentConfig.UseName is false && !_mainWindowController.Locked)
                 ImGui.EndDisabled();
 
             ImGui.Checkbox("##EnableWorldChange", ref _characterService.CurrentConfig.UseWorld);
             ImGui.SameLine();
 
-            if (_characterService.CurrentConfig.UseWorld is false)
+            if (_characterService.CurrentConfig.UseWorld is false && !_mainWindowController.Locked)
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
             ImGui.InputTextWithHint("##A3", "World", ref _characterService.CurrentConfig.World, 100);
 
-            if (_characterService.CurrentConfig.UseWorld is false)
+            if (_characterService.CurrentConfig.UseWorld is false || _mainWindowController.Locked)
                 ImGui.EndDisabled();
         });
 
