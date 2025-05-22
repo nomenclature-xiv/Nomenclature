@@ -81,6 +81,7 @@ namespace NomenclatureClient.Services
             collection.AddSingleton<InstallerWindowService>();
             collection.AddSingleton<RegistrationWindowController>();
             collection.AddSingleton<RegistrationWindow>();
+            collection.AddSingleton<MainWindowController>();
             collection.AddSingleton<MainWindow>();
             collection.AddSingleton<BlocklistWindowController>();
             collection.AddSingleton<BlocklistWindow>();
