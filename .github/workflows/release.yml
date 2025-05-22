@@ -28,7 +28,7 @@ jobs:
       id: version_step # step id used as a reference for output values
       uses: gittools/actions/gitversion/execute@v3.2.1
       with:
-        updateAssemblyInfo: true
+        updateProjectFiles: true
     - name: write version into json
       run: |
         $ver = '${{ env.majorMinorPatch }}'
