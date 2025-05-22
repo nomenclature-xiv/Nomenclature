@@ -9,6 +9,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NomenclatureClient.UI.New;
+using System;
+using NomenclatureClient.Services.New;
+using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Services
 {
@@ -39,7 +42,7 @@ namespace NomenclatureClient.Services
             return Task.CompletedTask;
         }
 
-        private void OnCommand(string command, string arguments)
+        private async void OnCommand(string command, string arguments)
         {
             if (arguments == string.Empty)
             {
@@ -47,15 +50,19 @@ namespace NomenclatureClient.Services
                 return;
             }
             var argv = arguments.Split(' ');
-            if (argv[0] == "set" && argv.Length == 3)
+            if (argv[0] == "set" && argv.Length > 2)
             {
                 if (argv[1] == "name")
                 {
-                    _nameService.UpdateName(argv[2], null);
+                    var joinedname = string.Join(' ', argv.Skip(2));
+                    if (await _nameService.UpdateName(joinedname, null))
+                        IdentityService.CurrentNomenclature = new Nomenclature(joinedname, IdentityService.CurrentNomenclature?.World);
                 }
                 if (argv[1] == "world")
                 {
-                    _nameService.UpdateName(null, argv[2]);
+                    var joinedworld = string.Join(' ', argv.Skip(2));
+                    if(await _nameService.UpdateName(null, argv[2]))
+                        IdentityService.CurrentNomenclature = new Nomenclature(IdentityService.CurrentNomenclature?.Name, joinedworld);
                 }
             }
             else
