@@ -16,7 +16,6 @@ namespace NomenclatureClient.Ipc
     {
         private readonly IDalamudPluginInterface _pluginInterface;
         private readonly NetworkNameService _networkNameService;
-        private readonly CharacterService _characterService;
         private readonly MainWindowController _mainWindowController;
 
         public const string SetNomenclature = "Nomenclature.SetNomenclature";
@@ -25,11 +24,10 @@ namespace NomenclatureClient.Ipc
         private ICallGateProvider<string, ushort, object?> _setNomenclature;
         private ICallGateProvider<string> _getNomenclature;
 
-        public IpcManager(IDalamudPluginInterface pluginInterface, NetworkNameService nameService, CharacterService characterService, MainWindowController mainWindowController)
+        public IpcManager(IDalamudPluginInterface pluginInterface, NetworkNameService nameService, MainWindowController mainWindowController)
         {
             _pluginInterface = pluginInterface;
             _networkNameService = nameService;
-            _characterService = characterService;
             _mainWindowController = mainWindowController;
             _setNomenclature = _pluginInterface.GetIpcProvider<string, ushort, object?>(SetNomenclature);
             _getNomenclature = _pluginInterface.GetIpcProvider<string>(GetNomenclature);

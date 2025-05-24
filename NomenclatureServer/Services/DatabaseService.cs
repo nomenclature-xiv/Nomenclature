@@ -54,6 +54,7 @@ public class DatabaseService
         command.CommandText = $"""
                                     INSERT INTO {RegisteredCharactersTable} (Secret, CharacterIdentifier)
                                     VALUES ({SecretParam}, {CharacterIdentifierParam})
+                                    ON CONFLICT(CharacterIdentifier) DO UPDATE SET Secret=excluded.Secret
                               """;
         command.Parameters.AddWithValue(SecretParam, secret);
         command.Parameters.AddWithValue(CharacterIdentifierParam, identifier);
