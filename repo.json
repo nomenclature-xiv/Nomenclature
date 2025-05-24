@@ -14,10 +14,10 @@
     "LastUpdated": 1746332595,
     "DownloadLinkInstall": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.2.4/latest.zip",
     "DownloadLinkUpdate": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.2.4/latest.zip",
-    "AssemblyVersion": "0.2.9",
+    "AssemblyVersion": "0.2.10",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 12,
     "Changelog": "",
-    "TestingAssemblyVersion": "0.2.9"
+    "TestingAssemblyVersion": "0.2.10"
   }
 ]
