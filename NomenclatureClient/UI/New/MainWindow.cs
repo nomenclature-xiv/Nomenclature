@@ -81,7 +81,7 @@ public class MainWindow : Window
             SharedUserInterfaces.TextCentered("Nomenclature");
             FontService.BigFont?.Pop();
 
-            SharedUserInterfaces.TextCentered($"{_networkHubService.UserCount} Corpse Puppets(s) Online");
+            SharedUserInterfaces.TextCentered($"{_networkHubService.UserCount} User(s) Online");
         });
 
         SharedUserInterfaces.ContentBox(() =>
