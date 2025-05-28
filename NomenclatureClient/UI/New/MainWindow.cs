@@ -114,7 +114,7 @@ public class MainWindow : Window
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
-            ImGui.InputTextWithHint("##A2", "Name", ref _characterService.CurrentConfig.Name, 100);
+            ImGui.InputTextWithHint("##A2", "Name", ref _characterService.CurrentConfig.Name, 32);
 
             if (_characterService.CurrentConfig.UseName is false && !_mainWindowController.Locked)
                 ImGui.EndDisabled();
@@ -126,7 +126,7 @@ public class MainWindow : Window
                 ImGui.BeginDisabled();
 
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
-            ImGui.InputTextWithHint("##A3", "World", ref _characterService.CurrentConfig.World, 100);
+            ImGui.InputTextWithHint("##A3", "World", ref _characterService.CurrentConfig.World, 32);
 
             if (_characterService.CurrentConfig.UseWorld is false || _mainWindowController.Locked)
                 ImGui.EndDisabled();

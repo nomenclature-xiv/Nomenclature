@@ -39,6 +39,9 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         // Get identifier from claims
         var identifier = CharacterIdentifier;
 
+        if (request.Nomenclature.Name?.Length > 32 || request.Nomenclature.World?.Length > 32)
+            return new Response { Success = false };
+
         // Check if the nomenclature already exists
         if (Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
         {
