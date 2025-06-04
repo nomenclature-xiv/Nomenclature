@@ -114,16 +114,19 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                 if (characterset && !worldflag)
                 {
                     //playerdata, insert after
-                    if (payloads[i] is RawPayload)
+                    if (nomenclature?.World != string.Empty)
                     {
-                        payloads.Insert(i + 1, new IconPayload(BitmapFontIcon.CrossWorld));
-                        payloads.Insert(i + 2, new TextPayload(nomenclature?.World));
-                        i += 2;
-                    }
-                    else
-                    {
-                        payloads.Insert(i, new IconPayload(BitmapFontIcon.CrossWorld));
-                        payloads.Insert(i + 1, new TextPayload(nomenclature.World));
+                        if (payloads[i] is RawPayload)
+                        {
+                            payloads.Insert(i + 1, new IconPayload(BitmapFontIcon.CrossWorld));
+                            payloads.Insert(i + 2, new TextPayload(nomenclature?.World));
+                            i += 2;
+                        }
+                        else
+                        {
+                            payloads.Insert(i, new IconPayload(BitmapFontIcon.CrossWorld));
+                            payloads.Insert(i + 1, new TextPayload(nomenclature.World));
+                        }
                     }
                     playerflag = false;
                     characterset = false;
@@ -131,7 +134,11 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
 
                 else if (payloads[i] is IconPayload && ((IconPayload)payloads[i]).Icon == BitmapFontIcon.CrossWorld && worldflag && characterset)
                 {
-                    TextPayload tpayload = (TextPayload)payloads[i+1];
+                    if(nomenclature?.World == string.Empty)
+                    {
+                        payloads.Remove(payloads[i]);
+                    }
+                    TextPayload tpayload = (TextPayload)payloads[i];
                     //we need to parse this because sqex hates me specifically
                     var tsplit = tpayload.Text!.Split(" ");
                     string postfix = tsplit[0].EndsWith('.') ? "." : "";
@@ -140,6 +147,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                     worldflag = false;
                     characterset = false;
                     playerflag = false;
+                    i--;
                 }
 
                 else if (payloads[i] is TextPayload tpayload)
@@ -181,7 +189,7 @@ public class ChatBoxHandlerService(CharacterService characterService, Configurat
                 }
             }
         }
-        if (characterset)
+        if (characterset && nomenclature?.World != string.Empty)
         {
             payloads.Add(new IconPayload(BitmapFontIcon.CrossWorld));
             payloads.Add(new TextPayload(nomenclature?.World));
