@@ -8,7 +8,7 @@ using NomenclatureCommon.Domain.Api.Server;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
-using System.Timers;
+using System.Collections.Concurrent;
 
 namespace NomenclatureServer.Hubs;
 
@@ -21,7 +21,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
     /// <summary>
     ///     List of currently applied nomenclatures
     /// </summary>
-    private static readonly Dictionary<string, Nomenclature> Nomenclatures = new();
+    private static readonly ConcurrentDictionary<string, Nomenclature> Nomenclatures = new();
 
     /// <summary>
     ///     Gets a character identifier from the claims provided by the sender
@@ -79,7 +79,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         var identifier = CharacterIdentifier;
 
         // Remove the identifier from our list of nomenclatures
-        Nomenclatures.Remove(identifier);
+        Nomenclatures.TryRemove(identifier, out var _);
 
         // Notify everyone in the group that this nomenclature has been removed
         Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
@@ -140,7 +140,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         var identifier = CharacterIdentifier;
 
         // Remove the identifier from our list of nomenclatures
-        Nomenclatures.Remove(identifier);
+        Nomenclatures.TryRemove(identifier, out var _);
 
         // Notify everyone in the group that this nomenclature has been removed
         Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
