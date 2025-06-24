@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NomenclatureCommon.Domain.Api.Controller;
 using NomenclatureServer.Services;
 
@@ -8,7 +9,7 @@ namespace NomenclatureServer.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class RegistrationController(DatabaseService database, LodestoneService lodestoneService) : ControllerBase
+public class RegistrationController(DatabaseService database, LodestoneService lodestoneService, ILogger<RegistrationController> logger) : ControllerBase
 {
     /// <summary>
     ///     List of all current registrations
@@ -31,6 +32,8 @@ public class RegistrationController(DatabaseService database, LodestoneService l
     [HttpPost("validate")]
     public async Task<IActionResult> Validate([FromBody] ValidateCharacterRegistration request)
     {
+        logger.LogInformation("{Request}", request);
+        
         if (PendingRegistrations.TryGetValue(request.ValidationCode, out var lodestoneId) is false)
             return BadRequest();
 

@@ -1,37 +1,42 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
-using NomenclatureCommon.Domain.Api;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using System.Timers;
+using Microsoft.Extensions.Logging;
+using NomenclatureCommon.Domain.Network;
+using NomenclatureCommon.Domain.Network.UpdateUserCount;
 using NomenclatureServer.Hubs;
 
-namespace NomenclatureServer.Services
+namespace NomenclatureServer.Services;
+
+public class TimerService(ConnectionService connections, IHubContext<NomenclatureHub> hub, ILogger<TimerService> logger)
+    : IHostedService
 {
-    public class TimerService(IHubContext<NomenclatureHub> hub, ConnectionService connections) : IHostedService
+    private const int UserCountInternal = 60000;
+    private readonly System.Timers.Timer _userCountTimer = new() { Interval = UserCountInternal, Enabled = true };
+
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        private const int UserCountInternal = 60000;
-        private readonly System.Timers.Timer _userCountTimer = new() { Interval = UserCountInternal, Enabled = true };
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            _userCountTimer.Elapsed += UserCount;
-            _userCountTimer.Start();
-            return Task.CompletedTask;
-        }
+        _userCountTimer.Elapsed += UserCount;
+        _userCountTimer.Start();
+        return Task.CompletedTask;
+    }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _userCountTimer.Elapsed -= UserCount;
-            return Task.CompletedTask;
-        }
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _userCountTimer.Elapsed -= UserCount;
+        return Task.CompletedTask;
+    }
 
-        public void UserCount(object? sender, ElapsedEventArgs e)
+    private void UserCount(object? sender, ElapsedEventArgs e)
+    {
+        try
         {
-            hub.Clients.All.SendAsync(ApiMethods.UpdateUserCountEvent, connections.Connections.Count);
+            var count = new UpdateUserCountForwardedRequest(connections.Connections.Count);
+            hub.Clients.All.SendAsync(HubMethod.UpdateUserCount, count);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError("Unknown exception sending updated user account to all clients, {}", exception);
         }
     }
 }

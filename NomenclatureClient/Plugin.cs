@@ -3,6 +3,7 @@ using System.Reflection;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureClient.Managers;
 using NomenclatureClient.Services;
 
 namespace NomenclatureClient;

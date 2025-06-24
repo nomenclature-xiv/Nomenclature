@@ -61,7 +61,9 @@ public class DatabaseService
         
         try
         {
-            return await command.ExecuteNonQueryAsync() is 1;
+            var result = await command.ExecuteNonQueryAsync() is 1;
+            _logger.LogInformation("{Result}", result);
+            return result;
         }
         catch (Exception e)
         {

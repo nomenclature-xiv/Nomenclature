@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using NomenclatureCommon.Domain.Api.Controller;
 using NomenclatureServer.Domain;
@@ -12,7 +13,7 @@ namespace NomenclatureServer.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(Configuration config, DatabaseService db) : ControllerBase
+public class AuthController(Configuration config, DatabaseService db, ILogger<AuthController> logger) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("login")]
