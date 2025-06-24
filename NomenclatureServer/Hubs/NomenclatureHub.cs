@@ -50,12 +50,12 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
             // Only update name if included in update mode
             var name = (request.Mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name
                 ? request.Name
-                : existingNomenclature.Name;
+                : null;
             
             // Only update world if included in update mode
             var world = (request.Mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World
                 ? request.World
-                : existingNomenclature.World;
+                : null;
             
             var nomenclature = new Nomenclature(name, world);
 

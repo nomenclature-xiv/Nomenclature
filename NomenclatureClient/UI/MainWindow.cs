@@ -100,38 +100,24 @@ public class MainWindow : Window
             ImGui.TextUnformatted("Change Name & World");
             FontService.MediumFont?.Pop();
             
-            SharedUserInterfaces.DisableIf(_controller.OverrideName, () =>
+            if(ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName))
+                _sessionService.Save();
+            ImGui.SameLine();
+            
+            SharedUserInterfaces.DisableIf(_controller.OverrideName is false, () =>
             {
-                if(ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName))
-                    _sessionService.Save();
-                ImGui.SameLine();
-            
-                var disableNameField = _controller.OverrideName;
-                if (disableNameField)
-                    ImGui.BeginDisabled();
-            
                 ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
                 ImGui.InputTextWithHint("##OverrideNameInput", "Name", ref _controller.OverwrittenName, 32);
-            
-                if (disableNameField)
-                    ImGui.EndDisabled();
             });
             
-            SharedUserInterfaces.DisableIf(_controller.OverrideWorld, () =>
+            if(ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld))
+                _sessionService.Save();
+            ImGui.SameLine();
+            
+            SharedUserInterfaces.DisableIf(_controller.OverrideWorld is false, () =>
             {
-                if(ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld))
-                    _sessionService.Save();
-                ImGui.SameLine();
-            
-                var disableNameField = _controller.OverrideName;
-                if (disableNameField)
-                    ImGui.BeginDisabled();
-            
                 ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
-                ImGui.InputTextWithHint("##OverrideNameInput", "Name", ref _controller.OverwrittenName, 32);
-            
-                if (disableNameField)
-                    ImGui.EndDisabled();
+                ImGui.InputTextWithHint("##OverrideWorldInput", "World", ref _controller.OverwrittenWorld, 32);
             });
         });
 
@@ -145,9 +131,7 @@ public class MainWindow : Window
         {
             FontService.MediumFont?.Push();
             if(ImGui.Button("Change Name", new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
-            {
-                // TODO
-            }
+                _controller.ChangeName();
             FontService.MediumFont?.Pop();
         }, false);
     }
@@ -183,14 +167,7 @@ public class MainWindow : Window
             SharedUserInterfaces.ContentBox(() =>
             {
                 if (ImGui.Button("Register", dimension))
-                {
-                    var con = new CharacterConfiguration("weV+zpXnQl4JmiXhQGzTeT5femjxsP9zeH7OU8IzQ6Y=");
-                    _config.LocalConfigurations.Add("Mora Nightshade@Diabolos", con);
-                    _config.Save();
-                    _sessionService.Save(); //_registrationWindow.IsOpen = true;
-                }
-                    
-                    
+                    _registrationWindow.IsOpen = true;
             });
         }
         else
@@ -206,7 +183,7 @@ public class MainWindow : Window
                 if (_networkService.Connection.State is HubConnectionState.Disconnected)
                 {
                     if (ImGui.Button("Connect", dimension))
-                        TryConnect();
+                        _controller.TryConnect();
                 }
                 else
                 {
@@ -215,18 +192,6 @@ public class MainWindow : Window
                     ImGui.EndDisabled();
                 }
             });
-        }
-    }
-
-    private async void TryConnect()
-    {
-        try
-        {
-            await _networkService.Connect();
-        }
-        catch (Exception)
-        {
-            // Ignore
         }
     }
 }

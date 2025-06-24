@@ -52,10 +52,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="UI\New\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Compile Remove="Services\CharacterService.cs" />
       <Compile Remove="UI\New\BlocklistWindow.cs" />
     </ItemGroup>

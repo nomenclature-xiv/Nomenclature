@@ -11,6 +11,7 @@ using NomenclatureCommon.Domain;
 namespace NomenclatureClient.Managers;
 
 public class LoginManager(
+    IPluginLog logger,
     IFramework framework,
     Configuration configuration,
     NetworkService networkService,

@@ -6,7 +6,7 @@ namespace NomenclatureClient.Types;
 [Serializable]
 public class CharacterConfiguration
 {
-    public readonly string Secret = string.Empty;
+    public string Secret = string.Empty;
     
     public bool AutoConnect;
     public bool OverrideName;
