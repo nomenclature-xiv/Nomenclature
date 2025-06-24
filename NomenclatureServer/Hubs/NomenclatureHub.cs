@@ -2,13 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using NomenclatureCommon.Domain;
-using NomenclatureCommon.Domain.Api;
-using NomenclatureCommon.Domain.Api.Base;
-using NomenclatureCommon.Domain.Api.Server;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 using System.Collections.Concurrent;
+using NomenclatureCommon.Domain.Network;
+using NomenclatureCommon.Domain.Network.Base;
+using NomenclatureCommon.Domain.Network.DeleteNomenclature;
+using NomenclatureCommon.Domain.Network.UpdateNomenclature;
+using NomenclatureCommon.Domain.Network.UpdateSubscriptions;
 
 namespace NomenclatureServer.Hubs;
 
@@ -29,9 +31,9 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
     private string CharacterIdentifier => Context.User?.FindFirst(AuthClaimType.CharacterIdentifier)?.Value ??
                                           throw new MissingExpectedClaimException(
                                               "CharacterIdentifier is not present in claims");
-
-    [HubMethodName(ApiMethods.PublishNomenclature)]
-    public Response PublishNomenclature(PublishNomenclatureRequest request)
+    
+    [HubMethodName(HubMethod.UpdateNomenclature)]
+    public Response UpdateNomenclature(UpdateNomenclatureRequest request)
     {
         // TODO: Remove after testing
         logger.LogInformation("{Request}", request);
@@ -39,38 +41,49 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         // Get identifier from claims
         var identifier = CharacterIdentifier;
 
-        if (request.Nomenclature.Name?.Length > 32 || request.Nomenclature.World?.Length > 32)
-            return new Response { Success = false };
+        if (request.Name?.Length > 32 || request.World?.Length > 32)
+            return new Response(false);
 
         // Check if the nomenclature already exists
         if (Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
         {
-            // If it does, construct a new nomenclature, only updating values that are non-null
-            var name = request.Nomenclature.Name ?? existingNomenclature.Name;
-            var world = request.Nomenclature.World ?? existingNomenclature.World;
+            // Only update name if included in update mode
+            var name = (request.Mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name
+                ? request.Name
+                : existingNomenclature.Name;
+            
+            // Only update world if included in update mode
+            var world = (request.Mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World
+                ? request.World
+                : existingNomenclature.World;
+            
             var nomenclature = new Nomenclature(name, world);
 
             // Update the identifier and nomenclature
             Nomenclatures[identifier] = nomenclature;
 
             // Notify everyone in the group that this nomenclature has been updated
-            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, nomenclature);
+            var update = new UpdateNomenclatureForwardedRequest(identifier, nomenclature);
+            Clients.Group(identifier).SendAsync(HubMethod.UpdateNomenclature, update);
         }
         else
         {
+            var nomenclature = new Nomenclature(request.Name, request.World);
+            
             // Update the identifier and nomenclature
-            Nomenclatures[identifier] = request.Nomenclature;
+            Nomenclatures[identifier] = nomenclature;
 
             // Notify everyone in the group that this nomenclature has been updated
-            Clients.Group(identifier).SendAsync(ApiMethods.UpdateNomenclatureEvent, identifier, request.Nomenclature);
+            var update = new UpdateNomenclatureForwardedRequest(identifier, nomenclature);
+            Clients.Group(identifier).SendAsync(HubMethod.UpdateNomenclature, update);
         }
 
         // Return success
-        return new Response { Success = true };
+        return new Response(true);
     }
 
-    [HubMethodName(ApiMethods.RemoveNomenclature)]
-    public Response RemoveNomenclature(RemoveNomenclatureRequest request)
+    [HubMethodName(HubMethod.DeleteNomenclature)]
+    public Response DeleteNomenclature(DeleteNomenclatureRequest request)
     {
         // TODO: Remove after testing
         logger.LogInformation("{Request}", request);
@@ -79,23 +92,24 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         var identifier = CharacterIdentifier;
 
         // Remove the identifier from our list of nomenclatures
-        Nomenclatures.TryRemove(identifier, out var _);
+        Nomenclatures.TryRemove(identifier, out _);
 
         // Notify everyone in the group that this nomenclature has been removed
-        Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
+        var delete = new DeleteNomenclatureForwardedRequest(identifier);
+        Clients.Group(identifier).SendAsync(HubMethod.DeleteNomenclature, delete);
 
         // Return success
-        return new Response { Success = true };
+        return new Response(true);
     }
 
-    [HubMethodName(ApiMethods.SyncNomenclatureUpdateSubscriptions)]
-    public SyncNomenclatureUpdateSubscriptionsResponse SyncNomenclatureUpdateSubscriptions(SyncNomenclatureUpdateSubscriptionsRequest request)
+    [HubMethodName(HubMethod.UpdateSubscriptions)]
+    public UpdateSubscriptionsResponse UpdateSubscriptions(UpdateSubscriptionsRequest request)
     {
         // TODO: Remove after testing
         logger.LogInformation("{Request}", request);
-
+        
         // Process all the subscriptions to remove
-        var unsubscriptions = request.CharacterIdentitiesToUnsubscribeFrom.AsSpan();
+        var unsubscriptions = request.CharacterToUnsubscribeFrom.AsSpan();
 
         for (var i = 0; i < unsubscriptions.Length; i++)
             Groups.RemoveFromGroupAsync(Context.ConnectionId, unsubscriptions[i]);
@@ -106,7 +120,7 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         var identities = new Dictionary<string, Nomenclature>();
 
         // Process all the subscriptions to add
-        var subscriptions = request.CharacterIdentitiesToSubscribeTo.AsSpan();
+        var subscriptions = request.CharactersToSubscribeTo.AsSpan();
         for (var i = 0; i < subscriptions.Length; i++)
         {
             // Add the caller to the group
@@ -119,13 +133,9 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         }
 
         // Return result with newly subscribed to identities
-        return new SyncNomenclatureUpdateSubscriptionsResponse
-        {
-            Success = true,
-            NewlySubscribedNomenclatures = identities
-        };
+        return new UpdateSubscriptionsResponse(true, identities);
     }
-
+    
     public override Task OnConnectedAsync()
     {
         connectionService.Connections.Add(Context.ConnectionId);
@@ -140,10 +150,10 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
         var identifier = CharacterIdentifier;
 
         // Remove the identifier from our list of nomenclatures
-        Nomenclatures.TryRemove(identifier, out var _);
+        Nomenclatures.TryRemove(identifier, out _);
 
         // Notify everyone in the group that this nomenclature has been removed
-        Clients.Group(identifier).SendAsync(ApiMethods.RemoveNomenclatureEvent, identifier);
+        Clients.Group(identifier).SendAsync(HubMethod.DeleteNomenclature, identifier);
 
         return base.OnDisconnectedAsync(exception);
     }

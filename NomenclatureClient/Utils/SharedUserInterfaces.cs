@@ -1,11 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Numerics;
-using System.Threading.Tasks;
 using Dalamud.Interface;
-using Dalamud.Interface.ManagedFontAtlas;
 using ImGuiNET;
-using NomenclatureClient.Services;
 
 namespace NomenclatureClient.Utils;
 
@@ -17,6 +13,9 @@ public static class SharedUserInterfaces
     // Const
     private static readonly uint PanelBackground = ImGui.ColorConvertFloat4ToU32(new Vector4(0.1294f, 0.1333f, 0.1764f, 1));
     
+    /// <summary>
+    ///     Display elements inside a rounded box, stretching to the window width
+    /// </summary>
     public static void ContentBox(Action contentToDraw, bool addSpacingAtEnd = true)
     {
         var windowPadding = ImGui.GetStyle().WindowPadding;
@@ -42,48 +41,19 @@ public static class SharedUserInterfaces
         drawList.ChannelsMerge();
         ImGui.SetCursorPosY(startPosition.Y + (max.Y - min.Y) + (addSpacingAtEnd ? windowPadding.Y : 0));
     }
-    
-    /// <summary>
-    ///     Draws a tool tip for the last hovered ImGui component
-    /// </summary>
-    /// <param name="tip"></param>
-    public static void Tooltip(string tip)
-    {
-        if (ImGui.IsItemHovered() is false)
-            return;
-
-        ImGui.BeginTooltip();
-        ImGui.Text(tip);
-        ImGui.EndTooltip();
-    }
 
     /// <summary>
-    ///     Draws a tool tip for the last hovered ImGui component
+    ///     Disables the content draw if the provided condition is true
     /// </summary>
-    /// <param name="tips"></param>
-    public static void Tooltip(string[] tips)
+    public static void DisableIf(bool condition, Action contentToDraw)
     {
-        if (ImGui.IsItemHovered() is false)
-            return;
-
-        ImGui.BeginTooltip();
-        foreach (var tip in tips)
-            ImGui.Text(tip);
-
-        ImGui.EndTooltip();
-    }
-
-    /// <summary>
-    ///     Draws a <see cref="FontAwesomeIcon"/>
-    /// </summary>
-    public static void Icon(FontAwesomeIcon icon, Vector4? color = null)
-    {
-        ImGui.PushFont(UiBuilder.IconFont);
-        if (color is null)
-            ImGui.TextUnformatted(icon.ToIconString());
-        else
-            ImGui.TextColored(color.Value, icon.ToIconString());
-        ImGui.PopFont();
+        if (condition)
+            ImGui.BeginDisabled();
+        
+        contentToDraw.Invoke();
+        
+        if (condition)
+            ImGui.EndDisabled();
     }
 
     /// <summary>
@@ -116,11 +86,4 @@ public static class SharedUserInterfaces
         else
             ImGui.TextColored(color.Value, text);
     }
-
-    public static bool ButtonCentered(string text)
-    {
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - ImGui.CalcTextSize(text).X) * 0.5f);
-        return ImGui.Button(text);
-    }
-    
 }

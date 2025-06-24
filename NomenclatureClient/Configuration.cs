@@ -3,59 +3,38 @@ using System.Collections.Generic;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
 using NomenclatureClient.Types;
-using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient;
 
 [Serializable]
 public class Configuration : IPluginConfiguration
 {
-    [NonSerialized] private IDalamudPluginInterface? _pluginInterface;
-    public void Initialize(IDalamudPluginInterface pluginInterface)
-    {
-        _pluginInterface = pluginInterface;
-    }
+    [NonSerialized]
+    private IDalamudPluginInterface? _pluginInterface;
     
     /// <summary>
     ///     Configuration version
     /// </summary>
-    public int Version { get; set; } = 2;
-
-    /// <summary>
-    ///     Should the server attempt to connect automatically?
-    /// </summary>
-    public bool AutoConnect = false;
-
-    /// <summary>
-    ///     [deprecated] Map of [Character]@[World] to Secret
-    /// </summary>
-    public Dictionary<string, string> LocalCharacterSecrets = new();
-
-    /// <summary>
-    ///     Map of [Character]@[World] to all per-character config values, including secrets.
-    /// </summary>
-    public readonly Dictionary<string, CharConfig> LocalCharacters = new();
+    public int Version { get; set; } = 3;
     
     /// <summary>
-    ///     List of [Character]@[World] the local client has blocked
+    ///     Map of local characters to their configurations. Local characters are in the format of Name@World
     /// </summary>
-    public readonly List<Character> BlocklistCharacters = [];
+    public Dictionary<string, CharacterConfiguration> LocalConfigurations = [];
     
+    /// <summary>
+    ///     Save the configuration
+    /// </summary>
     public void Save()
     {
         _pluginInterface!.SavePluginConfig(this);
     }
-
-    public void Migrate()
+    
+    /// <summary>
+    ///     Initialize the configuration. This must be called before the config can be successfully used
+    /// </summary>
+    public void Initialize(IDalamudPluginInterface pluginInterface)
     {
-        if(Version == 1)
-        {
-            foreach(string key in LocalCharacterSecrets.Keys)
-            {
-                LocalCharacters.Add(key, new CharConfig() { Secret = LocalCharacterSecrets[key] });
-            }
-            Version = 2;
-        }
-        Save();
+        _pluginInterface = pluginInterface;
     }
 }
