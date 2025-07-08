@@ -19,9 +19,13 @@ namespace NomenclatureClient.Network;
 /// </summary>
 public class NetworkService : IHostedService
 {
-    // Server URL
-    private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
-    private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
+    // Server URL 
+    // private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
+    // private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
+    
+    // Beta
+    private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
+    private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
     public event Func<Task>? Connected;
     

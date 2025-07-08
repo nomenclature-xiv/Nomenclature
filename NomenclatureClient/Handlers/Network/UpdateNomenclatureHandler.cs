@@ -9,6 +9,6 @@ public class UpdateNomenclatureHandler(IPluginLog logger)
     public void Handle(UpdateNomenclatureForwardedRequest request)
     {
         logger.Info($"{request}");
-        IdentityService.Identities.TryAdd(request.CharacterName, request.Nomenclature);
+        IdentityService.Identities[request.CharacterName] = request.Nomenclature;
     }
 }

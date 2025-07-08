@@ -46,7 +46,16 @@ public class Program
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<TimerService>());
 
 #if DEBUG
-        builder.WebHost.UseUrls("https://localhost:5006");
+        // builder.WebHost.UseUrls("https://localhost:5006");
+        
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            var ip = IPAddress.Parse("192.168.1.14");
+            options.Listen(ip, 5017, listenOptions =>
+            {
+                listenOptions.UseHttps($"{configuration.CertificatePath}", $"{configuration.CertificatePasswordPath}");
+            });
+        });
 #else
         builder.WebHost.ConfigureKestrel(options => 
         {
