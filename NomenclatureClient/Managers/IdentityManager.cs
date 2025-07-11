@@ -22,12 +22,28 @@ public class IdentityManager(
     public async Task ClearWorld() => await Clear(UpdateNomenclatureMode.World);
     
     public async Task ClearNameAndWorld() => await Clear(UpdateNomenclatureMode.Name | UpdateNomenclatureMode.World);
-    
+
+    public string GetDisplayName()
+    {
+        var player = sessionService.CurrentSession.Character;
+        var playername = player.ToString();
+        if (IdentityService.Identities.TryGetValue(playername, out var nomenclature))
+        {
+            var outname = nomenclature.Name ?? player.Name;
+            var outworld = nomenclature.World ?? player.World;
+            return string.Concat(outname, "@", outworld);
+        }
+        else
+        {
+            return playername;
+        }
+    }
+
     private async Task Set(string? name, string? world)
     {
         if (name is null && world is null)
             return;
-        
+
         var mode = UpdateNomenclatureMode.None;
         if (name is not null)
             mode |= UpdateNomenclatureMode.Name;
@@ -38,13 +54,13 @@ public class IdentityManager(
         var response = await networkService.InvokeAsync<Response>(HubMethod.UpdateNomenclature, request);
         if (response.Success is false)
             return;
-        
+
         var player = sessionService.CurrentSession.Character.ToString();
         if (IdentityService.Identities.TryGetValue(player, out var nomenclature))
         {
             if (name is not null)
                 nomenclature.Name = name;
-            
+
             if (world is not null)
                 nomenclature.World = world;
         }
@@ -58,7 +74,7 @@ public class IdentityManager(
             sessionService.CurrentSession.CharacterConfiguration.Name = name;
             sessionService.CurrentSession.CharacterConfiguration.OverrideName = true;
         }
-        
+
         if (world is not null)
         {
             sessionService.CurrentSession.CharacterConfiguration.World = world;

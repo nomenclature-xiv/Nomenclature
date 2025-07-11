@@ -4,6 +4,7 @@ using Dalamud.Interface.Colors;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using Microsoft.AspNetCore.SignalR.Client;
+using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types;
@@ -20,6 +21,7 @@ public class MainWindow : Window
     private readonly BlocklistWindow _blocklistWindow;
     private readonly MainWindowController _controller;
     private readonly SessionService _sessionService;
+    private readonly IdentityManager _identityManager;
 
     public MainWindow(
         Configuration config,
@@ -27,7 +29,8 @@ public class MainWindow : Window
         NetworkService networkService,
         RegistrationWindow registrationWindow,
         BlocklistWindow blocklistWindow,
-        MainWindowController mainWindowController) : base($"Nomenclature - Version {Plugin.Version}")
+        MainWindowController mainWindowController,
+        IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}")
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -41,6 +44,7 @@ public class MainWindow : Window
         _blocklistWindow = blocklistWindow;
         _controller = mainWindowController;
         _sessionService = sessionService;
+        _identityManager = identityManager;
     }
 
     public override void Draw()
@@ -123,7 +127,12 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            ImGui.Text(String.Concat("→"));
+            ImGui.Text(String.Concat(
+                _identityManager.GetDisplayName(), 
+                " → ", 
+                _controller.OverrideName ? _controller.OverwrittenName : _sessionService.CurrentSession.Character.Name,
+                "@",
+                _controller.OverrideWorld ? _controller.OverwrittenWorld : _sessionService.CurrentSession.Character.World));
         });
 
         SharedUserInterfaces.ContentBox(() =>
