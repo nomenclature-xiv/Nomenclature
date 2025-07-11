@@ -139,12 +139,15 @@ public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService 
     public override Task OnConnectedAsync()
     {
         connectionService.Connections.Add(Context.ConnectionId);
+        logger.LogInformation(Context.ConnectionId + " connected.");
+
         return base.OnConnectedAsync();
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         connectionService.Connections.Remove(Context.ConnectionId);
+        logger.LogInformation(Context.ConnectionId + " disconnected.");
 
         // Get identifier from claims
         var identifier = CharacterIdentifier;

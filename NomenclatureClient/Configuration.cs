@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
 using NomenclatureClient.Types;
+using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient;
 
@@ -16,12 +18,27 @@ public class Configuration : IPluginConfiguration
     ///     Configuration version
     /// </summary>
     public int Version { get; set; } = 3;
-    
+
+    /// <summary>
+    /// [deprecated] Should the client attempt to automatically connect to the server?
+    /// </summary>
+    public bool AutoConnect = false;
+
+    /// <summary>
+    /// [deprecated] Map of [Character]@[World] to all per-character config values, including secrets
+    /// </summary>
+    public Dictionary<string, CharConfig> LocalCharacters = new();
+
     /// <summary>
     ///     Map of local characters to their configurations. Local characters are in the format of Name@World
     /// </summary>
     public Dictionary<string, CharacterConfiguration> LocalConfigurations = [];
-    
+
+    /// <summary>
+    ///     [deprecated] List of [Character]@[World] the local client has blocked
+    /// </summary>
+    public readonly List<Character> BlocklistCharacters = [];
+
     /// <summary>
     ///     Save the configuration
     /// </summary>
@@ -36,5 +53,27 @@ public class Configuration : IPluginConfiguration
     public void Initialize(IDalamudPluginInterface pluginInterface)
     {
         _pluginInterface = pluginInterface;
+        if (Version == 2)
+        {
+            foreach(string key in LocalCharacters.Keys)
+            {
+                var value = LocalCharacters[key];
+                LocalConfigurations.Add(key, new CharacterConfiguration()
+                {
+                    Secret = value.Secret,
+                    AutoConnect = AutoConnect,
+                    OverrideName = value.UseName,
+                    OverrideWorld = value.UseWorld,
+                    Name = value.Name,
+                    World = value.World
+                });
+            }
+            foreach(string key in LocalConfigurations.Keys)
+            {
+                LocalConfigurations[key].BlockedCharacters.UnionWith(BlocklistCharacters.Select(x => x.ToString()));
+            }
+            Version = 3;
+            Save();
+        }
     }
 }

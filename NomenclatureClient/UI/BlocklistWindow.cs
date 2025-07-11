@@ -45,9 +45,10 @@ public class BlocklistWindow : Window
                 ImGui.TableSetupColumn(" ", ImGuiTableColumnFlags.NoResize, 20);
                 ImGui.TableHeadersRow();
 
+                int counter = 0;
                 foreach (var blocked in blockList.ToList())
                 {
-                    ImGui.PushID(Guid.NewGuid().ToString());
+                    ImGui.PushID(counter++);
                     var split = blocked.Split('@');
                     
                     ImGui.TableNextColumn();

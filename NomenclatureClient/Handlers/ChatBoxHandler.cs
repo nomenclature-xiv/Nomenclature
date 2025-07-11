@@ -82,7 +82,7 @@ public class ChatBoxHandler(IChatGui chatGui, IClientState clientState) : IHoste
 
     private void HandleDefault(List<Payload> payloads)
     {
-        if (clientState.LocalPlayer is not { } player || player.HomeWorld.Value.ToString() is not { } homeworld)
+        if (clientState.LocalPlayer is not { } player || player.HomeWorld.Value.Name.ToString() is not { } homeworld)
             return;
         
         var character = new Character(player.Name.ToString(), homeworld);

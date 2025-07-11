@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Windowing;
@@ -123,8 +123,7 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            // TODO
-            ImGui.Text("TODO");
+            ImGui.Text(String.Concat("→"));
         });
 
         SharedUserInterfaces.ContentBox(() =>

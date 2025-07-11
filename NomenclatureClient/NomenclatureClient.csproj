@@ -47,7 +47,6 @@
     <ItemGroup>
       <Compile Remove="Network\NetworkNameService.cs" />
       <Compile Remove="Services\ServiceManager.cs" />
-      <Compile Remove="Types\CharConfig.cs" />
       <Compile Remove="UI\New\RegistrationWindowController.cs" />
     </ItemGroup>
 
