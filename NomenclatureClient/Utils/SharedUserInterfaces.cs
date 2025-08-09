@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using Dalamud.Interface;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.ManagedFontAtlas;
 
 namespace NomenclatureClient.Utils;
 
@@ -59,11 +60,13 @@ public static class SharedUserInterfaces
     /// <summary>
     ///     Creates a button with specified icon
     /// </summary>
-    public static bool IconButton(FontAwesomeIcon icon, Vector2? size = null, string? tooltip = null)
+    public static bool IconButton(FontAwesomeIcon icon, Vector2? size = null, string? tooltip = null, IFontHandle? fontHandle = null)
     {
+        fontHandle?.Push();
         ImGui.PushFont(UiBuilder.IconFont);
         var result = ImGui.Button(icon.ToIconString(), size ?? Vector2.Zero);
         ImGui.PopFont();
+        fontHandle?.Pop();
 
         if (tooltip is null || ImGui.IsItemHovered() is false)
             return result;

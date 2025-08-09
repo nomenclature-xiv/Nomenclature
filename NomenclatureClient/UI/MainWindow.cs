@@ -2,13 +2,14 @@
 using System.Numerics;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using Microsoft.AspNetCore.SignalR.Client;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types;
 using NomenclatureClient.Utils;
+using Dalamud.Interface;
 
 namespace NomenclatureClient.UI;
 
@@ -30,12 +31,12 @@ public class MainWindow : Window
         RegistrationWindow registrationWindow,
         BlocklistWindow blocklistWindow,
         MainWindowController mainWindowController,
-        IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}")
+        IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoResize)
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(280, 450),
-            MaximumSize = ImGui.GetIO().DisplaySize
+            MinimumSize = new Vector2(450, 290),
+            MaximumSize = new Vector2(450, 290)
         };
         
         _config = config;
@@ -77,52 +78,57 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            FontService.BigFont?.Push();
-            SharedUserInterfaces.TextCentered("Nomenclature");
-            FontService.BigFont?.Pop();
-
-            SharedUserInterfaces.TextCentered($"{_networkService.UserCount} User(s) Online");
-        });
-
-        SharedUserInterfaces.ContentBox(() =>
-        {
-            var dimensions = new Vector2((size.X - padding.X * 3) * 0.5f, 0);
-            if(ImGui.Button("Disconnect", dimensions))
+            SharedUserInterfaces.TextCentered("I am");
+            ImGui.SameLine(size.X - padding.X * 3 - ImGui.GetFontSize());
+            if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Cog, tooltip: "Settings"))
             {
-                _controller.Disconnect();
+                
             }
-            ImGui.SameLine();
-            if(ImGui.Button("Blocklist", dimensions))
-            {
-                _blocklistWindow.Toggle();
-            }
-        });
-
-        SharedUserInterfaces.ContentBox(() =>
-        {
             FontService.MediumFont?.Push();
-            ImGui.TextUnformatted("Change Name & World");
+            SharedUserInterfaces.TextCentered(_identityManager.GetDisplayName());
             FontService.MediumFont?.Pop();
-            
-            if(ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName))
+        });
+
+        SharedUserInterfaces.ContentBox(() =>
+        {
+            ImGui.BeginGroup();
+            if (ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName))
+            {
+                _sessionService.CurrentSession.CharacterConfiguration.OverrideName = _controller.OverrideName;
                 _sessionService.Save();
+            }
             ImGui.SameLine();
-            
+            ImGui.TextUnformatted("Override Name");
             SharedUserInterfaces.DisableIf(_controller.OverrideName is false, () =>
             {
-                ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
+                ImGui.SetNextItemWidth(195);
                 ImGui.InputTextWithHint("##OverrideNameInput", "Name", ref _controller.OverwrittenName, 32);
             });
-            
-            if(ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld))
-                _sessionService.Save();
+            ImGui.EndGroup();
+
             ImGui.SameLine();
-            
+
+            ImGui.BeginGroup();
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + ImGui.GetFontSize() + padding.Y);
+            ImGui.TextUnformatted("@");
+            ImGui.EndGroup();
+
+            ImGui.SameLine();
+
+            ImGui.BeginGroup();
+            if (ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld))
+            {
+                _sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = _controller.OverrideWorld;
+                _sessionService.Save();
+            }
+            ImGui.SameLine();
+            ImGui.TextUnformatted("Override World");
             SharedUserInterfaces.DisableIf(_controller.OverrideWorld is false, () =>
             {
-                ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetCursorPosX());
+                ImGui.SetNextItemWidth(195);
                 ImGui.InputTextWithHint("##OverrideWorldInput", "World", ref _controller.OverwrittenWorld, 32);
             });
+            ImGui.EndGroup();
         });
 
         SharedUserInterfaces.ContentBox(() =>
@@ -137,8 +143,10 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
+            if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Undo, new Vector2(50,50), "Reset to default.", FontService.MediumFont)) ;
+            ImGui.SameLine();
             FontService.MediumFont?.Push();
-            if(ImGui.Button("Change Name", new Vector2(size.X - padding.X * 2, size.Y - padding.Y - ImGui.GetCursorPosY())))
+            if (ImGui.Button("Change Name", new Vector2(360, 50)))
                 _controller.ChangeName();
             FontService.MediumFont?.Pop();
         }, false);

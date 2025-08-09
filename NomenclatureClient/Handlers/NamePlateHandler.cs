@@ -46,6 +46,7 @@ public class NamePlateHandler(INamePlateGui namePlateGui) : IHostedService
             handler.FreeCompanyTag = identity.World == string.Empty 
                 ? new SeString(new TextPayload(string.Empty)) 
                 : new SeString(new TextPayload(string.Concat(" «", identity.World, "»")));
+
         }
     }
 

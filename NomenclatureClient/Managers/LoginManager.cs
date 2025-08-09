@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types;
+using NomenclatureClient.UI;
 using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Managers;
@@ -16,7 +17,8 @@ public class LoginManager(
     Configuration configuration,
     NetworkService networkService,
     IClientState clientState,
-    SessionService sessionService) : IHostedService
+    SessionService sessionService,
+    MainWindowController controller) : IHostedService
 {
     private async void OnLogin()
     {
@@ -37,6 +39,11 @@ public class LoginManager(
             // Connect if we have it enabled
             if (value.AutoConnect)
                 await networkService.Connect();
+
+            controller.OverrideName = value.OverrideName;
+            controller.OverrideWorld = value.OverrideWorld;
+            controller.OverwrittenName = value.Name ?? "";
+            controller.OverwrittenWorld = value.World ?? "";
         }
         catch (Exception)
         {

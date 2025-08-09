@@ -108,6 +108,7 @@ public static class ServiceManager
         collection.AddSingleton<MainWindow>();
         collection.AddSingleton<BlocklistWindowController>();
         collection.AddSingleton<BlocklistWindow>();
+        collection.AddSingleton<SettingsWindow>();
         collection.AddSingleton<IpcWindow>();
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
@@ -115,6 +116,7 @@ public static class ServiceManager
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<BlocklistWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
+        collection.AddSingleton<Window>(provider => provider.GetRequiredService<SettingsWindow>());
 
         //Add configuration
         collection.AddSingleton((s) =>
