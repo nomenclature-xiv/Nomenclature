@@ -28,8 +28,6 @@ public class NetworkService : IHostedService
     //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
     public event Func<Task>? Connected;
-    
-    public int UserCount { get; set; }
 
     /// <summary>
     ///     Signal R Hub Connection

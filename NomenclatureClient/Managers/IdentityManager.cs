@@ -31,7 +31,7 @@ public class IdentityManager(
         {
             var outname = nomenclature.Name ?? player.Name;
             var outworld = nomenclature.World ?? player.World;
-            return string.Concat(outname, "@", outworld);
+            return string.Concat(outname, outworld == string.Empty ? "" : "@", outworld);
         }
         else
         {

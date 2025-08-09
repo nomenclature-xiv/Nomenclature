@@ -19,7 +19,7 @@ public class MainWindow : Window
     private readonly Configuration _config;
     private readonly NetworkService _networkService;
     private readonly RegistrationWindow _registrationWindow;
-    private readonly BlocklistWindow _blocklistWindow;
+    private readonly SettingsWindow _settingsWindow;
     private readonly MainWindowController _controller;
     private readonly SessionService _sessionService;
     private readonly IdentityManager _identityManager;
@@ -29,7 +29,7 @@ public class MainWindow : Window
         SessionService sessionService,
         NetworkService networkService,
         RegistrationWindow registrationWindow,
-        BlocklistWindow blocklistWindow,
+        SettingsWindow settingsWindow,
         MainWindowController mainWindowController,
         IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoResize)
     {
@@ -42,7 +42,7 @@ public class MainWindow : Window
         _config = config;
         _networkService = networkService;
         _registrationWindow = registrationWindow;
-        _blocklistWindow = blocklistWindow;
+        _settingsWindow = settingsWindow;
         _controller = mainWindowController;
         _sessionService = sessionService;
         _identityManager = identityManager;
@@ -82,7 +82,7 @@ public class MainWindow : Window
             ImGui.SameLine(size.X - padding.X * 3 - ImGui.GetFontSize());
             if(SharedUserInterfaces.IconButton(FontAwesomeIcon.Cog, tooltip: "Settings"))
             {
-                
+                _settingsWindow.Toggle();
             }
             FontService.MediumFont?.Push();
             SharedUserInterfaces.TextCentered(_identityManager.GetDisplayName());
@@ -133,17 +133,22 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
+            string name = _controller.OverrideName ? _controller.OverwrittenName : _sessionService.CurrentSession.Character.Name;
+            string world = _controller.OverrideWorld ? _controller.OverwrittenWorld : _sessionService.CurrentSession.Character.World;
             ImGui.Text(String.Concat(
                 _identityManager.GetDisplayName(), 
                 " → ", 
-                _controller.OverrideName ? _controller.OverwrittenName : _sessionService.CurrentSession.Character.Name,
-                "@",
-                _controller.OverrideWorld ? _controller.OverwrittenWorld : _sessionService.CurrentSession.Character.World));
+                name,
+                world == string.Empty ? "" : "@",
+                world));
         });
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Undo, new Vector2(50,50), "Reset to default.", FontService.MediumFont)) ;
+            if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Undo, new Vector2(50,50), "Reset to default.", FontService.MediumFont))
+            {
+                _controller.ResetName();
+            }
             ImGui.SameLine();
             FontService.MediumFont?.Push();
             if (ImGui.Button("Change Name", new Vector2(360, 50)))

@@ -9,15 +9,13 @@ using NomenclatureClient.Network;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.DeleteNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
-using NomenclatureCommon.Domain.Network.UpdateUserCount;
 
 namespace NomenclatureClient.Handlers;
 
 public class NetworkHandler(
     NetworkService network,
     DeleteNomenclatureHandler deleteNomenclatureHandler,
-    UpdateNomenclatureHandler updateNomenclatureHandler,
-    UpdateUserCountHandler updateUserCountHandler) : IHostedService
+    UpdateNomenclatureHandler updateNomenclatureHandler) : IHostedService
 {
     /// <summary>
     ///     List of subscriptions to incoming server events
@@ -28,7 +26,6 @@ public class NetworkHandler(
     {
         _handlers.Add(network.Connection.On<DeleteNomenclatureForwardedRequest>(HubMethod.DeleteNomenclature, deleteNomenclatureHandler.Handle));
         _handlers.Add(network.Connection.On<UpdateNomenclatureForwardedRequest>(HubMethod.UpdateNomenclature, updateNomenclatureHandler.Handle));
-        _handlers.Add(network.Connection.On<UpdateUserCountForwardedRequest>(HubMethod.UpdateUserCount, updateUserCountHandler.Handle));
         return Task.CompletedTask;
     }
 

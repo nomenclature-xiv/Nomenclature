@@ -76,7 +76,6 @@ public static class ServiceManager
                 // Network Handlers
                 collection.AddSingleton<DeleteNomenclatureHandler>();
                 collection.AddSingleton<UpdateNomenclatureHandler>();
-                collection.AddSingleton<UpdateUserCountHandler>();
                 collection.AddSingleton<NetworkHandler>();
                 
                 // UI

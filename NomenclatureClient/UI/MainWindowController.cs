@@ -4,6 +4,7 @@ using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.Base;
+using NomenclatureCommon.Domain.Network.DeleteNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
 namespace NomenclatureClient.UI;
@@ -27,18 +28,6 @@ public class MainWindowController(IPluginLog logger, NetworkService networkServi
             // Ignore
         }
     }
-    
-    public async void Disconnect()
-    {
-        try
-        {
-            await networkService.Disconnect();
-        }
-        catch (Exception)
-        {
-            // Ignore
-        }
-    }
 
     public async void ChangeName()
     {
@@ -53,6 +42,16 @@ public class MainWindowController(IPluginLog logger, NetworkService networkServi
         var update = new UpdateNomenclatureRequest(name, world, mode);
 
         var response = await networkService.InvokeAsync<Response>(HubMethod.UpdateNomenclature, update);
+        if (response.Success is false)
+        {
+            logger.Warning("Unsuccessful!!!!");
+        }
+    }
+    public async void ResetName()
+    {
+        var delete = new DeleteNomenclatureRequest();
+
+        var response = await networkService.InvokeAsync<Response>(HubMethod.DeleteNomenclature, delete);
         if (response.Success is false)
         {
             logger.Warning("Unsuccessful!!!!");
