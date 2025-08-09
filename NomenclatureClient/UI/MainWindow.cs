@@ -92,11 +92,7 @@ public class MainWindow : Window
         SharedUserInterfaces.ContentBox(() =>
         {
             ImGui.BeginGroup();
-            if (ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName))
-            {
-                _sessionService.CurrentSession.CharacterConfiguration.OverrideName = _controller.OverrideName;
-                _sessionService.Save();
-            }
+            ImGui.Checkbox("##OverrideNameCheckbox", ref _controller.OverrideName);
             ImGui.SameLine();
             ImGui.TextUnformatted("Override Name");
             SharedUserInterfaces.DisableIf(_controller.OverrideName is false, () =>
@@ -116,11 +112,7 @@ public class MainWindow : Window
             ImGui.SameLine();
 
             ImGui.BeginGroup();
-            if (ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld))
-            {
-                _sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = _controller.OverrideWorld;
-                _sessionService.Save();
-            }
+            ImGui.Checkbox("##OverrideWorldCheckbox", ref _controller.OverrideWorld);
             ImGui.SameLine();
             ImGui.TextUnformatted("Override World");
             SharedUserInterfaces.DisableIf(_controller.OverrideWorld is false, () =>

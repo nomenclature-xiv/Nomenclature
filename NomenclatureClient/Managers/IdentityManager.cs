@@ -4,6 +4,7 @@ using NomenclatureClient.Services;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.Base;
+using NomenclatureCommon.Domain.Network.DeleteNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
 namespace NomenclatureClient.Managers;
@@ -16,12 +17,14 @@ public class IdentityManager(
     public async Task SetName(string name) => await Set(name, null);
     
     public async Task SetWorld(string world) => await Set(null, world);
+
+    public async Task SetNameAndWorld(string? name, string? world) => await Set(name, world);
     
     public async Task ClearName() => await Clear(UpdateNomenclatureMode.Name);
     
     public async Task ClearWorld() => await Clear(UpdateNomenclatureMode.World);
     
-    public async Task ClearNameAndWorld() => await Clear(UpdateNomenclatureMode.Name | UpdateNomenclatureMode.World);
+    public async Task ClearNameAndWorld() => await Delete();
 
     public string GetDisplayName()
     {
@@ -80,6 +83,7 @@ public class IdentityManager(
             sessionService.CurrentSession.CharacterConfiguration.World = world;
             sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = true;
         }
+        sessionService.Save();
     }
     
     private async Task Clear(UpdateNomenclatureMode mode)
@@ -113,5 +117,11 @@ public class IdentityManager(
             sessionService.CurrentSession.CharacterConfiguration.World = null;
             sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = false;
         }
+    }
+
+    private async Task Delete()
+    {
+        var request = new DeleteNomenclatureRequest();
+        await networkService.InvokeAsync<Response>(HubMethod.DeleteNomenclature, request);
     }
 }
