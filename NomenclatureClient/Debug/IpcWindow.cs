@@ -46,6 +46,7 @@ namespace NomenclatureClient.Debug
             }
             ImGui.SameLine();
             ImGui.InputText("##setnom2", ref setnom2, 64);
+            ImGui.Text(_tester.ChangedMessage);
         }
     }
 }
