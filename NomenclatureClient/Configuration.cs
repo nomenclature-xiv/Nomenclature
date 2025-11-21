@@ -60,17 +60,12 @@ public class Configuration : IPluginConfiguration
                 var value = LocalCharacters[key];
                 LocalConfigurations.Add(key, new CharacterConfiguration()
                 {
-                    Secret = value.Secret,
                     AutoConnect = AutoConnect,
                     OverrideName = value.UseName,
                     OverrideWorld = value.UseWorld,
                     Name = value.Name,
                     World = value.World
                 });
-            }
-            foreach(string key in LocalConfigurations.Keys)
-            {
-                LocalConfigurations[key].BlockedCharacters.UnionWith(BlocklistCharacters.Select(x => x.ToString()));
             }
             Version = 3;
             Save();

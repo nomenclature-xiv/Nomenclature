@@ -36,11 +36,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\NomenclatureCommon\NomenclatureCommon.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="Network\NetworkNameService.cs" />
       <Compile Remove="Services\ServiceManager.cs" />
       <Compile Remove="UI\New\RegistrationWindowController.cs" />
     </ItemGroup>
@@ -48,6 +43,10 @@
     <ItemGroup>
       <Compile Remove="Services\CharacterService.cs" />
       <Compile Remove="UI\New\BlocklistWindow.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\NomenclatureCommon\NomenclatureCommon.csproj" />
     </ItemGroup>
     
 </Project>

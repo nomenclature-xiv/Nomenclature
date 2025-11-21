@@ -52,12 +52,12 @@ public class CommandHandler(
                     {
                         case SubCommand.SubArgument.Name:
                             var name = string.Join(" ", args.Skip(2));
-                            await identityManager.SetName(name);
+                            identityManager.SetName(name);
                             break;
 
                         case SubCommand.SubArgument.World:
                             var world = string.Join(" ", args.Skip(2));
-                            await identityManager.SetWorld(world);
+                            identityManager.SetWorld(world);
                             break;
                     }
 

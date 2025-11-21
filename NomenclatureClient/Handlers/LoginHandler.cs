@@ -3,47 +3,48 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
-using NomenclatureClient.Network;
+using NomenclatureClient.Managers;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types;
 using NomenclatureClient.UI;
 using NomenclatureCommon.Domain;
 
-namespace NomenclatureClient.Managers;
+namespace NomenclatureClient.Handlers;
 
-public class LoginManager(
+public class LoginHandler(
     IPluginLog logger,
     IFramework framework,
     Configuration configuration,
-    NetworkService networkService,
     IClientState clientState,
     SessionService sessionService,
-    MainWindowController controller) : IHostedService
+    MainWindowController controller,
+    IdentityManager identityManager) : IHostedService
 {
     private async void OnLogin()
     {
         try
         {
             // This should never happen as the event we're listening to suggests the local player is available
-            if (await framework.RunOnFrameworkThread(() => clientState.LocalPlayer)  is not { } player)
+            if (await framework.RunOnFrameworkThread(() => clientState.LocalPlayer) is not { } player)
                 return;
             
             // Get character name and their configuration
             var character = new Character(player.Name.ToString(), player.HomeWorld.Value.Name.ToString());
             if (configuration.LocalConfigurations.TryGetValue(character.ToString(), out var value) is false)
-                return;
+            {
+                value = new CharacterConfiguration();
+                configuration.LocalConfigurations.Add(character.ToString(), value);
+            }
             
             // Set the session info
             sessionService.CurrentSession = new SessionInfo(character, value);
-            
-            // Connect if we have it enabled
-            if (value.AutoConnect)
-                await networkService.Connect();
 
             controller.OverrideName = value.OverrideName;
             controller.OverrideWorld = value.OverrideWorld;
             controller.OverwrittenName = value.Name ?? "";
             controller.OverwrittenWorld = value.World ?? "";
+
+            identityManager.SetConfig(value);
         }
         catch (Exception)
         {

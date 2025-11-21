@@ -1,28 +1,27 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using NomenclatureClient.Network;
+using Dalamud.Plugin.Services;
+using NomenclatureClient.Ipc;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types;
 using NomenclatureCommon.Domain;
-using NomenclatureCommon.Domain.Network;
-using NomenclatureCommon.Domain.Network.Base;
-using NomenclatureCommon.Domain.Network.DeleteNomenclature;
-using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
 namespace NomenclatureClient.Managers;
 
 public class IdentityManager(
-    NetworkService networkService,
-    SessionService sessionService)
+    SessionService sessionService,
+    INamePlateGui namePlateGui)
 {
     private const int MaxLength = 32;
-    public async Task SetName(string name) => await Set(name, null);
+    public void SetName(string? name) => Set(name, null, UpdateNomenclatureFlag.Name);
     
-    public async Task SetWorld(string world) => await Set(null, world);
+    public void SetWorld(string? world) => Set(null, world, UpdateNomenclatureFlag.World);
 
-    public async Task SetNameAndWorld(string? name, string? world) => await Set(name, world);
+    public void SetNameAndWorld(string? name, string? world, bool updateConfig = false) => Set(name, world, UpdateNomenclatureFlag.Name | UpdateNomenclatureFlag.World, updateConfig);
     
-    public async Task ClearName() => await Clear(UpdateNomenclatureMode.Name);
+    public async Task ClearName() => await Clear(UpdateNomenclatureFlag.Name);
     
-    public async Task ClearWorld() => await Clear(UpdateNomenclatureMode.World);
+    public async Task ClearWorld() => await Clear(UpdateNomenclatureFlag.World);
     
     public async Task ClearNameAndWorld() => await Delete();
 
@@ -42,86 +41,88 @@ public class IdentityManager(
         }
     }
 
-    private async Task Set(string? name, string? world)
+    public Nomenclature? GetNomenclature()
     {
-        if (name is null && world is null)
-            return;
+        var player = sessionService.CurrentSession.Character.ToString();
+        IdentityService.Identities.TryGetValue(player, out var nomenclature);
+        return nomenclature;
+    }
 
-        var mode = UpdateNomenclatureMode.None;
-        if (name is not null)
-            mode |= UpdateNomenclatureMode.Name;
-        if (world is not null)
-            mode |= UpdateNomenclatureMode.World;
+    public void SetConfig(CharacterConfiguration configuration)
+    {
+        if(configuration.OverrideName)
+        {
+            Set(configuration.Name, null, UpdateNomenclatureFlag.Name);
+        }
+        if(configuration.OverrideWorld)
+        {
+            Set(null, configuration.World, UpdateNomenclatureFlag.World);
+        }
+    }
 
-        var request = new UpdateNomenclatureRequest(name, world, mode);
-        var response = await networkService.InvokeAsync<Response>(HubMethod.UpdateNomenclature, request);
-        if (response.Success is false)
+    private void Set(string? name, string? world, UpdateNomenclatureFlag flags, bool updateConfig = false)
+    {
+        if (flags is UpdateNomenclatureFlag.None)
             return;
 
         var player = sessionService.CurrentSession.Character.ToString();
         if (IdentityService.Identities.TryGetValue(player, out var nomenclature))
         {
-            if (name is not null)
+            if (flags.HasFlag(UpdateNomenclatureFlag.Name))
                 nomenclature.Name = name;
 
-            if (world is not null)
+            if (flags.HasFlag(UpdateNomenclatureFlag.World))
                 nomenclature.World = world;
         }
         else
         {
-            IdentityService.Identities.TryAdd(player, new Nomenclature(name, world));
+            nomenclature = new Nomenclature(name, world);
+            IdentityService.Identities.TryAdd(player, nomenclature);
         }
-
-        if (name is not null)
+        if (updateConfig)
         {
-            sessionService.CurrentSession.CharacterConfiguration.Name = name;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = true;
+            if (name is not null)
+            {
+                sessionService.CurrentSession.CharacterConfiguration.Name = name;
+            }
+            if (world is not null)
+            {
+                sessionService.CurrentSession.CharacterConfiguration.World = world;
+            }
+            sessionService.CurrentSession.CharacterConfiguration.OverrideName = name != null;
+            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = world != null;
+            sessionService.Save();
         }
-
-        if (world is not null)
-        {
-            sessionService.CurrentSession.CharacterConfiguration.World = world;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = true;
-        }
-        sessionService.Save();
+        IpcHandler.ChangedNomenclature(nomenclature);
+        namePlateGui.RequestRedraw();
     }
     
-    private async Task Clear(UpdateNomenclatureMode mode)
+    private async Task Clear(UpdateNomenclatureFlag mode)
     {
-        if (mode is UpdateNomenclatureMode.None)
-            return;
-        
-        var request = new UpdateNomenclatureRequest(null, null, mode);
-        var response = await networkService.InvokeAsync<Response>(HubMethod.UpdateNomenclature, request);
-        if (response.Success is false)
+        if (mode is UpdateNomenclatureFlag.None)
             return;
 
         var player = sessionService.CurrentSession.Character.ToString();
         if (IdentityService.Identities.TryGetValue(player, out var nomenclature))
         {
-            if ((mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name)
+            if (mode.HasFlag(UpdateNomenclatureFlag.Name))
+            {
                 nomenclature.Name = null;
-            
-            if ((mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World)
+            }
+            if (mode.HasFlag(UpdateNomenclatureFlag.World))
+            {
                 nomenclature.World = null;
+            }
         }
-        
-        if ((mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name)
-        {
-            sessionService.CurrentSession.CharacterConfiguration.Name = null;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = false;
-        }
-        
-        if ((mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World)
-        {
-            sessionService.CurrentSession.CharacterConfiguration.World = null;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = false;
-        }
+        IpcHandler.ChangedNomenclature(nomenclature);
+        namePlateGui.RequestRedraw();
     }
 
     private async Task Delete()
     {
-        var request = new DeleteNomenclatureRequest();
-        await networkService.InvokeAsync<Response>(HubMethod.DeleteNomenclature, request);
+        var player = sessionService.CurrentSession.Character.ToString();
+        IdentityService.Identities.TryRemove(player, out _);
+        IpcHandler.ChangedNomenclature(null);
+        namePlateGui.RequestRedraw();
     }
 }

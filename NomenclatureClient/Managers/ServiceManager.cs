@@ -6,9 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NomenclatureClient.Debug;
 using NomenclatureClient.Handlers;
-using NomenclatureClient.Handlers.Network;
 using NomenclatureClient.Ipc;
-using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.UI;
 
@@ -50,50 +48,35 @@ public static class ServiceManager
                 // Internal Services
                 collection.AddSingleton<SessionService>();
                 collection.AddSingleton<IdentityService>();
-                collection.AddSingleton<ScanningService>();
                 
                 collection.AddSingleton<WorldService>();
-                collection.AddSingleton<NetworkService>();
-                collection.AddSingleton<NetworkRegisterService>();
                 collection.AddSingleton<FontService>();
-                
-                
-                
-                
                 
                 collection.AddSingleton<IpcTester>();
                 
                 // Managers
-                collection.AddSingleton<IpcManager>();
+                collection.AddSingleton<IpcHandler>();
                 collection.AddSingleton<IdentityManager>();
-                collection.AddSingleton<LoginManager>();
+                collection.AddSingleton<LoginHandler>();
                 
                 // Handlers
                 collection.AddSingleton<ChatBoxHandler>();
                 collection.AddSingleton<NamePlateHandler>();
                 collection.AddSingleton<CommandHandler>();
                 
-                // Network Handlers
-                collection.AddSingleton<DeleteNomenclatureHandler>();
-                collection.AddSingleton<UpdateNomenclatureHandler>();
-                collection.AddSingleton<NetworkHandler>();
-                
                 // UI
                 collection = AddUiServices(collection);
 
                 //Services to automatically start when the plugin does
                 collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
-                collection.AddHostedService(p => p.GetRequiredService<ScanningService>());
                 collection.AddHostedService(p => p.GetRequiredService<WindowService>());
                 collection.AddHostedService(p => p.GetRequiredService<InstallerWindowService>());
                 collection.AddHostedService(p => p.GetRequiredService<CommandHandler>());
-                collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
                 collection.AddHostedService(p => p.GetRequiredService<FontService>());
                 collection.AddHostedService(p => p.GetRequiredService<NamePlateHandler>());
                 collection.AddHostedService(p => p.GetRequiredService<ChatBoxHandler>());
-                collection.AddHostedService(p => p.GetRequiredService<IpcManager>());
-                collection.AddHostedService(p => p.GetRequiredService<LoginManager>());
-                collection.AddHostedService(p => p.GetRequiredService<NetworkHandler>());
+                collection.AddHostedService(p => p.GetRequiredService<IpcHandler>());
+                collection.AddHostedService(p => p.GetRequiredService<LoginHandler>());
             }).Build();
 
     }
@@ -101,21 +84,13 @@ public static class ServiceManager
     {
         collection.AddSingleton<WindowService>();
         collection.AddSingleton<InstallerWindowService>();
-        collection.AddSingleton<RegistrationWindowController>();
-        collection.AddSingleton<RegistrationWindow>();
         collection.AddSingleton<MainWindowController>();
         collection.AddSingleton<MainWindow>();
-        collection.AddSingleton<BlocklistWindowController>();
-        collection.AddSingleton<BlocklistWindow>();
-        collection.AddSingleton<SettingsWindow>();
         collection.AddSingleton<IpcWindow>();
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
         //Easier to do using autofac
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<BlocklistWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<SettingsWindow>());
 
         //Add configuration
         collection.AddSingleton((s) =>
