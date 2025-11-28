@@ -35,7 +35,7 @@ public class MainWindowController(IPluginLog logger, IdentityManager identityMan
         var name = OverrideName ? OverwrittenName : null;
         var world = OverrideWorld ? OverwrittenWorld : null;
 
-        await identityManager.SetNameAndWorld(name, world);
+        await identityManager.Set(name, world, true);
     }
     public async void ResetName()
     {

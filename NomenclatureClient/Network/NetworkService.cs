@@ -17,25 +17,42 @@ namespace NomenclatureClient.Network;
 /// <summary>
 ///     Provides access to the Signal R hub connection
 /// </summary>
-public class NetworkService : IHostedService
+public class NetworkService : IHostedService, IDisposable
 {
-    // Server URL 
-     private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
-     private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
-    
-    // Beta
-    //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
-    //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
-    
-    public event Func<Task>? Connected;
-
     /// <summary>
     ///     Signal R Hub Connection
     /// </summary>
     public readonly HubConnection Connection;
+
+    /// <summary>
+    ///     Event fired when the server successfully connects, either by reconnection or manual connection
+    /// </summary>
+    public event Func<Task>? Connected;
+
+    /// <summary>
+    ///     Event fired when the server connection is lost, either by disruption or manual intervention
+    /// </summary>
+    public event Func<Task>? Disconnected;
+
+    public bool Connecting;
+
+#if DEBUG
+    private const string HubUrl = "https://localhost:5006/nomenclature";
+    private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
+#else
+    // Server URL 
+    private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
+     private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
+#endif
+
+    // Beta
+    //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
+    //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
     private readonly SessionService _sessionService;
     private readonly IPluginLog _pluginLog;
+
+    private string? _token = string.Empty;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
@@ -47,7 +64,7 @@ public class NetworkService : IHostedService
 
         Connection = new HubConnectionBuilder()
             .WithUrl(HubUrl,
-                options => { options.AccessTokenProvider = async () => await Token().ConfigureAwait(false); })
+                options => { options.AccessTokenProvider = () => Task.FromResult<string?>(_token); })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol(options =>
             {
@@ -55,6 +72,10 @@ public class NetworkService : IHostedService
                     MessagePackSerializerOptions.Standard.WithSecurity(MessagePackSecurity.UntrustedData);
             })
             .Build();
+
+        Connection.Reconnected += OnReconnected;
+        Connection.Reconnecting += OnReconnecting;
+        Connection.Closed += OnClosed;
     }
 
     /// <summary>
@@ -92,12 +113,19 @@ public class NetworkService : IHostedService
     {
         if (Connection.State is not HubConnectionState.Disconnected)
             return;
-        
         try
         {
-            await Connection.StartAsync().ConfigureAwait(false);
-            if (Connection.State is HubConnectionState.Connected)
-                Connected?.Invoke();
+            if (await Token().ConfigureAwait(false) is { } token)
+            {
+                _token = token;
+                await Connection.StartAsync().ConfigureAwait(false);
+                if (Connection.State is HubConnectionState.Connected)
+                {
+                    Connected?.Invoke();
+                    Connecting = false;
+                }
+
+            }
         }
         catch (NoSecretForLocalCharacterException)
         {
@@ -126,6 +154,7 @@ public class NetworkService : IHostedService
         try
         {
             await Connection.StopAsync().ConfigureAwait(false);
+            Connecting = true;
         }
         catch (Exception e)
         {
@@ -135,6 +164,7 @@ public class NetworkService : IHostedService
     
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        Connecting = true;
         return Task.CompletedTask;
     }
 
@@ -142,6 +172,24 @@ public class NetworkService : IHostedService
     {
         await Disconnect();
         await Connection.DisposeAsync();
+    }
+
+    private Task OnReconnected(string? arg)
+    {
+        Connected?.Invoke();
+        return Task.CompletedTask;
+    }
+
+    private Task OnClosed(Exception? arg)
+    {
+        Disconnected?.Invoke();
+        return Task.CompletedTask;
+    }
+
+    private Task OnReconnecting(Exception? arg)
+    {
+        Disconnected?.Invoke();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -166,5 +214,17 @@ public class NetworkService : IHostedService
 
         _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
         return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        Connection.Reconnected -= OnReconnected;
+        Connection.Reconnecting -= OnReconnecting;
+        Connection.Closed -= OnClosed;
+
+        Connection.StopAsync().ConfigureAwait(false);
+        Connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+        GC.SuppressFinalize(this);
     }
 }

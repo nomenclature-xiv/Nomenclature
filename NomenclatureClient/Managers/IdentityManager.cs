@@ -14,11 +14,11 @@ public class IdentityManager(
     SessionService sessionService)
 {
     private const int MaxLength = 32;
-    public async Task SetName(string name) => await Set(name, null);
+    public async Task SetName(string name) => await Set(name, null, false);
     
-    public async Task SetWorld(string world) => await Set(null, world);
+    public async Task SetWorld(string world) => await Set(null, world, false);
 
-    public async Task SetNameAndWorld(string? name, string? world) => await Set(name, world);
+    public async Task SetNameAndWorld(string? name, string? world, bool updateConfig = false) => await Set(name, world, updateConfig);
     
     public async Task ClearName() => await Clear(UpdateNomenclatureMode.Name);
     
@@ -42,10 +42,13 @@ public class IdentityManager(
         }
     }
 
-    private async Task Set(string? name, string? world)
+    public async Task Set(string? name, string? world, bool updateConfig)
     {
         if (name is null && world is null)
+        {
+            await Delete(updateConfig);
             return;
+        }
 
         var mode = UpdateNomenclatureMode.None;
         if (name is not null)
@@ -71,19 +74,21 @@ public class IdentityManager(
         {
             IdentityService.Identities.TryAdd(player, new Nomenclature(name, world));
         }
-
-        if (name is not null)
+        if (updateConfig)
         {
-            sessionService.CurrentSession.CharacterConfiguration.Name = name;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = true;
-        }
+            if (name is not null)
+            {
+                sessionService.CurrentSession.CharacterConfiguration.Name = name;
+            }
 
-        if (world is not null)
-        {
-            sessionService.CurrentSession.CharacterConfiguration.World = world;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = true;
+            if (world is not null)
+            {
+                sessionService.CurrentSession.CharacterConfiguration.World = world;
+            }
+            sessionService.CurrentSession.CharacterConfiguration.OverrideName = name != null;
+            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = world != null;
+            sessionService.Save();
         }
-        sessionService.Save();
     }
     
     private async Task Clear(UpdateNomenclatureMode mode)
@@ -119,9 +124,14 @@ public class IdentityManager(
         }
     }
 
-    private async Task Delete()
+    private async Task Delete(bool updateConfig = false)
     {
         var request = new DeleteNomenclatureRequest();
         await networkService.InvokeAsync<Response>(HubMethod.DeleteNomenclature, request);
+        if(updateConfig)
+        {
+            sessionService.CurrentSession.CharacterConfiguration.OverrideName = false;
+            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = false;
+        }
     }
 }
