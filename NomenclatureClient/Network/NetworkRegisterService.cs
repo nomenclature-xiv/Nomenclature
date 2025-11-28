@@ -9,8 +9,8 @@ namespace NomenclatureClient.Network;
 
 public class NetworkRegisterService(IPluginLog pluginLog)
 {
-    private const string RegisterPostUrlInit = "https://foxitsvc.com:5007/registration/initiate";
-    private const string RegisterPostUrlValidate = "https://foxitsvc.com:5007/registration/validate";
+    private const string RegisterPostUrlInit = "https://foxitsvc.com:5017/registration/initiate";
+    private const string RegisterPostUrlValidate = "https://foxitsvc.com:5017/registration/validate";
 
     /// <summary>
     ///     Begins the registration process on the server
