@@ -18,6 +18,7 @@
     "ApplicableVersion": "any",
     "DalamudApiLevel": 13,
     "Changelog": "",
-    "TestingAssemblyVersion": "0.4.1"
+    "TestingAssemblyVersion": "0.4.1",
+    "IconUrl": "https://raw.githubusercontent.com/nomenclature-xiv/Nomenclature/main/Images/nomenclature.png"
   }
 ]
