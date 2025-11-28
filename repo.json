@@ -12,12 +12,12 @@
     "RepoUrl": "https://github.com/nomenclature-xiv/Nomenclature",
     "DownloadCount": 0,
     "LastUpdated": 1746332595,
-    "DownloadLinkInstall": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.3.0/Nomenclature.zip",
-    "DownloadLinkUpdate": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.3.0/Nomenclature.zip",
-    "AssemblyVersion": "0.3.0",
+    "DownloadLinkInstall": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.4.0/Nomenclature.zip",
+    "DownloadLinkUpdate": "https://github.com/nomenclature-xiv/Nomenclature/releases/download/v0.4.0/Nomenclature.zip",
+    "AssemblyVersion": "0.4.0",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 13,
     "Changelog": "",
-    "TestingAssemblyVersion": "0.3.0"
+    "TestingAssemblyVersion": "0.4.0"
   }
 ]
