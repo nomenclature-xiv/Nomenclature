@@ -11,6 +11,7 @@ using NomenclatureClient.Ipc;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.UI;
+using System.Net.Http;
 
 namespace NomenclatureClient.Managers;
 
@@ -36,6 +37,8 @@ public static class ServiceManager
             })
             .ConfigureServices(collection =>
             {
+                collection.AddSingleton<HttpClient>();
+
                 // Dalamud Services 
                 collection.AddSingleton(pluginInterface);
                 collection.AddSingleton(commandManager);
@@ -101,8 +104,6 @@ public static class ServiceManager
     {
         collection.AddSingleton<WindowService>();
         collection.AddSingleton<InstallerWindowService>();
-        collection.AddSingleton<RegistrationWindowController>();
-        collection.AddSingleton<RegistrationWindow>();
         collection.AddSingleton<MainWindowController>();
         collection.AddSingleton<MainWindow>();
         collection.AddSingleton<BlocklistWindowController>();
@@ -112,7 +113,6 @@ public static class ServiceManager
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
         //Easier to do using autofac
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<RegistrationWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<BlocklistWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<SettingsWindow>());

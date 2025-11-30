@@ -38,9 +38,12 @@ public class Program
         builder.Services.AddSingleton(configuration);
 
         builder.Services.AddSingleton<DatabaseService>();
+        builder.Services.AddSingleton<OauthService>();
         builder.Services.AddSingleton<RegistrationController>();
         builder.Services.AddSingleton<LodestoneService>();
         builder.Services.AddSingleton<ConnectionService>();
+        builder.Services.AddHttpClient();
+        builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<OauthService>());
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<LodestoneService>());
 
 #if DEBUG

@@ -11,9 +11,10 @@ public class Configuration
     public static readonly IPAddress Ip = IPAddress.Parse("192.168.1.14");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public readonly string SigningKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    public readonly string SigningKey;
     public readonly string CertificatePath;
     public readonly string CertificatePasswordPath;
+    public readonly string ClientSecret;
 
     public Configuration()
     {
@@ -27,8 +28,10 @@ public class Configuration
         {
             var defaultConfig = new ConfigurationData
             {
-                CertificatePath = "DEFAULT",
-                CertificatePasswordPath = "DEFAULT",
+                CertificatePath = DefaultValue,
+                CertificatePasswordPath = DefaultValue,
+                SigningKey = DefaultValue,
+                ClientSecret = DefaultValue
             };
 
             var defaultContent = JsonSerializer.Serialize(defaultConfig, JsonOptions);
@@ -39,16 +42,21 @@ public class Configuration
         if (JsonSerializer.Deserialize<ConfigurationData>(json) is not { } config)
             throw new InvalidOperationException("Failed to deserialize server configuration data");
         
-        if (config.CertificatePath is DefaultValue || config.CertificatePasswordPath is DefaultValue)
+        if (config.CertificatePath is DefaultValue || config.CertificatePasswordPath is DefaultValue || config.SigningKey is DefaultValue)
             throw new InvalidOperationException("Configuration values must be set before running the server");
         
         CertificatePath = config.CertificatePath;
         CertificatePasswordPath = config.CertificatePasswordPath;
+        SigningKey = config.SigningKey;
+        ClientSecret = config.ClientSecret;
+
     }
     
     private class ConfigurationData
     {
+        public string SigningKey { get; init; } = string.Empty;
         public string CertificatePath { get; init; } = string.Empty;
         public string CertificatePasswordPath { get; init; } = string.Empty;
+        public string ClientSecret {  get; init; } = string.Empty;
     }
 }

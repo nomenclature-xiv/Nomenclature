@@ -18,7 +18,6 @@ public class MainWindow : Window
     // Injected
     private readonly Configuration _config;
     private readonly NetworkService _networkService;
-    private readonly RegistrationWindow _registrationWindow;
     private readonly SettingsWindow _settingsWindow;
     private readonly MainWindowController _controller;
     private readonly SessionService _sessionService;
@@ -28,7 +27,6 @@ public class MainWindow : Window
         Configuration config,
         SessionService sessionService,
         NetworkService networkService,
-        RegistrationWindow registrationWindow,
         SettingsWindow settingsWindow,
         MainWindowController mainWindowController,
         IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoResize)
@@ -41,7 +39,6 @@ public class MainWindow : Window
         
         _config = config;
         _networkService = networkService;
-        _registrationWindow = registrationWindow;
         _settingsWindow = settingsWindow;
         _controller = mainWindowController;
         _sessionService = sessionService;
@@ -171,16 +168,13 @@ public class MainWindow : Window
         {
             SharedUserInterfaces.ContentBox(() =>
             {
-                ImGui.TextWrapped("This character is not registered with nomenclature. Please click \"Register\" to start using the plugin.");
-                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped("Please ensure that your character lodestone profile is not private and that you can view it as not-privated BEFORE clicking Register.");
-                ImGui.PopStyleColor();
+                ImGui.TextWrapped("This character is not registered with Nomenclature. Please click \"Login\" to start using the plugin.");
             });
             
             SharedUserInterfaces.ContentBox(() =>
             {
-                if (ImGui.Button("Register", dimension))
-                    _registrationWindow.IsOpen = true;
+                if (ImGui.Button("Login with XIVAuth", dimension))
+                    _controller.StartRegistration();
             });
         }
         else
