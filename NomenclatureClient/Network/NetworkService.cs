@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,14 +52,16 @@ public class NetworkService : IHostedService, IDisposable
     
     private readonly SessionService _sessionService;
     private readonly IPluginLog _pluginLog;
+    private readonly HttpClient _client;
 
     private string? _token = string.Empty;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService(SessionService sessionService, IPluginLog pluginLog)
+    public NetworkService(HttpClient client, SessionService sessionService, IPluginLog pluginLog)
     {
+        _client = client;
         _sessionService =  sessionService;
         _pluginLog = pluginLog;
 
@@ -204,7 +207,7 @@ public class NetworkService : IHostedService, IDisposable
             throw new NoSecretForLocalCharacterException();
 
         var request = new GenerateTokenRequest(_sessionService.CurrentSession.CharacterConfiguration.Secret);
-        var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
+        var response = await NetworkUtils.PostRequest(_client, JsonSerializer.Serialize(request), AuthPostUrl);
         if (response.IsSuccessStatusCode is false)
             throw response.StatusCode switch
             {
