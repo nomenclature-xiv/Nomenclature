@@ -8,6 +8,7 @@ using Dalamud.Utility;
 using Microsoft.Win32;
 using System.Net.Http;
 using System.Net;
+using NomenclatureCommon.Domain.Exceptions;
 
 namespace NomenclatureClient.Network;
 
@@ -18,13 +19,13 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
 
     public Func<Task>? Registered;
 
-    public async Task RegisterCharacter(Character character)
+    public async Task<string?> RegisterCharacter(Character character)
     {
         var res = await RegisterCharacterInitiate(character);
         if (res == null)
-            return;
+            throw new Exception("Shouldn't happen!");
         Util.OpenLink(res.Uri);
-        var res2 = await RegisterCharacterPoll(res.Ticket, character);
+        return await RegisterCharacterPoll(res.Ticket, character);
     }
 
     /// <summary>
@@ -75,11 +76,12 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
                     var resmodel = JsonSerializer.Deserialize<ValidateCharacterRegistrationResponse>(text, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
                     if (resmodel?.Status is "bound")
                     {
+                        return resmodel.Token;
                     }
                 }
-                if (resp.StatusCode == HttpStatusCode.InternalServerError)
+                if (resp.StatusCode == HttpStatusCode.BadRequest)
                 {
-                    return null;
+                    throw new CharacterNotMatchingException(await resp.Content.ReadAsStringAsync());
                 }
             }
             catch(HttpRequestException ex)

@@ -116,7 +116,7 @@ public class NetworkService : IHostedService, IDisposable
             return;
         try
         {
-            if (await Token().ConfigureAwait(false) is { } token)
+            if (Token() is { } token)
             {
                 _token = token;
                 await Connection.StartAsync().ConfigureAwait(false);
@@ -199,7 +199,7 @@ public class NetworkService : IHostedService, IDisposable
     /// <returns></returns>
     /// <exception cref="InvalidSecretException">Thrown when the client submits an invalid token</exception>
     /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
-    private async Task<string?> Token()
+    private string? Token()
     {
         if (_sessionService.CurrentSession.CharacterConfiguration.Secret == string.Empty)
             throw new NoSecretForLocalCharacterException();

@@ -4,7 +4,9 @@ using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types;
 using NomenclatureCommon.Domain;
+using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.Base;
 using NomenclatureCommon.Domain.Network.DeleteNomenclature;
@@ -12,8 +14,10 @@ using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
 namespace NomenclatureClient.UI;
 
-public class MainWindowController(IPluginLog logger, IFramework framework, IClientState clientState, IdentityManager identityManager, NetworkService networkService, NetworkRegisterService registerService)
+public class MainWindowController(IPluginLog logger, IFramework framework, IClientState clientState, IdentityManager identityManager, NetworkService networkService, NetworkRegisterService registerService, SessionService sessionService, Configuration configuration)
 {
+    public string ErrorMessage = string.Empty;
+
     public bool OverrideName = false;
     public string OverwrittenName = string.Empty;
 
@@ -24,7 +28,24 @@ public class MainWindowController(IPluginLog logger, IFramework framework, IClie
     {
         if (await framework.RunOnFrameworkThread(() => clientState.LocalPlayer) is not { } player)
             return;
-        await registerService.RegisterCharacter(new Character(player.Name.TextValue, player.HomeWorld.Value.Name.ToString()));
+        try
+        {
+            Character self = new Character(player.Name.TextValue, player.HomeWorld.Value.Name.ToString());
+            var res = await registerService.RegisterCharacter(self);
+            if(res is null)
+            {
+                ErrorMessage = "Timed out! Please try again.";
+                return;
+            }
+            var config = new CharacterConfiguration(res);
+            sessionService.CurrentSession = new SessionInfo(self, config);
+            ErrorMessage = string.Empty;
+            configuration.Save();
+        }
+        catch(CharacterNotMatchingException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
     
     public async void TryConnect()

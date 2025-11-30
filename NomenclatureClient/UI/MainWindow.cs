@@ -169,6 +169,9 @@ public class MainWindow : Window
             SharedUserInterfaces.ContentBox(() =>
             {
                 ImGui.TextWrapped("This character is not registered with Nomenclature. Please click \"Login\" to start using the plugin.");
+                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
+                ImGui.TextWrapped(_controller.ErrorMessage);
+                ImGui.PopStyleColor();
             });
             
             SharedUserInterfaces.ContentBox(() =>
