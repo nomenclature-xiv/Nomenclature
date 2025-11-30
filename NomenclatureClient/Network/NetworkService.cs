@@ -52,16 +52,14 @@ public class NetworkService : IHostedService, IDisposable
     
     private readonly SessionService _sessionService;
     private readonly IPluginLog _pluginLog;
-    private readonly HttpClient _client;
 
     private string? _token = string.Empty;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService(HttpClient client, SessionService sessionService, IPluginLog pluginLog)
+    public NetworkService(SessionService sessionService, IPluginLog pluginLog)
     {
-        _client = client;
         _sessionService =  sessionService;
         _pluginLog = pluginLog;
 
@@ -206,17 +204,7 @@ public class NetworkService : IHostedService, IDisposable
         if (_sessionService.CurrentSession.CharacterConfiguration.Secret == string.Empty)
             throw new NoSecretForLocalCharacterException();
 
-        var request = new GenerateTokenRequest(_sessionService.CurrentSession.CharacterConfiguration.Secret);
-        var response = await NetworkUtils.PostRequest(_client, JsonSerializer.Serialize(request), AuthPostUrl);
-        if (response.IsSuccessStatusCode is false)
-            throw response.StatusCode switch
-            {
-                HttpStatusCode.Unauthorized => new InvalidSecretException(),
-                _ => new UnknownTokenException($"StatusCode was {response.StatusCode}")
-            };
-
-        _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
-        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        return _sessionService.CurrentSession.CharacterConfiguration.Secret;
     }
 
     public void Dispose()

@@ -71,10 +71,10 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
                 using var resp = await NetworkUtils.PostRequest(client, JsonSerializer.Serialize(data), RegisterPostUrlPoll).ConfigureAwait(false);
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
-                    var resmodel = JsonSerializer.Deserialize<ValidateCharacterRegistrationResponse>(await resp.Content.ReadAsStringAsync());
+                    var text = await resp.Content.ReadAsStringAsync();
+                    var resmodel = JsonSerializer.Deserialize<ValidateCharacterRegistrationResponse>(text, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
                     if (resmodel?.Status is "bound")
                     {
-                        pluginLog.Debug(resmodel.Token.ToString());
                     }
                 }
                 if (resp.StatusCode == HttpStatusCode.InternalServerError)
