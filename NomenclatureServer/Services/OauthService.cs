@@ -82,7 +82,7 @@ namespace NomenclatureServer.Services
             loginEphemerals[state] = new Character(resmodel[0].name, resmodel[0].home_world);
         }
 
-        public async Task<JwtSecurityToken?> ValidateTicket(Character character, string ticket)
+        public JwtSecurityToken? ValidateTicket(Character character, string ticket)
         {
             loginEphemerals.TryGetValue(ticket, out var bound);
             if (bound is null) return null;

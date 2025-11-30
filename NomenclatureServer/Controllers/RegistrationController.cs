@@ -32,10 +32,10 @@ public class RegistrationController(DatabaseService database, OauthService authS
     {
         try
         {
-            var token = await authService.ValidateTicket(request.Character, request.Ticket);
+            var token = authService.ValidateTicket(request.Character, request.Ticket);
             if (token is null)
                 return Ok(new ValidateCharacterRegistrationResponse() { Status = "unbound", Token = null });
-            return Ok(new ValidateCharacterRegistrationResponse() { Status = "bound", Token = token });
+            return Ok(new ValidateCharacterRegistrationResponse() { Status = "bound", Token = token.RawData });
         }
         catch (Exception ex)
         {

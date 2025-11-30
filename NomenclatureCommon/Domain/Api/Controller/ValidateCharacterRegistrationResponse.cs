@@ -12,6 +12,6 @@ namespace NomenclatureCommon.Domain.Api.Controller
     public record ValidateCharacterRegistrationResponse
     {
         public string Status { get; set; } = string.Empty;
-        public JwtSecurityToken? Token;
+        public string? Token { get; set; }
     }
 }
