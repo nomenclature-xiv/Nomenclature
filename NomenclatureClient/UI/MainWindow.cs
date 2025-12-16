@@ -15,21 +15,22 @@ namespace NomenclatureClient.UI;
 
 public class MainWindow : Window
 {
+    private static readonly Vector2 SquareButtonSize = new(50);
+    private static readonly Vector2 ChangeNameButtonSize = SquareButtonSize with { X = 360 };
+    
     // Injected
-    private readonly Configuration _config;
     private readonly NetworkService _networkService;
     private readonly SettingsWindow _settingsWindow;
     private readonly MainWindowController _controller;
-    private readonly SessionService _sessionService;
     private readonly IdentityManager _identityManager;
+    private readonly ConfigurationService _configuration;
 
     public MainWindow(
-        Configuration config,
-        SessionService sessionService,
         NetworkService networkService,
         SettingsWindow settingsWindow,
         MainWindowController mainWindowController,
-        IdentityManager identityManager) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoResize)
+        IdentityManager identityManager,
+        ConfigurationService configuration) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoResize)
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -37,12 +38,11 @@ public class MainWindow : Window
             MaximumSize = new Vector2(450, 290)
         };
         
-        _config = config;
         _networkService = networkService;
         _settingsWindow = settingsWindow;
         _controller = mainWindowController;
-        _sessionService = sessionService;
         _identityManager = identityManager;
+        _configuration = configuration;
     }
 
     public override void Draw()
@@ -122,25 +122,23 @@ public class MainWindow : Window
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            string name = _controller.OverrideName ? _controller.OverwrittenName : _sessionService.CurrentSession.Character.Name;
-            string world = _controller.OverrideWorld ? _controller.OverwrittenWorld : _sessionService.CurrentSession.Character.World;
-            ImGui.Text(String.Concat(
-                _identityManager.GetDisplayName(), 
-                " → ", 
-                name,
-                world == string.Empty ? "" : "@",
-                world));
+            if (_configuration.CharacterConfiguration is null)
+                return;
+            
+            var name = _controller.OverrideName ? _controller.OverwrittenName : _configuration.CharacterConfiguration.Name;
+            var world = _controller.OverrideWorld ? _controller.OverwrittenWorld : _configuration.CharacterConfiguration.World;
+            ImGui.Text(string.Concat(_identityManager.GetDisplayName(), " → ", name, world == string.Empty ? "" : "@", world));
         });
 
         SharedUserInterfaces.ContentBox(() =>
         {
-            if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Undo, new Vector2(50,50), "Reset to default.", FontService.MediumFont))
+            if (SharedUserInterfaces.IconButton(FontAwesomeIcon.Undo, SquareButtonSize, "Reset to default.", FontService.MediumFont))
             {
                 _controller.ResetName();
             }
             ImGui.SameLine();
             FontService.MediumFont?.Push();
-            if (ImGui.Button("Change Name", new Vector2(360, 50)))
+            if (ImGui.Button("Change Name", ChangeNameButtonSize))
                 _controller.ChangeName();
             FontService.MediumFont?.Pop();
         }, false);
@@ -163,45 +161,6 @@ public class MainWindow : Window
             SharedUserInterfaces.TextCentered($"{_networkService.Connection.State}");
         });
         
-        var dimension = new Vector2(size.X - padding.X * 2, 0);
-        if (_sessionService.CurrentSession.Character.Name == string.Empty) // Can check any value here, name is easiest since it should always be set
-        {
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                ImGui.TextWrapped("This character is not registered with Nomenclature. Please click \"Login\" to start using the plugin.");
-                ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudRed);
-                ImGui.TextWrapped(_controller.ErrorMessage);
-                ImGui.PopStyleColor();
-            });
-            
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                if (ImGui.Button("Login with XIVAuth", dimension))
-                    _controller.StartRegistration();
-            });
-        }
-        else
-        {
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                if (ImGui.Checkbox("Auto connect?", ref _sessionService.CurrentSession.CharacterConfiguration.AutoConnect))
-                    _sessionService.Save();
-            });
-            
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                if (_networkService.Connection.State is HubConnectionState.Disconnected)
-                {
-                    if (ImGui.Button("Connect", dimension))
-                        _controller.TryConnect();
-                }
-                else
-                {
-                    ImGui.BeginDisabled();
-                    ImGui.Button("Connect", dimension);
-                    ImGui.EndDisabled();
-                }
-            });
-        }
+        // TODO: Remake now that new secret system is in place
     }
 }
