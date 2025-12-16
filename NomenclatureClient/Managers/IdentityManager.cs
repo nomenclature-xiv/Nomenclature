@@ -9,9 +9,7 @@ using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
 namespace NomenclatureClient.Managers;
 
-public class IdentityManager(
-    NetworkService networkService,
-    SessionService sessionService)
+public class IdentityManager(ConfigurationService configuration, NetworkService networkService)
 {
     private const int MaxLength = 32;
     public async Task SetName(string name) => await Set(name, null, false);
@@ -28,17 +26,19 @@ public class IdentityManager(
 
     public string GetDisplayName()
     {
-        var player = sessionService.CurrentSession.Character;
-        var playername = player.ToString();
-        if (IdentityService.Identities.TryGetValue(playername, out var nomenclature))
+        if (configuration.CharacterConfiguration is null)
+            return string.Empty;
+
+        var name = configuration.CharacterConfiguration.Name + '@' + configuration.CharacterConfiguration.World;
+        if (IdentityService.Identities.TryGetValue(name, out var nomenclature))
         {
-            var outname = nomenclature.Name ?? player.Name;
-            var outworld = nomenclature.World ?? player.World;
+            var outname = nomenclature.Name ?? configuration.CharacterConfiguration.Name;
+            var outworld = nomenclature.World ?? configuration.CharacterConfiguration.World;
             return string.Concat(outname, outworld == string.Empty ? "" : "@", outworld);
         }
         else
         {
-            return playername;
+            return name;
         }
     }
 
@@ -61,7 +61,10 @@ public class IdentityManager(
         if (response.Success is false)
             return;
 
-        var player = sessionService.CurrentSession.Character.ToString();
+        if (configuration.CharacterConfiguration is null)
+            return;
+
+        var player = configuration.CharacterConfiguration.Name + '@' + configuration.CharacterConfiguration.World;
         if (IdentityService.Identities.TryGetValue(player, out var nomenclature))
         {
             if (name is not null)
@@ -78,16 +81,17 @@ public class IdentityManager(
         {
             if (name is not null)
             {
-                sessionService.CurrentSession.CharacterConfiguration.Name = name;
+                configuration.CharacterConfiguration.OverrideName = name;
             }
 
             if (world is not null)
             {
-                sessionService.CurrentSession.CharacterConfiguration.World = world;
+                configuration.CharacterConfiguration.OverrideWorld = world;
             }
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = name != null;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = world != null;
-            sessionService.Save();
+
+            configuration.CharacterConfiguration.ShouldOverrideName = name is not null;
+            configuration.CharacterConfiguration.ShouldOverrideWorld = world is not null;
+            await configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
         }
     }
     
@@ -101,7 +105,10 @@ public class IdentityManager(
         if (response.Success is false)
             return;
 
-        var player = sessionService.CurrentSession.Character.ToString();
+        if (configuration.CharacterConfiguration is null)
+            return;
+
+        var player = configuration.CharacterConfiguration.Name + '@' + configuration.CharacterConfiguration.World;
         if (IdentityService.Identities.TryGetValue(player, out var nomenclature))
         {
             if ((mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name)
@@ -113,14 +120,14 @@ public class IdentityManager(
         
         if ((mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name)
         {
-            sessionService.CurrentSession.CharacterConfiguration.Name = null;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = false;
+            configuration.CharacterConfiguration.OverrideName = null;
+            configuration.CharacterConfiguration.ShouldOverrideName = false;
         }
         
         if ((mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World)
         {
-            sessionService.CurrentSession.CharacterConfiguration.World = null;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = false;
+            configuration.CharacterConfiguration.OverrideWorld = null;
+            configuration.CharacterConfiguration.ShouldOverrideWorld = false;
         }
     }
 
@@ -130,8 +137,11 @@ public class IdentityManager(
         await networkService.InvokeAsync<Response>(HubMethod.DeleteNomenclature, request);
         if(updateConfig)
         {
-            sessionService.CurrentSession.CharacterConfiguration.OverrideName = false;
-            sessionService.CurrentSession.CharacterConfiguration.OverrideWorld = false;
+            if (configuration.CharacterConfiguration is null)
+                return;
+            
+            configuration.CharacterConfiguration.ShouldOverrideName = false;
+            configuration.CharacterConfiguration.ShouldOverrideWorld = false;
         }
     }
 }
