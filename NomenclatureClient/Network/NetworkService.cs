@@ -1,7 +1,4 @@
 using System;
-using System.Net;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
@@ -10,8 +7,8 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Services;
-using NomenclatureClient.Types.Exceptions;
-using NomenclatureCommon.Domain.Api.Controller;
+
+// ReSharper disable RedundantBoolCompare
 
 namespace NomenclatureClient.Network;
 
@@ -35,6 +32,9 @@ public class NetworkService : IHostedService, IDisposable
     /// </summary>
     public event Func<Task>? Disconnected;
 
+    /// <summary>
+    ///     If the plugin has begun the connection process
+    /// </summary>
     public bool Connecting;
 
 #if DEBUG
@@ -50,22 +50,27 @@ public class NetworkService : IHostedService, IDisposable
     //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
     //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
-    private readonly SessionService _sessionService;
+    // Injected
     private readonly IPluginLog _pluginLog;
-
+    private readonly ConfigurationService _configuration;
+    
+    /// <summary>
+    ///     Access token required to connect to the SignalR hub
+    /// </summary>
     private string? _token = string.Empty;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService(SessionService sessionService, IPluginLog pluginLog)
+    public NetworkService(IPluginLog pluginLog, ConfigurationService configuration)
     {
-        _sessionService =  sessionService;
         _pluginLog = pluginLog;
+        _configuration = configuration;
 
-        Connection = new HubConnectionBuilder()
-            .WithUrl(HubUrl,
-                options => { options.AccessTokenProvider = () => Task.FromResult<string?>(_token); })
+        Connection = new HubConnectionBuilder().WithUrl(HubUrl, options =>
+            {
+                options.AccessTokenProvider = () => Task.FromResult(_token);
+            })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol(options =>
             {
@@ -114,34 +119,39 @@ public class NetworkService : IHostedService, IDisposable
     {
         if (Connection.State is not HubConnectionState.Disconnected)
             return;
+        
+        Connecting = true;
+        
         try
         {
-            if (Token() is { } token)
-            {
-                _token = token;
-                await Connection.StartAsync().ConfigureAwait(false);
-                if (Connection.State is HubConnectionState.Connected)
-                {
-                    Connected?.Invoke();
-                    Connecting = false;
-                }
+            if (_configuration.CharacterConfiguration?.SecretId is not { } id)
+                return;
 
+            // TODO: Populate value once authentication secret code is fleshed out
+            if (_configuration.Configuration.Secrets.TryGetValue(id, out _) is false)
+                return;
+            
+            // TODO: Authenticate secret with server to get token
+            _token = string.Empty;
+            
+            await Connection.StartAsync().ConfigureAwait(false);
+
+            if (Connection.State is HubConnectionState.Connected)
+            {
+                Connected?.Invoke();
+                // TODO: Connected Message
             }
-        }
-        catch (NoSecretForLocalCharacterException)
-        {
-            _pluginLog.Warning(
-                "[NetworkService] You do not have a secret assigned to your local character, please register");
-        }
-        catch (InvalidSecretException)
-        {
-            _pluginLog.Warning(
-                "[NetworkService] Your secret is invalid. Make sure your current character is registered");
+            else
+            {
+                // TODO: Not Connected Message
+            }
         }
         catch (Exception e)
         {
-            _pluginLog.Warning($"[NetworkService] Unexpected error while connecting, {e}");
+            _pluginLog.Warning($"[NetworkService.Connect] {e}");
         }
+        
+        Connecting = false;
     }
 
     /// <summary>
@@ -191,20 +201,6 @@ public class NetworkService : IHostedService, IDisposable
     {
         Disconnected?.Invoke();
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    ///     Queries the login server for a valid token
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidSecretException">Thrown when the client submits an invalid token</exception>
-    /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
-    private string? Token()
-    {
-        if (_sessionService.CurrentSession.CharacterConfiguration.Secret == string.Empty)
-            throw new NoSecretForLocalCharacterException();
-
-        return _sessionService.CurrentSession.CharacterConfiguration.Secret;
     }
 
     public void Dispose()

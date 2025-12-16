@@ -20,12 +20,7 @@ namespace NomenclatureClient.Services;
 /// <summary>
 ///     Handles scanning nearby players to subscribe to on the server
 /// </summary>
-public class ScanningService(
-    IFramework framework,
-    IPluginLog logger,
-    IObjectTable objectTable,
-    NetworkService network,
-    SessionService sessionService) : IHostedService
+public class ScanningService(IFramework framework, IPluginLog logger, IObjectTable objectTable, NetworkService network) : IHostedService
 {
     // Constants
     private const int ScanInternal = 5000;
@@ -40,12 +35,6 @@ public class ScanningService(
         _scanningTimer.Start();
 
         network.Connection.Closed += OnServerConnectionClosed;
-        return Task.CompletedTask;
-    }
-    
-    private Task OnServerConnectionClosed(Exception? exception)
-    {
-        _previousNearbyPlayers = [];
         return Task.CompletedTask;
     }
 
@@ -102,32 +91,20 @@ public class ScanningService(
     private ImmutableHashSet<string> ScanNearbyCharacters()
     {
         var nearby = new HashSet<string>();
-        var blockList = sessionService.CurrentSession.CharacterConfiguration.BlockedCharacters;
-        if (blockList.Count is 0)
+        for (var i = 0; i < objectTable.Length; i++)
         {
-            for (var i = 0; i < objectTable.Length; i++)
-            {
-                if (objectTable[i] is not IPlayerCharacter player)
-                    continue;
+            if (objectTable[i] is not IPlayerCharacter player)
+                continue;
                 
-                nearby.Add(string.Concat(player.Name.TextValue, "@", player.HomeWorld.Value.Name.ExtractText()));
-            }
-        }
-        else
-        {
-            for (var i = 0; i < objectTable.Length; i++)
-            {
-                if (objectTable[i] is not IPlayerCharacter player)
-                    continue;
-
-                var character = string.Concat(player.Name.TextValue, "@", player.HomeWorld.Value.Name.ExtractText());
-                if (blockList.Contains(character))
-                    continue;
-                
-                nearby.Add(character);
-            }
+            nearby.Add(string.Concat(player.Name.TextValue, "@", player.HomeWorld.Value.Name.ExtractText()));
         }
         
         return nearby.ToImmutableHashSet();
+    }
+    
+    private Task OnServerConnectionClosed(Exception? exception)
+    {
+        _previousNearbyPlayers = [];
+        return Task.CompletedTask;
     }
 }

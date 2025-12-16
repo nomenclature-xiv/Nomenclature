@@ -51,10 +51,8 @@ public static class ServiceManager
                 collection.AddSingleton(chatGui);
                 
                 // Internal Services
-                collection.AddSingleton<SessionService>();
                 collection.AddSingleton<IdentityService>();
                 collection.AddSingleton<ScanningService>();
-                
                 collection.AddSingleton<WorldService>();
                 collection.AddSingleton<NetworkService>();
                 collection.AddSingleton<NetworkRegisterService>();
@@ -85,6 +83,7 @@ public static class ServiceManager
                 collection = AddUiServices(collection);
 
                 //Services to automatically start when the plugin does
+                collection.AddHostedService(p => p.GetRequiredService<ConfigurationService>());
                 collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
                 collection.AddHostedService(p => p.GetRequiredService<ScanningService>());
                 collection.AddHostedService(p => p.GetRequiredService<WindowService>());
@@ -106,23 +105,20 @@ public static class ServiceManager
         collection.AddSingleton<InstallerWindowService>();
         collection.AddSingleton<MainWindowController>();
         collection.AddSingleton<MainWindow>();
-        collection.AddSingleton<BlocklistWindowController>();
-        collection.AddSingleton<BlocklistWindow>();
         collection.AddSingleton<SettingsWindow>();
         collection.AddSingleton<IpcWindow>();
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
         //Easier to do using autofac
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<BlocklistWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<SettingsWindow>());
 
-        //Add configuration
-        collection.AddSingleton((s) =>
+        collection.AddSingleton(async provider =>
         {
-            var dalamudPluginInterface = s.GetRequiredService<IDalamudPluginInterface>();
-            var configuration = dalamudPluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            configuration.Initialize(dalamudPluginInterface);
+            var dalamudPluginInterface = provider.GetRequiredService<IDalamudPluginInterface>();
+            var logging = provider.GetRequiredService<IPluginLog>();
+            var configuration = new ConfigurationService(dalamudPluginInterface, logging);
+            await configuration.LoadConfigurationAsync();
             return configuration;
         });
 

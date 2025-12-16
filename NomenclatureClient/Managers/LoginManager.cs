@@ -5,45 +5,59 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
-using NomenclatureClient.Types;
-using NomenclatureClient.UI;
-using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Managers;
 
-public class LoginManager(
-    IPluginLog logger,
-    IFramework framework,
-    Configuration configuration,
-    NetworkService networkService,
-    IClientState clientState,
-    SessionService sessionService,
-    MainWindowController controller) : IHostedService
+public class LoginManager(IClientState client, IFramework framework, IObjectTable objectTable, ConfigurationService configuration, NetworkService network) : IHostedService
 {
+    /// <summary>
+    ///     If we have finished processing all the login events
+    /// </summary>
+    public event Action? LoginFinished;
+    
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        client.Login += OnLogin;
+        client.Logout += OnLogout;
+        
+        if (client.IsLoggedIn)
+            OnLogin();
+        
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        client.Login -= OnLogin;
+        client.Logout -= OnLogout;
+        return Task.CompletedTask;
+    }
+    
     private async void OnLogin()
     {
         try
         {
             // This should never happen as the event we're listening to suggests the local player is available
-            if (await framework.RunOnFrameworkThread(() => clientState.LocalPlayer)  is not { } player)
+            if (await framework.RunOnFrameworkThread(() => objectTable.LocalPlayer)  is not { } player)
                 return;
             
-            // Get character name and their configuration
-            var character = new Character(player.Name.ToString(), player.HomeWorld.Value.Name.ToString());
-            if (configuration.LocalConfigurations.TryGetValue(character.ToString(), out var value) is false)
+            // Extract name and world
+            var name = player.Name.ToString();
+            var world = player.HomeWorld.Value.Name.ToString();
+            
+            // Load the configuration for this character
+            await configuration.LoadCharacterConfigurationAsync(name, world).ConfigureAwait(false);
+            
+            // If the configuration for the character didn't load
+            if (configuration.CharacterConfiguration is null)
                 return;
             
-            // Set the session info
-            sessionService.CurrentSession = new SessionInfo(character, value);
+            // Emit an event for the loaded login event
+            LoginFinished?.Invoke();
             
-            // Connect if we have it enabled
-            if (value.AutoConnect)
-                await networkService.Connect();
-
-            controller.OverrideName = value.OverrideName;
-            controller.OverrideWorld = value.OverrideWorld;
-            controller.OverwrittenName = value.Name ?? "";
-            controller.OverwrittenWorld = value.World ?? "";
+            // If the character is enabled for automatic connection
+            if (configuration.CharacterConfiguration.AutoConnect)
+                await network.Connect();
         }
         catch (Exception)
         {
@@ -53,26 +67,10 @@ public class LoginManager(
 
     private void OnLogout(int type, int code)
     {
-        // Cleanse the identity service
-        IdentityService.Identities.Clear();
-
-        // Reset the current session to an empty one
-        sessionService.CurrentSession = new SessionInfo(new Character(), new CharacterConfiguration());
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        clientState.Login += OnLogin;
-        clientState.Logout += OnLogout;
+        // TODO: Clear any locally saved titles
+        // <Code goes here>
         
-        OnLogin();
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        clientState.Login -= OnLogin;
-        clientState.Logout -= OnLogout;
-        return Task.CompletedTask;
+        // Clear character configuration
+        configuration.ResetCharacterConfiguration();
     }
 }

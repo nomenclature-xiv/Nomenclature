@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NomenclatureClient.Managers;
 using NomenclatureClient.Types.Configurations;
 
 namespace NomenclatureClient.Services;
@@ -32,8 +33,14 @@ public class ConfigurationService : IHostedService
     // Injected
     private readonly IPluginLog _pluginLog;
     
-    // Exposed Configurations
+    /// <summary>
+    ///     Plugin configuration
+    /// </summary>
     public ConfigurationV2 Configuration { get; private set; } = new();
+    
+    /// <summary>
+    ///     The current configuration for the logged in character, loaded on login by <see cref="LoadCharacterConfigurationAsync"/> by <see cref="LoginManager"/>
+    /// </summary>
     public CharacterConfigurationV2? CharacterConfiguration { get; private set; }
     
     /// <summary>
@@ -187,6 +194,14 @@ public class ConfigurationService : IHostedService
         {
             _pluginLog.Error($"[ConfigurationService.SaveCharacterConfigurationAsync] {e}");
         }
+    }
+
+    /// <summary>
+    ///     Sets the current character configuration to null
+    /// </summary>
+    public void ResetCharacterConfiguration()
+    {
+        CharacterConfiguration = null;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
