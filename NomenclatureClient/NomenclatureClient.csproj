@@ -30,9 +30,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.15" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.4" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.1" />
     </ItemGroup>
 
     <ItemGroup>
@@ -48,6 +48,10 @@
     <ItemGroup>
       <Compile Remove="Services\CharacterService.cs" />
       <Compile Remove="UI\New\BlocklistWindow.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Update="DalamudPackager" Version="14.0.1" />
     </ItemGroup>
     
 </Project>
