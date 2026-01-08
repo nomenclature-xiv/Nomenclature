@@ -29,10 +29,11 @@ public class AuthController(Configuration config, DatabaseService database, ILog
         if (request.Version < ExpectedVersion)
             return StatusCode(StatusCodes.Status409Conflict, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.VersionMismatch));
 
-        if (await database.GetRegisteredCharacter(request.Secret) is not { } registeredCharacter)
+        if (await database.GetAccountBySecret(request.Secret) is not { } registeredCharacter)
             return StatusCode(StatusCodes.Status401Unauthorized, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.UnknownSecret));
-
-        var token = GenerateJwtToken([new Claim(AuthClaimType.CharacterIdentifier, registeredCharacter)]);
+        
+        // TODO: Update ClaimType to match Id based account relationships
+        var token = GenerateJwtToken([new Claim(AuthClaimType.CharacterIdentifier, registeredCharacter.Id.ToString())]);
         return StatusCode(StatusCodes.Status200OK, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.Success, token.RawData));
     }
 
