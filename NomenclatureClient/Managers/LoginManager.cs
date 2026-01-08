@@ -6,21 +6,45 @@ using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 
+// ReSharper disable RedundantBoolCompare
+
 namespace NomenclatureClient.Managers;
 
-public class LoginManager(IClientState client, IFramework framework, IObjectTable objectTable, ConfigurationService configuration, NetworkService network) : IHostedService
+/// <summary>
+///     Handles logging in and out of a character in game
+/// </summary>
+public class LoginManager : IHostedService
 {
+    // Injected
+    private readonly IClientState _client;
+    private readonly IFramework _framework;
+    private readonly IObjectTable _objectTable;
+    private readonly ConfigurationService _configuration;
+    private readonly NetworkService _network;
+    
     /// <summary>
     ///     If we have finished processing all the login events
     /// </summary>
     public event Action? LoginFinished;
+
+    /// <summary>
+    ///     <inheritdoc cref="LoginManager"/>
+    /// </summary>
+    public LoginManager(IClientState client, IFramework framework, IObjectTable objectTable, ConfigurationService configuration, NetworkService network)
+    {
+        _client = client;
+        _framework = framework;
+        _objectTable = objectTable;
+        _configuration = configuration;
+        _network = network;
+        
+        _client.Login += OnLogin;
+        _client.Logout += OnLogout;
+    }
     
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        client.Login += OnLogin;
-        client.Logout += OnLogout;
-        
-        if (client.IsLoggedIn)
+        if (_client.IsLoggedIn)
             OnLogin();
         
         return Task.CompletedTask;
@@ -28,8 +52,8 @@ public class LoginManager(IClientState client, IFramework framework, IObjectTabl
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        client.Login -= OnLogin;
-        client.Logout -= OnLogout;
+        _client.Login -= OnLogin;
+        _client.Logout -= OnLogout;
         return Task.CompletedTask;
     }
     
@@ -38,7 +62,7 @@ public class LoginManager(IClientState client, IFramework framework, IObjectTabl
         try
         {
             // This should never happen as the event we're listening to suggests the local player is available
-            if (await framework.RunOnFrameworkThread(() => objectTable.LocalPlayer)  is not { } player)
+            if (await _framework.RunOnFrameworkThread(() => _objectTable.LocalPlayer).ConfigureAwait(false)  is not { } player)
                 return;
             
             // Extract name and world
@@ -46,18 +70,15 @@ public class LoginManager(IClientState client, IFramework framework, IObjectTabl
             var world = player.HomeWorld.Value.Name.ToString();
             
             // Load the configuration for this character
-            await configuration.LoadCharacterConfigurationAsync(name, world).ConfigureAwait(false);
-            
-            // If the configuration for the character didn't load
-            if (configuration.CharacterConfiguration is null)
+            if (await _configuration.LoadCharacterConfigurationAsync(name, world).ConfigureAwait(false) is false)
                 return;
             
             // Emit an event for the loaded login event
             LoginFinished?.Invoke();
             
             // If the character is enabled for automatic connection
-            if (configuration.CharacterConfiguration.AutoConnect)
-                await network.Connect();
+            if (_configuration.CharacterConfiguration?.AutoConnect ?? false)
+                await _network.Connect().ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -67,10 +88,7 @@ public class LoginManager(IClientState client, IFramework framework, IObjectTabl
 
     private void OnLogout(int type, int code)
     {
-        // TODO: Clear any locally saved titles
-        // <Code goes here>
-        
         // Clear character configuration
-        configuration.ResetCharacterConfiguration();
+        _configuration.ResetCharacterConfiguration();
     }
 }

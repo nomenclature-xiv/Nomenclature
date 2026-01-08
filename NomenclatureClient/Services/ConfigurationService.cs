@@ -125,7 +125,7 @@ public class ConfigurationService : IHostedService
     /// <summary>
     ///     Load a character configuration into this service instance
     /// </summary>
-    public async Task LoadCharacterConfigurationAsync(string name, string world)
+    public async Task<bool> LoadCharacterConfigurationAsync(string name, string world)
     {
         try
         {
@@ -143,27 +143,26 @@ public class ConfigurationService : IHostedService
                     case CharacterConfigurationV2.ExpectedVersion:
                         CharacterConfiguration = json.ToObject<CharacterConfigurationV2>() ?? new CharacterConfigurationV2();
                         _pluginLog.Verbose($"[ConfigurationService.LoadCharacterConfigurationAsync] Loaded character configuration {json}");
-                        break;
-                
-                    // Update when / if new version of CharacterConfigurationV2 are created
+                        return true;
+                    
+                    // Add new cases as needed
                     default:
-                        CharacterConfiguration = new CharacterConfigurationV2();
+                        CharacterConfiguration = null;
                         _pluginLog.Warning($"[ConfigurationService.LoadCharacterConfigurationAsync] Unsupported version {version.ToString() ?? "null"}");
-                        break;
+                        return false;
                 }
             }
-            else
-            {
-                // New instance of character configuration
-                CharacterConfiguration = new CharacterConfigurationV2 { Name = name, World = world };
+            // New instance of character configuration
+            CharacterConfiguration = new CharacterConfigurationV2 { Name = name, World = world };
             
-                // Write
-                await SaveCharacterConfigurationAsync().ConfigureAwait(false);
-            }
+            // Write
+            await SaveCharacterConfigurationAsync().ConfigureAwait(false);
+            return true;
         }
         catch (Exception e)
         {
             _pluginLog.Error($"[ConfigurationService.LoadCharacterConfigurationAsync] {e}");
+            return false;
         }
     }
 
