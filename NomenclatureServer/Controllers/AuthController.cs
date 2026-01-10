@@ -32,8 +32,7 @@ public class AuthController(Configuration config, DatabaseService database, ILog
         if (await database.GetAccountBySecret(request.Secret) is not { } registeredCharacter)
             return StatusCode(StatusCodes.Status401Unauthorized, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.UnknownSecret));
         
-        // TODO: Update ClaimType to match Id based account relationships
-        var token = GenerateJwtToken([new Claim(AuthClaimType.CharacterIdentifier, registeredCharacter.Id.ToString())]);
+        var token = GenerateJwtToken([new Claim(AuthClaimType.SyncCode, registeredCharacter.SyncCode)]);
         return StatusCode(StatusCodes.Status200OK, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.Success, token.RawData));
     }
 

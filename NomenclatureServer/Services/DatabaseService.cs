@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using NomenclatureCommon.Domain.Network;
 using NomenclatureServer.Domain;
 
 // ReSharper disable RedundantBoolCompare
@@ -51,14 +52,14 @@ public class DatabaseService
     public async Task<Account?> GetAccountBySecret(string secret)
     {
         await using var command = _database.CreateCommand();
-        command.CommandText = "SELECT Id, SyncCode FROM Accounts WHERE Secret = @secret LIMIT 1";
+        command.CommandText = "SELECT SyncCode FROM Accounts WHERE Secret = @secret LIMIT 1";
         command.Parameters.AddWithValue("@secret", secret);
 
         try
         {
             await using var reader = await command.ExecuteReaderAsync();
             return await reader.ReadAsync()
-                ? new Account(reader.GetInt32(0), secret, reader.GetString(1))
+                ? new Account(secret, reader.GetString(0))
                 : null;
         }
         catch (Exception e)
@@ -71,7 +72,7 @@ public class DatabaseService
     /// <summary>
     ///     Creates a one-direction pair with target account id
     /// </summary>
-    public async Task<DatabaseResultEc> CreatePair(int senderAccountId, int targetAccountId)
+    public async Task<DatabaseResultEc> CreatePair(int senderSyncCode, int targetSyncCode)
     {
         await using var transaction = (SqliteTransaction)await _database.BeginTransactionAsync();
 
@@ -85,14 +86,14 @@ public class DatabaseService
             command.Transaction = transaction;
             command.CommandText = 
                  """
-                    INSERT INTO Permissions (AccountId, TargetAccountId, Paused, Permissions)
-                    SELECT @accountId, @targetAccountId, @paused, @permissions
+                    INSERT INTO Permissions (SyncCode, TargetSyncCode, Paused, Permissions)
+                    SELECT @syncCode, @targetSyncCode, @paused, @permissions
                     WHERE EXISTS (
-                        SELECT 1 FROM Accounts WHERE Id = @targetAccountId
+                        SELECT 1 FROM Accounts WHERE Id = @targetSyncCode
                     )
                  """;
-            command.Parameters.AddWithValue("@accountId", senderAccountId);
-            command.Parameters.AddWithValue("@targetAccountId", targetAccountId);
+            command.Parameters.AddWithValue("@syncCode", senderSyncCode);
+            command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
             command.Parameters.AddWithValue("@paused", 0);
             command.Parameters.AddWithValue("@permissions", 0);
             
@@ -102,8 +103,8 @@ public class DatabaseService
                 // Check to see if the account id exists, SenderAccountId will always exist because it is a requirement to connect and use the plugin
                 var failure = _database.CreateCommand();
                 failure.Transaction = transaction;
-                failure.CommandText = "SELECT 1 FROM Accounts WHERE AccountId = @targetAccountId LIMIT 1";
-                failure.Parameters.AddWithValue("@targetAccountId", targetAccountId);
+                failure.CommandText = "SELECT 1 FROM Accounts WHERE SyncCode = @targetSyncCode LIMIT 1";
+                failure.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
                 result = await failure.ExecuteScalarAsync() is null ? DatabaseResultEc.NoSuchSyncCode : DatabaseResultEc.AlreadyPaired;
             }
             else
@@ -111,9 +112,9 @@ public class DatabaseService
                 // Otherwise, check to see if they added us back
                 var pair = _database.CreateCommand();
                 pair.Transaction = transaction;
-                pair.CommandText = "SELECT 1 FROM Permissions WHERE AccountId = @targetAccountId AND TargetAccountId = @senderAccountId LIMIT 1";
-                pair.Parameters.AddWithValue("@senderAccountId", senderAccountId);
-                pair.Parameters.AddWithValue("@targetAccountId", targetAccountId);
+                pair.CommandText = "SELECT 1 FROM Permissions WHERE SyncCode = @targetSyncCode AND TargetSyncCode = @senderSyncCode LIMIT 1";
+                pair.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
+                pair.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
                 result = await pair.ExecuteScalarAsync() is null ? DatabaseResultEc.Pending : DatabaseResultEc.Success;
             }
             
@@ -132,12 +133,12 @@ public class DatabaseService
     /// <summary>
     ///     Pauses a one-sided pair
     /// </summary>
-    public async Task<DatabaseResultEc> PausePair(int senderAccountId, int targetAccountId, bool paused)
+    public async Task<DatabaseResultEc> PausePair(int senderSyncCode, int targetSyncCode, bool paused)
     {
         await using var command = _database.CreateCommand();
-        command.CommandText = "UPDATE Permissions SET Paused = @pause WHERE AccountId = @senderAccountId AND TargetAccountId = @targetAccountId";
-        command.Parameters.AddWithValue("@senderAccountId", senderAccountId);
-        command.Parameters.AddWithValue("@targetAccountId", targetAccountId);
+        command.CommandText = "UPDATE Permissions SET Paused = @pause WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";
+        command.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
+        command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
         command.Parameters.AddWithValue("@pause", paused);
         
         try
@@ -154,21 +155,21 @@ public class DatabaseService
     /// <summary>
     ///     Get all the pairs for a provided account id
     /// </summary>
-    public async Task<List<Pair>?> GetAllPairs(int accountId)
+    public async Task<List<Pair>> GetAllPairs(string syncCode)
     {
         await using var command = _database.CreateCommand();
         command.CommandText =
             """
                 SELECT
-                p.TargetAccountId,
+                p.TargetSyncCode,
                 p.Paused,
                 p.Permissions,
                 r.Paused AS PausedByThem,
                 r.Permissions AS PermissionsByThem,
-                FROM Permissions AS p LEFT JOIN Permissions AS r ON r.AccountId = p.TargetAccountId AND r.TargetAccountId = p.AccountId
-                WHERE p.AccountId = @accountId;
+                FROM Permissions AS p LEFT JOIN Permissions AS r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
+                WHERE p.SyncCode = @syncCode;
             """;
-        command.Parameters.AddWithValue("@accountId", accountId);
+        command.Parameters.AddWithValue("@syncCode", syncCode);
 
         try
         {
@@ -178,7 +179,7 @@ public class DatabaseService
             while (reader.Read())
             {
                 // Always get the target account id
-                var targetAccountId = reader.GetInt32(0);
+                var targetSyncCode = reader.GetInt32(0).ToString();
                 
                 // Get our pair data for them
                 var paused = reader.GetBoolean(1);
@@ -187,14 +188,14 @@ public class DatabaseService
                 // If 4 is null, 5 and 6 will also be null because that means they have not paired with us
                 if (reader.IsDBNull(3))
                 {
-                    results.Add(new Pair(accountId, targetAccountId, paused, permissions, null, null));
+                    results.Add(new Pair(targetSyncCode, new PairInformation(paused, permissions), null));
                     continue;
                 }
                 
                 // Get their pair data for us
                 var paused2 = reader.GetBoolean(3);
                 var permissions2 = reader.GetInt32(4);
-                results.Add(new Pair(accountId, targetAccountId, paused, permissions, paused2, permissions2));
+                results.Add(new Pair(targetSyncCode, new PairInformation(paused, permissions), new PairInformation(paused2, permissions2)));
             }
 
             return results;
@@ -242,9 +243,6 @@ public class DatabaseService
     
     // TODO: Delete Account
     
-    // TODO: Move this to the shared package once structure is defined
-    public record Pair(int AccountId, int TargetAccountId, bool Paused, int Permissions, bool? Paused2, int? Permissions2);
-
     /// <summary>
     ///     Creates database tables if they do not exist already
     /// </summary>
@@ -263,20 +261,20 @@ public class DatabaseService
         accounts.ExecuteNonQuery();
         
         using var index = _database.CreateCommand();
-        index.CommandText = $"CREATE INDEX IF NOT EXISTS idx_accounts_lodestoneid ON {AccountsTable} (LodestoneId)";
+        index.CommandText = $"CREATE INDEX IF NOT EXISTS idx_syncCode_lodestoneid ON {AccountsTable} (LodestoneId)";
         index.ExecuteNonQuery();
         
         using var permissions = _database.CreateCommand();
         permissions.CommandText =
             $"""
                CREATE TABLE IF NOT EXISTS {PermissionsTable} (
-                   AccountId TEXT NOT NULL,
-                   TargetAccountId TEXT NOT NULL,
+                   SyncCode TEXT NOT NULL,
+                   TargetSyncCode TEXT NOT NULL,
                    Paused INTEGER NOT NULL DEFAULT 0,
                    Permissions INTEGER NOT NULL DEFAULT 0,
-                   PRIMARY KEY (AccountId, TargetAccountId),
-                   FOREIGN KEY (AccountId) REFERENCES {AccountsTable} (Id) ON UPDATE CASCADE ON DELETE CASCADE,
-                   FOREIGN KEY (TargetAccountId) REFERENCES {AccountsTable} (Id) ON UPDATE CASCADE ON DELETE CASCADE
+                   PRIMARY KEY (SyncCode, TargetSyncCode),
+                   FOREIGN KEY (SyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE,
+                   FOREIGN KEY (TargetSyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE
                )
              """;
         permissions.ExecuteNonQuery();

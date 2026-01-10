@@ -96,7 +96,7 @@ namespace NomenclatureServer.Services
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SigningKey));
             var descriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity([new Claim(AuthClaimType.CharacterIdentifier, bound.ToString())]),
+                Subject = new ClaimsIdentity([new Claim(AuthClaimType.SyncCode, bound.ToString())]),
                 SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
                 Expires = DateTime.UtcNow.AddHours(4)
             };
