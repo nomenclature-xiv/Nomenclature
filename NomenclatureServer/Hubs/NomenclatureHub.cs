@@ -6,14 +6,16 @@ using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
+using NomenclatureCommon.Domain.Network.RemoveNomenclature;
+using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
+
+// ReSharper disable RedundantBoolCompare
 
 namespace NomenclatureServer.Hubs;
 
-// ReSharper disable once ForCanBeConvertedToForeach
-
 [Authorize]
-public class NomenclatureHub(ConnectionService connections, DatabaseService database, ILogger<NomenclatureHub> logger) : Hub
+public class NomenclatureHub(ConnectionService connections, DatabaseService database, NomenclatureService nomenclatures, ILogger<NomenclatureHub> logger) : Hub
 {
     /// <summary>
     ///     Gets the account id from claims
@@ -29,27 +31,34 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
+        
+        // TODO: Authentication of the Nomenclature values
+        
+        if (request.Nomenclature is not null)
+            nomenclatures.Upsert(syncCode, request.Nomenclature);
 
         var results = new List<PairRelationship>();
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
+            var nomenclature = nomenclatures.TryGet(pair.TargetSyncCode);
+            
             if (pair.GrantedByTarget is null)
             {
-                results.Add(new PairRelationship(pair, PairOnlineStatus.Pending));
+                results.Add(new PairRelationship(pair, PairOnlineStatus.Pending, nomenclature));
                 continue;
             }
 
             if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target)
             {
-                results.Add(new PairRelationship(pair, PairOnlineStatus.Offline));
+                results.Add(new PairRelationship(pair, PairOnlineStatus.Offline, nomenclature));
                 continue;
             }
             
-            results.Add(new PairRelationship(pair, PairOnlineStatus.Online));
+            results.Add(new PairRelationship(pair, PairOnlineStatus.Online, nomenclature));
             
             try
             {
-                var forward = new UpdateOnlineStatusRequest(syncCode, PairOnlineStatus.Online, pair.GrantedToTarget);
+                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, PairOnlineStatus.Online, pair.GrantedToTarget, request.Nomenclature);
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -60,6 +69,61 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         
         return new InitializeSessionResponse(syncCode, results);
     }
+
+    [HubMethodName(HubMethod.UpdateNomenclature)]
+    public async Task<UpdateNomenclatureResponse> UpdateNomenclature(UpdateNomenclatureRequest request)
+    {
+        var syncCode = SyncCode;
+        
+        // TODO: Verification that the Nomenclature is valid
+        
+        nomenclatures.Upsert(syncCode, request.Nomenclature);
+        
+        foreach (var pair in await database.GetAllPairs(syncCode))
+        {
+            if (pair.GrantedByTarget is null) continue;
+            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            
+            try
+            {
+                var forward = new UpdateNomenclatureForwardedRequest(syncCode, request.Nomenclature);
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateNomenclature, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[UpdateNomenclature] {Error}", e);
+            }
+        }
+        
+        return new UpdateNomenclatureResponse(RequestErrorCode.Success);
+    }
+    
+    [HubMethodName(HubMethod.RemoveNomenclature)]
+    public async Task<RemoveNomenclatureResponse> RemoveNomenclature(RemoveNomenclatureRequest request)
+    {
+        var syncCode = SyncCode;
+        
+        if (nomenclatures.Remove(syncCode) is false)
+            return new RemoveNomenclatureResponse(RequestErrorCode.Success);
+        
+        foreach (var pair in await database.GetAllPairs(syncCode))
+        {
+            if (pair.GrantedByTarget is null) continue;
+            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            
+            try
+            {
+                var forward = new RemoveNomenclatureForwardedRequest(syncCode);
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.RemoveNomenclature, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[RemoveNomenclature] {Error}", e);
+            }
+        }
+        
+        return new RemoveNomenclatureResponse(RequestErrorCode.Success);
+    }
     
     public override Task OnConnectedAsync()
     {
@@ -67,12 +131,27 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         return base.OnConnectedAsync();
     }
 
-    public override Task OnDisconnectedAsync(Exception? exception)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        connections.RemoveConnectedClient(SyncCode);
+        var syncCode = SyncCode;
+        connections.RemoveConnectedClient(syncCode);
+
+        foreach (var pair in await database.GetAllPairs(syncCode))
+        {
+            if (pair.GrantedByTarget is null) continue;
+            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            
+            try
+            {
+                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, PairOnlineStatus.Offline, null, null);
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[OnDisconnectedAsync] {Error}", e);
+            }
+        }
         
-        // TODO: Send a message to all online, two-way-paired friends that this client is offline now
-        
-        return base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(exception);
     }
 }

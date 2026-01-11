@@ -1,7 +1,10 @@
 using System;
 using System.Reflection;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Services;

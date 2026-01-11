@@ -1,5 +1,4 @@
 ﻿using MessagePack;
-using NomenclatureCommon.Domain.Network.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +8,9 @@ using System.Threading.Tasks;
 namespace NomenclatureCommon.Domain.Api.Controller
 {
     [MessagePackObject]
-    public record BeginCharacterRegistrationResponse : Response
+    public record BeginCharacterRegistrationResponse
     {
+        [Key(0)] public bool Success { get; set; }
         [Key(1)]
         public string Ticket { get; set; } = string.Empty;
         [Key(2)]
