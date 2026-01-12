@@ -76,7 +76,8 @@ public class NetworkService : IHostedService
 
         Connection = new HubConnectionBuilder().WithUrl(HubUrl, options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult(_token);
+                // ReSharper disable once RedundantTypeArgumentsOfMethod
+                options.AccessTokenProvider = () => Task.FromResult<string?>(_token);
             })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol(options =>

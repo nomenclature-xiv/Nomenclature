@@ -17,16 +17,16 @@ namespace NomenclatureClient.Managers;
 
 public static class ServiceManager
 {
-    public static IHost RegisterServices(IDalamudPluginInterface pluginInterface, 
-        ICommandManager commandManager,
+    public static IHost RegisterServices(
+        IChatGui chatGui,
         IClientState clientState,
+        ICommandManager commandManager,
+        IDalamudPluginInterface pluginInterface, 
+        IDataManager dataManager,
         IFramework framework,
         INamePlateGui namePlateGui,
         IObjectTable objectTable,
-        IPluginLog pluginLog,
-        IDataManager dataManager,
-        IChatGui chatGui
-        )
+        IPluginLog pluginLog)
     {
         return new HostBuilder()
             .UseContentRoot(pluginInterface.ConfigDirectory.FullName)
@@ -51,7 +51,6 @@ public static class ServiceManager
                 collection.AddSingleton(chatGui);
                 
                 // Internal Services
-                collection.AddSingleton<IdentityService>();
                 collection.AddSingleton<WorldService>();
                 collection.AddSingleton<NetworkService>();
                 collection.AddSingleton<NetworkRegisterService>();
@@ -80,7 +79,6 @@ public static class ServiceManager
 
                 //Services to automatically start when the plugin does
                 collection.AddHostedService(p => p.GetRequiredService<ConfigurationService>());
-                collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
                 collection.AddHostedService(p => p.GetRequiredService<WindowService>());
                 collection.AddHostedService(p => p.GetRequiredService<CommandHandler>());
                 collection.AddHostedService(p => p.GetRequiredService<NetworkService>());

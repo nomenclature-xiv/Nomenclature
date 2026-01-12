@@ -51,8 +51,7 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
             return null;
         }
     }
-
-
+    
     /// <summary>
     ///  Polls server for registration completion
     /// </summary>

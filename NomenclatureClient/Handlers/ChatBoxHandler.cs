@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Game.Text;
@@ -8,19 +6,13 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureClient.Managers;
 using NomenclatureClient.Services;
-using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Handlers;
 
-public class ChatBoxHandler(IChatGui chatGui, IClientState clientState) : IHostedService
+public class ChatBoxHandler(IChatGui chatGui, ConfigurationService configuration, NomenclatureManager nomenclatures) : IHostedService
 {
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        chatGui.ChatMessage += OnChatMessage;
-        return Task.CompletedTask;
-    }
-
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
         switch (type)
@@ -48,17 +40,16 @@ public class ChatBoxHandler(IChatGui chatGui, IClientState clientState) : IHoste
             case XivChatType.FreeCompany:
             case XivChatType.CustomEmote:
             case XivChatType.Yell:
-                HandleDefault(sender.Payloads);
-                break;
-            
-            case XivChatType.StandardEmote:
-                HandleDefault(message.Payloads);
-                break;
-            
+                
+            // These cases were separate in the old model
             case XivChatType.Party:
             case XivChatType.CrossParty:
             case XivChatType.Alliance:
-                HandleDefault(sender.Payloads);
+                HandleDefaults(type, sender.Payloads);
+                break;
+            
+            case XivChatType.StandardEmote:
+                HandleDefaults(type, message.Payloads);
                 break;
             
             case XivChatType.None:
@@ -80,116 +71,65 @@ public class ChatBoxHandler(IChatGui chatGui, IClientState clientState) : IHoste
         }
     }
 
-    private void HandleDefault(List<Payload> payloads)
+    private void HandleDefaults(XivChatType type, List<Payload> payloads)
     {
-        if (clientState.LocalPlayer is not { } player || player.HomeWorld.Value.Name.ToString() is not { } homeworld)
-            return;
-        
-        var character = new Character(player.Name.ToString(), homeworld);
-
-        string name = character.Name;
-        string world = character.World;
-        bool hasplayer = payloads.Where(p => p is PlayerPayload).Count() > 0;
-        bool characterset = false;
-        bool playerflag = false;
-        bool worldflag = false;
-        Nomenclature? nomenclature = null;
-
-        // Consider using `type` to filter out things?
-        for(int i = 0; i < payloads.Count; i++)
+        // This message doesn't contain a player packet, which means we sent it
+        var self = payloads.FindIndex(payload => payload is PlayerPayload);
+        if (self < 0)
         {
-            if (payloads[i] is PlayerPayload ppayload)
+            if (configuration.CharacterConfiguration is null) return;
+            var name = configuration.CharacterConfiguration.Name;
+            var world = configuration.CharacterConfiguration.World;
+
+            if (nomenclatures.TryGetNomenclature(name, world) is not { } nomenclature) return;
+            foreach (var payload in payloads)
             {
-                name = ppayload.PlayerName;
-                string tworld = ppayload.World.Value.Name.ExtractText();
-                worldflag = tworld != world;
-                world = tworld;
-                playerflag = true;
+                if (payload is not TextPayload text) continue;
+                if (text.Text is null) continue;
+                
+                // Replace any occurrence of our name
+                text.Text = text.Text.Replace(name, nomenclature.Name);
+                
+                // Only replace the world if it literally is the exact string
+                if (text.Text.Trim() == world)
+                    text.Text = nomenclature.World;
             }
+        }
+        else
+        {
+            var info = (PlayerPayload)payloads[self];
+            var name = info.PlayerName;
+            var world = info.World.Value.Name.ToString();
 
-            //self doesn't have playerflag, so manually check the cases
-            if(playerflag || !hasplayer)
+            if (nomenclatures.TryGetNomenclature(name, world) is not { } nomenclature) return;
+            foreach (var payload in payloads)
             {
-                if (characterset && !worldflag)
-                {
-                    //playerdata, insert after
-                    if (nomenclature?.World != string.Empty)
-                    {
-                        if (payloads[i] is RawPayload)
-                        {
-                            payloads.Insert(i + 1, new IconPayload(BitmapFontIcon.CrossWorld));
-                            payloads.Insert(i + 2, new TextPayload(nomenclature?.World));
-                            i += 2;
-                        }
-                        else
-                        {
-                            payloads.Insert(i, new IconPayload(BitmapFontIcon.CrossWorld));
-                            payloads.Insert(i + 1, new TextPayload(nomenclature.World));
-                        }
-                    }
-                    playerflag = false;
-                    characterset = false;
-                }
+                if (payload is not TextPayload text) continue;
+                if (text.Text is null) continue;
+                
+                // Replace any occurrence of our name
+                text.Text = text.Text.Replace(name, nomenclature.Name);
 
-                else if (payloads[i] is IconPayload && ((IconPayload)payloads[i]).Icon == BitmapFontIcon.CrossWorld && worldflag && characterset)
+                if (type is XivChatType.StandardEmote)
                 {
-                    if(nomenclature?.World == string.Empty)
-                    {
-                        payloads.Remove(payloads[i]);
-                    }
-                    TextPayload tpayload = (TextPayload)payloads[i];
-                    //we need to parse this because sqex hates me specifically
-                    var tsplit = tpayload.Text!.Split(" ");
-                    string postfix = tsplit[0].EndsWith('.') ? "." : "";
-                    tsplit[0] = string.Concat(nomenclature?.World!, postfix);
-                    tpayload.Text = string.Join(" ", tsplit);
-                    worldflag = false;
-                    characterset = false;
-                    playerflag = false;
-                    i--;
+                    // Emotes are a little odd in that they contain the world in the string as well...
+                    if (text.Text.StartsWith(world))
+                        text.Text = nomenclature.World + text.Text[world.Length..];
                 }
-
-                else if (payloads[i] is TextPayload tpayload)
+                else
                 {
-                    var identifier = string.Concat(name, "@", world);
-                    if (IdentityService.Identities.TryGetValue(identifier, out nomenclature) is false)
-                        continue;
-                    
-                    if (!characterset)
-                    {
-                        //handling for friend group icons!
-                        string testtext = tpayload.Text ?? string.Empty;
-                        string prefix = string.Empty;
-                        if (!Char.IsUpper(testtext[0]))
-                        {
-                            prefix = testtext.Substring(0, 1);
-                            testtext = testtext.Substring(1);
-                        }
-                        if (name == testtext)
-                        {
-                            if (nomenclature.Name is not null)
-                            {
-                                tpayload.Text = string.Concat(prefix, nomenclature.Name);
-                            }
-                            tpayload.Text = string.Concat(tpayload.Text, "*");
-                            if (nomenclature.World is not null)
-                            {
-                                characterset = true;
-                            }
-                            else
-                            {
-                                playerflag = false;
-                            }
-                        }
-                    }
+                    // Only replace the world if it literally is the exact string
+                    if (text.Text.Trim() == world)
+                        text.Text = nomenclature.World;
                 }
             }
         }
-        if (characterset && nomenclature?.World != string.Empty)
-        {
-            payloads.Add(new IconPayload(BitmapFontIcon.CrossWorld));
-            payloads.Add(new TextPayload(nomenclature?.World));
-        }
+    }
+    
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        chatGui.ChatMessage += OnChatMessage;
+        return Task.CompletedTask;
     }
     
     public Task StopAsync(CancellationToken cancellationToken)

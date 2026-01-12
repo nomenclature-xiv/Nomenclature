@@ -1,3 +1,5 @@
+using NomenclatureCommon.Domain;
+
 namespace NomenclatureClient.Types.Configurations;
 
 public class CharacterConfigurationV2
@@ -33,22 +35,7 @@ public class CharacterConfigurationV2
     public bool AutoConnect;
 
     /// <summary>
-    ///     Should this character override their name
+    ///     The saved / active nomenclature
     /// </summary>
-    public bool ShouldOverrideName;
-
-    /// <summary>
-    ///     Should this character override their world
-    /// </summary>
-    public bool ShouldOverrideWorld;
-
-    /// <summary>
-    ///     The overwritten name of the character
-    /// </summary>
-    public string? OverrideName;
-    
-    /// <summary>
-    ///     The overwritten world of the character
-    /// </summary>
-    public string? OverrideWorld;
+    public Nomenclature Nomenclature = new();
 }

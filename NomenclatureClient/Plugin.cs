@@ -1,13 +1,9 @@
 using System;
 using System.Reflection;
-using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
-using NomenclatureClient.Services;
 
 namespace NomenclatureClient;
 
@@ -26,18 +22,18 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>
     ///     Entry point for the plugin
     /// </summary>
-    public Plugin(IDalamudPluginInterface pluginInterface,
-            ICommandManager commandManager,
-            IClientState clientState,
-            IFramework framework,
-            INamePlateGui namePlateGui,
-            IObjectTable objectTable,
-            IPluginLog pluginLog,
-            IDataManager dataManager,
-            IChatGui chatGui)
+    public Plugin(
+        IChatGui chatGui,
+        IClientState clientState,
+        ICommandManager commandManager,
+        IDalamudPluginInterface pluginInterface, 
+        IDataManager dataManager,
+        IFramework framework,
+        INamePlateGui namePlateGui,
+        IObjectTable objectTable,
+        IPluginLog pluginLog)
     {
-        _host = ServiceManager.RegisterServices(pluginInterface, commandManager, clientState, framework, namePlateGui, objectTable, pluginLog, dataManager, chatGui);
-
+        _host = ServiceManager.RegisterServices(chatGui, clientState, commandManager, pluginInterface, dataManager, framework, namePlateGui, objectTable, pluginLog);
         _ = _host.StartAsync();
     }
     
