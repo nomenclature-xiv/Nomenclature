@@ -6,7 +6,7 @@
         <Version>0.2.4</Version>
         <Description>XIV Plugin</Description>
         <Copyright>(C)Mora 2024 - 25</Copyright>
-        <PackageProjectUrl>https://github.com/aetherremote/AetherRemote</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/nomenclature-xiv/Nomenclature</PackageProjectUrl>
     </PropertyGroup>
     
     <PropertyGroup>

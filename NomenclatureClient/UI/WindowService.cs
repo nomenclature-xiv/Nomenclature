@@ -19,6 +19,7 @@ public class WindowService(IDalamudPluginInterface pluginInterface, IEnumerable<
             windowSystem.AddWindow(pluginWindow);
 
 #if DEBUG
+            if (pluginWindow.WindowName.Contains("Nomenclature 2")) pluginWindow.IsOpen = true;
             if (pluginWindow.WindowName == "Nomenclature") pluginWindow.IsOpen = true;
 #endif
         }

@@ -52,22 +52,17 @@ public static class ServiceManager
                 
                 // Internal Services
                 collection.AddSingleton<IdentityService>();
-                collection.AddSingleton<ScanningService>();
                 collection.AddSingleton<WorldService>();
                 collection.AddSingleton<NetworkService>();
                 collection.AddSingleton<NetworkRegisterService>();
                 collection.AddSingleton<FontService>();
-                
-                
-                
-                
-                
                 collection.AddSingleton<IpcTester>();
+                collection.AddSingleton<ConfigurationService>();
                 
                 // Managers
                 collection.AddSingleton<IpcManager>();
-                collection.AddSingleton<IdentityManager>();
                 collection.AddSingleton<LoginManager>();
+                collection.AddSingleton<NomenclatureManager>();
                 
                 // Handlers
                 collection.AddSingleton<ChatBoxHandler>();
@@ -75,8 +70,9 @@ public static class ServiceManager
                 collection.AddSingleton<CommandHandler>();
                 
                 // Network Handlers
-                collection.AddSingleton<DeleteNomenclatureHandler>();
+                collection.AddSingleton<RemoveNomenclatureHandler>();
                 collection.AddSingleton<UpdateNomenclatureHandler>();
+                collection.AddSingleton<UpdateOnlineStatusHandler>();
                 collection.AddSingleton<NetworkHandler>();
                 
                 // UI
@@ -85,9 +81,7 @@ public static class ServiceManager
                 //Services to automatically start when the plugin does
                 collection.AddHostedService(p => p.GetRequiredService<ConfigurationService>());
                 collection.AddHostedService(p => p.GetRequiredService<IdentityService>());
-                collection.AddHostedService(p => p.GetRequiredService<ScanningService>());
                 collection.AddHostedService(p => p.GetRequiredService<WindowService>());
-                collection.AddHostedService(p => p.GetRequiredService<InstallerWindowService>());
                 collection.AddHostedService(p => p.GetRequiredService<CommandHandler>());
                 collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
                 collection.AddHostedService(p => p.GetRequiredService<FontService>());
@@ -102,16 +96,12 @@ public static class ServiceManager
     private static IServiceCollection AddUiServices(IServiceCollection collection)
     {
         collection.AddSingleton<WindowService>();
-        collection.AddSingleton<InstallerWindowService>();
-        collection.AddSingleton<MainWindowController>();
-        collection.AddSingleton<MainWindow>();
-        collection.AddSingleton<SettingsWindow>();
         collection.AddSingleton<IpcWindow>();
+        collection.AddSingleton<PrimaryWindow>();
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 
         //Easier to do using autofac
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<MainWindow>());
-        collection.AddSingleton<Window>(provider => provider.GetRequiredService<SettingsWindow>());
+        collection.AddSingleton<Window>(provider => provider.GetRequiredService<PrimaryWindow>());
 
         collection.AddSingleton(async provider =>
         {
