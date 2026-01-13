@@ -12,6 +12,12 @@ using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.UI;
 using System.Net.Http;
+using NomenclatureClient.UI.Views.Login;
+using NomenclatureClient.UI.Views.Manage;
+using NomenclatureClient.UI.Views.Nomenclature;
+using NomenclatureClient.UI.Views.Pairs;
+using NomenclatureClient.UI.Views.Register;
+using NomenclatureClient.UI.Views.Settings;
 
 namespace NomenclatureClient.Managers;
 
@@ -93,8 +99,25 @@ public static class ServiceManager
     }
     private static IServiceCollection AddUiServices(IServiceCollection collection)
     {
+        // View Controllers
+        collection.AddSingleton<LoginViewController>();
+        collection.AddSingleton<ManageViewController>();
+        collection.AddSingleton<NomenclatureViewController>();
+        collection.AddSingleton<PairsViewController>();
+        collection.AddSingleton<RegisterViewController>();
+        collection.AddSingleton<SettingsViewController>();
+        
+        // Views
+        collection.AddSingleton<LoginView>();
+        collection.AddSingleton<ManageView>();
+        collection.AddSingleton<NomenclatureView>();
+        collection.AddSingleton<PairsView>();
+        collection.AddSingleton<RegisterView>();
+        collection.AddSingleton<SettingsView>();
+        
         collection.AddSingleton<WindowService>();
         collection.AddSingleton<IpcWindow>();
+        collection.AddSingleton<PrimaryWindowController>();
         collection.AddSingleton<PrimaryWindow>();
         collection.AddSingleton<Window>(provider => provider.GetRequiredService<IpcWindow>());
 

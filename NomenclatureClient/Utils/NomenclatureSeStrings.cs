@@ -5,6 +5,9 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 
 namespace NomenclatureClient.Utils;
 
+/// <summary>
+///     Provides static responses for various CLI outputs
+/// </summary>
 public static class NomenclatureSeStrings
 {
     private static readonly Payload ErrorColorPayload = new UIForegroundPayload(17);

@@ -34,20 +34,20 @@ public partial class CommandHandler(
         {
             HelpMessage = 
                 """
-                    Toggles the primary plugin window
-                    /nom setboth "name" "world" - Sets your name and world. You must include the quotes in the command.
-                    /nom setname name - Sets your name on your nameplate
-                    /nom setworld world - Sets your world on your nameplate
+                Toggles the primary plugin window
+                /nom setboth "<name>" "<world>" - Sets your name and world. You must include the quotes in the command.
+                /nom setname <name> - Sets your name on your nameplate
+                /nom setworld <world> - Sets your world on your nameplate
 
-                    /nom hide - Hides your name and world. You must disable your title via other plugin or using in-game methods
-                    /nom hidename - Hides your name from your nameplate
-                    /nom hideworld - Hides your world from your nameplate
+                /nom hide - Hides your name and world. You must disable your title via other plugin or using in-game methods
+                /nom hidename - Hides your name from your nameplate
+                /nom hideworld - Hides your world from your nameplate
 
-                    /nom clear - Removes any changes to your nameplate
-                    /nom clearname - Removes any changes to your nameplate's name
-                    /nom clearworld - Removes any changes to your nameplate's world
+                /nom clear - Removes any changes to your nameplate
+                /nom clearname - Removes any changes to your nameplate's name
+                /nom clearworld - Removes any changes to your nameplate's world
 
-                    /nom debug - Debug command
+                /nom debug - Debug command
                 """
         });
         return Task.CompletedTask;
@@ -55,8 +55,6 @@ public partial class CommandHandler(
     
     private void OnCommand(string command, string arguments)
     {
-        logger.Verbose($"={command}= ={arguments}=");
-
         if (arguments.Length is 0)
         {
             primaryWindow.Toggle();

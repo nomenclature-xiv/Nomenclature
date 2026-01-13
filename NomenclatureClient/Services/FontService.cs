@@ -8,7 +8,7 @@ namespace NomenclatureClient.Services;
 
 public class FontService(IDalamudPluginInterface pluginInterface) : IHostedService
 {
-    private const int BigFontSize = 40;
+    private const int BigFontSize = 36;
     public static IFontHandle? BigFont;
 
     private const int MediumFontSize = 24;

@@ -1,18 +1,47 @@
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using NomenclatureClient.UI.Views.Login;
+using NomenclatureClient.UI.Views.Manage;
+using NomenclatureClient.UI.Views.Nomenclature;
+using NomenclatureClient.UI.Views.Pairs;
+using NomenclatureClient.UI.Views.Register;
+using NomenclatureClient.UI.Views.Settings;
 
 namespace NomenclatureClient.UI;
 
 public class PrimaryWindow : Window
 {
-    public PrimaryWindow() : base($"Nomenclature - Version {Plugin.Version}")
+    private readonly PrimaryWindowController _controller;
+    private readonly LoginView _loginView;
+    private readonly ManageView _manageView;
+    private readonly NomenclatureView _nomenclatureView;
+    private readonly PairsView _pairsView;
+    private readonly RegisterView _registerView;
+    private readonly SettingsView _settingsView;
+    
+    public PrimaryWindow(
+        PrimaryWindowController controller,
+        LoginView loginView,
+        ManageView manageView,
+        NomenclatureView nomenclatureView,
+        PairsView pairsView,
+        RegisterView registerView,
+        SettingsView settingsView) : base($"Nomenclature - Version {Plugin.Version}")
     {
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(500),
             MaximumSize = ImGui.GetIO().DisplaySize
         };
+
+        _controller = controller;
+        _loginView = loginView;
+        _manageView = manageView;
+        _nomenclatureView = nomenclatureView;
+        _pairsView = pairsView;
+        _registerView = registerView;
+        _settingsView = settingsView;
     }
 
     public override void Draw()
@@ -21,31 +50,37 @@ public class PrimaryWindow : Window
         {
             if (ImGui.BeginTabItem("Login"))
             {
-                ImGui.TextUnformatted("A");
+                _loginView.Draw();
                 ImGui.EndTabItem();
             }
             
             if (ImGui.BeginTabItem("Register"))
             {
-                ImGui.TextUnformatted("B");
+                _registerView.Draw();
                 ImGui.EndTabItem();
             }
             
             if (ImGui.BeginTabItem("Manage"))
             {
-                ImGui.TextUnformatted("B");
+                _manageView.Draw();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("Nomenclature"))
+            {
+                _nomenclatureView.Draw();
                 ImGui.EndTabItem();
             }
             
             if (ImGui.BeginTabItem("Pairs"))
             {
-                ImGui.TextUnformatted("B");
+                _pairsView.Draw();
                 ImGui.EndTabItem();
             }
             
-            if (ImGui.BeginTabItem("Options"))
+            if (ImGui.BeginTabItem("Settings"))
             {
-                ImGui.TextUnformatted("B");
+                _settingsView.Draw();
                 ImGui.EndTabItem();
             }
             

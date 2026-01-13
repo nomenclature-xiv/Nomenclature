@@ -1,10 +1,7 @@
 ﻿using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Microsoft.Extensions.Hosting;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,7 +16,7 @@ public class WindowService(IDalamudPluginInterface pluginInterface, IEnumerable<
             windowSystem.AddWindow(pluginWindow);
 
 #if DEBUG
-            if (pluginWindow.WindowName.Contains("Nomenclature 2")) pluginWindow.IsOpen = true;
+            if (pluginWindow.WindowName.Contains("Nomenclature")) pluginWindow.IsOpen = true;
             if (pluginWindow.WindowName == "Nomenclature") pluginWindow.IsOpen = true;
 #endif
         }
