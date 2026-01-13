@@ -1,5 +1,9 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
@@ -8,17 +12,19 @@ using NomenclatureClient.Services;
 
 namespace NomenclatureClient.UI.Views.Login;
 
-public class LoginViewController : IDisposable
+public class LoginViewController : IHostedService
 {
     private readonly ConfigurationService _configuration;
     private readonly NetworkService _network;
     private readonly LoginManager _loginManager;
-    
-    public LoginViewController(ConfigurationService configuration, NetworkService network, LoginManager loginManager)
+    private readonly IPluginLog _pluginLog;
+
+    public LoginViewController(ConfigurationService configuration, NetworkService network, LoginManager loginManager, IPluginLog pluginLog)
     {
         _configuration = configuration;
         _network = network;
         _loginManager = loginManager;
+        _pluginLog =  pluginLog;
 
         _loginManager.LoginFinished += OnLoginFinished;
     }
@@ -78,9 +84,14 @@ public class LoginViewController : IDisposable
         AutoLogin = _configuration.CharacterConfiguration?.AutoConnect ?? false;
     }
 
-    public void Dispose()
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _loginManager.LoginFinished -= OnLoginFinished;
-        GC.SuppressFinalize(this);
+        return Task.CompletedTask;
     }
 }

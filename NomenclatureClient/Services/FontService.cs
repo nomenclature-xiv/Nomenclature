@@ -29,8 +29,8 @@ public class FontService(IDalamudPluginInterface pluginInterface) : IHostedServi
             toolkit.OnPreBuild(preBuild => { preBuild.AddDalamudDefaultFont(BigFontSize); });
         });
         
-        await MediumFont.WaitAsync().ConfigureAwait(false);
-        await BigFont.WaitAsync().ConfigureAwait(false);
+        await MediumFont.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await BigFont.WaitAsync(cancellationToken).ConfigureAwait(false);
         await pluginInterface.UiBuilder.FontAtlas.BuildFontsAsync().ConfigureAwait(false);
     }
 

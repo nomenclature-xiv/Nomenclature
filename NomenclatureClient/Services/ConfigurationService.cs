@@ -203,9 +203,9 @@ public class ConfigurationService : IHostedService
         CharacterConfiguration = null;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        await LoadConfigurationAsync().ConfigureAwait(false);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

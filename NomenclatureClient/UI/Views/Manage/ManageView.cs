@@ -23,6 +23,9 @@ public class ManageView(ManageViewController controller, ConfigurationService co
         else
         {
             var secrets = configuration.Configuration.Secrets.ToDictionary();
+            
+            ImGui.TextWrapped($"Displaying {secrets.Count} secret{(secrets.Count is 1 ? string.Empty : 's')}.");
+            
             foreach (var (identifier, secret) in secrets)
             {
                 var i = identifier;
