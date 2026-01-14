@@ -27,15 +27,14 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     {
         var syncCode = SyncCode;
         if (connections.TryGetConnectedClient(syncCode) is not { } information)
-            return new InitializeSessionResponse();
+            return new InitializeSessionResponse(RequestErrorCode.NotAuthenticatedOrOnline, string.Empty, []);
         
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
         
         // TODO: Authentication of the Nomenclature values
         
-        if (request.Nomenclature is not null)
-            nomenclatures.Upsert(syncCode, request.Nomenclature);
+        nomenclatures.Upsert(syncCode, request.Nomenclature);
 
         var results = new List<PairRelationship>();
         foreach (var pair in await database.GetAllPairs(syncCode))
@@ -67,7 +66,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
             }
         }
         
-        return new InitializeSessionResponse(syncCode, results);
+        return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results);
     }
 
     [HubMethodName(HubMethod.UpdateNomenclature)]

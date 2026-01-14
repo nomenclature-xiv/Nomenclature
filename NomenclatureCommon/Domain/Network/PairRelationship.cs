@@ -5,7 +5,7 @@ namespace NomenclatureCommon.Domain.Network;
 [MessagePackObject]
 public record PairRelationship
 {   
-    [Key(0)] public Pair Pair { get; set; } = new Pair();
+    [Key(0)] public Pair Pair { get; set; } = new();
     [Key(1)] public PairOnlineStatus Status { get; set; }
     [Key(2)] public Nomenclature? Nomenclature { get; set; }
 

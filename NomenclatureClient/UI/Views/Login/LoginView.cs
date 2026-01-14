@@ -8,10 +8,6 @@ public class LoginView(LoginViewController controller, ConfigurationService conf
 {
     public void Draw()
     {
-        FontService.BigFont?.Push();
-        ImGui.TextUnformatted("Nomenclature");
-        FontService.BigFont?.Pop();
-        
         FontService.MediumFont?.Push();
         ImGui.TextUnformatted("Online Status:");
         ImGui.SameLine();

@@ -7,13 +7,13 @@ public record InitializeSessionRequest
 {
     [Key(0)] public string CharacterName { get; set; } = string.Empty;
     [Key(1)] public string CharacterWorld { get; set; } = string.Empty;
-    [Key(2)] public Nomenclature? Nomenclature { get; set; }
+    [Key(2)] public Nomenclature Nomenclature { get; set; } = new();
 
     public InitializeSessionRequest()
     {
     }
 
-    public InitializeSessionRequest(string characterName, string characterWorld, Nomenclature? nomenclature)
+    public InitializeSessionRequest(string characterName, string characterWorld, Nomenclature nomenclature)
     {
         CharacterName = characterName;
         CharacterWorld = characterWorld;
