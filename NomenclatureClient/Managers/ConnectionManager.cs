@@ -37,7 +37,7 @@ public class ConnectionManager : IHostedService
         if (response.ErrorCode is not RequestErrorCode.Success)
             return;
 
-        foreach (var pair in response.Relationships)
+        foreach (var pair in response.Pairs)
         {
         }
     }

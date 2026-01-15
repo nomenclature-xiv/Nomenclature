@@ -9,6 +9,7 @@ using NomenclatureCommon.Domain.Network.InitializeSession;
 using NomenclatureCommon.Domain.Network.RemoveNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
+using NomenclatureServer.Utilities;
 
 // ReSharper disable RedundantBoolCompare
 
@@ -31,33 +32,32 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
-        
-        // TODO: Authentication of the Nomenclature values
+
+        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+            return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, []);
         
         nomenclatures.Upsert(syncCode, request.Nomenclature);
 
-        var results = new List<PairRelationship>();
+        var results = new List<PairDto>();
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            var nomenclature = nomenclatures.TryGet(pair.TargetSyncCode);
-            
-            if (pair.GrantedByTarget is null)
+            if (pair.IsOneWay())
             {
-                results.Add(new PairRelationship(pair, PairOnlineStatus.Pending, nomenclature));
-                continue;
-            }
-
-            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target)
-            {
-                results.Add(new PairRelationship(pair, PairOnlineStatus.Offline, nomenclature));
+                results.Add(new PairDto(pair.SyncCode, OnlineStatus.Pending, pair.LeftSidePaused, pair.RightSidePaused, null));
                 continue;
             }
             
-            results.Add(new PairRelationship(pair, PairOnlineStatus.Online, nomenclature));
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target)
+            {
+                results.Add(new PairDto(pair.SyncCode, OnlineStatus.Offline, pair.LeftSidePaused, pair.RightSidePaused, null));
+                continue;
+            }
+            
+            results.Add(new PairDto(pair.SyncCode, OnlineStatus.Offline, pair.LeftSidePaused, pair.RightSidePaused, nomenclatures.TryGet(pair.SyncCode)));
             
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, PairOnlineStatus.Online, pair.GrantedToTarget, request.Nomenclature);
+                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, OnlineStatus.Online, request.Nomenclature);
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -73,15 +73,15 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     public async Task<UpdateNomenclatureResponse> UpdateNomenclature(UpdateNomenclatureRequest request)
     {
         var syncCode = SyncCode;
-        
-        // TODO: Verification that the Nomenclature is valid
+        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+            return new UpdateNomenclatureResponse(RequestErrorCode.InvalidNomenclature);
         
         nomenclatures.Upsert(syncCode, request.Nomenclature);
         
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.GrantedByTarget is null) continue;
-            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
             
             try
             {
@@ -107,8 +107,8 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.GrantedByTarget is null) continue;
-            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
             
             try
             {
@@ -137,12 +137,12 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.GrantedByTarget is null) continue;
-            if (connections.TryGetConnectedClient(pair.TargetSyncCode) is not { } target) continue;
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
             
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, PairOnlineStatus.Offline, null, null);
+                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, OnlineStatus.Offline, null);
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)

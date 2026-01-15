@@ -1,6 +1,6 @@
 namespace NomenclatureCommon.Domain.Network;
 
-public enum PairOnlineStatus
+public enum OnlineStatus
 {
     Uninitialized,
     Online,

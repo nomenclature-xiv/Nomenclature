@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using NomenclatureCommon.Domain.Network;
 using NomenclatureServer.Domain;
 
 // ReSharper disable RedundantBoolCompare
@@ -14,7 +13,7 @@ public class DatabaseService
 {
     // Const
     private const string AccountsTable = "Accounts";
-    private const string PermissionsTable = "Permissions";
+    private const string PairsTable = "Pairs";
     private static readonly string DatabasePath = Path.Combine(Directory.GetCurrentDirectory(), "Database", "Nomenclature.db");
 
     // Injected
@@ -86,8 +85,8 @@ public class DatabaseService
             command.Transaction = transaction;
             command.CommandText = 
                  """
-                    INSERT INTO Permissions (SyncCode, TargetSyncCode, Paused, Permissions)
-                    SELECT @syncCode, @targetSyncCode, @paused, @permissions
+                    INSERT INTO Pairs (SyncCode, TargetSyncCode, Paused)
+                    SELECT @syncCode, @targetSyncCode, @paused
                     WHERE EXISTS (
                         SELECT 1 FROM Accounts WHERE Id = @targetSyncCode
                     )
@@ -95,7 +94,6 @@ public class DatabaseService
             command.Parameters.AddWithValue("@syncCode", senderSyncCode);
             command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
             command.Parameters.AddWithValue("@paused", 0);
-            command.Parameters.AddWithValue("@permissions", 0);
             
             // If nothing was added, that means we're already paired or the target account doesn't exist
             if (await command.ExecuteNonQueryAsync() is 0)
@@ -112,7 +110,7 @@ public class DatabaseService
                 // Otherwise, check to see if they added us back
                 var pair = _database.CreateCommand();
                 pair.Transaction = transaction;
-                pair.CommandText = "SELECT 1 FROM Permissions WHERE SyncCode = @targetSyncCode AND TargetSyncCode = @senderSyncCode LIMIT 1";
+                pair.CommandText = "SELECT 1 FROM Pairs WHERE SyncCode = @targetSyncCode AND TargetSyncCode = @senderSyncCode LIMIT 1";
                 pair.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
                 pair.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
                 result = await pair.ExecuteScalarAsync() is null ? DatabaseResultEc.Pending : DatabaseResultEc.Success;
@@ -136,7 +134,7 @@ public class DatabaseService
     public async Task<DatabaseResultEc> PausePair(int senderSyncCode, int targetSyncCode, bool paused)
     {
         await using var command = _database.CreateCommand();
-        command.CommandText = "UPDATE Permissions SET Paused = @pause WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";
+        command.CommandText = "UPDATE Pairs SET Paused = @pause WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";
         command.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
         command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
         command.Parameters.AddWithValue("@pause", paused);
@@ -163,10 +161,8 @@ public class DatabaseService
                 SELECT
                 p.TargetSyncCode,
                 p.Paused,
-                p.Permissions,
                 r.Paused AS PausedByThem,
-                r.Permissions AS PermissionsByThem,
-                FROM Permissions AS p LEFT JOIN Permissions AS r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
+                FROM Pairs AS p LEFT JOIN Pairs AS r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
                 WHERE p.SyncCode = @syncCode;
             """;
         command.Parameters.AddWithValue("@syncCode", syncCode);
@@ -182,20 +178,11 @@ public class DatabaseService
                 var targetSyncCode = reader.GetInt32(0).ToString();
                 
                 // Get our pair data for them
-                var paused = reader.GetBoolean(1);
-                var permissions = reader.GetInt32(2);
-
-                // If 4 is null, 5 and 6 will also be null because that means they have not paired with us
-                if (reader.IsDBNull(3))
-                {
-                    results.Add(new Pair(targetSyncCode, new PairInformation(paused, permissions), null));
-                    continue;
-                }
+                var leftSidePaused = reader.GetBoolean(1);
+                var rightSidePaused = reader.IsDBNull(2) ? null : (bool?)reader.GetBoolean(2);
                 
-                // Get their pair data for us
-                var paused2 = reader.GetBoolean(3);
-                var permissions2 = reader.GetInt32(4);
-                results.Add(new Pair(targetSyncCode, new PairInformation(paused, permissions), new PairInformation(paused2, permissions2)));
+                // Add pair
+                results.Add(new Pair(targetSyncCode, leftSidePaused, rightSidePaused));
             }
 
             return results;
@@ -264,19 +251,18 @@ public class DatabaseService
         index.CommandText = $"CREATE INDEX IF NOT EXISTS idx_syncCode_lodestoneid ON {AccountsTable} (LodestoneId)";
         index.ExecuteNonQuery();
         
-        using var permissions = _database.CreateCommand();
-        permissions.CommandText =
+        using var pairs = _database.CreateCommand();
+        pairs.CommandText =
             $"""
-               CREATE TABLE IF NOT EXISTS {PermissionsTable} (
+               CREATE TABLE IF NOT EXISTS {PairsTable} (
                    SyncCode TEXT NOT NULL,
                    TargetSyncCode TEXT NOT NULL,
                    Paused INTEGER NOT NULL DEFAULT 0,
-                   Permissions INTEGER NOT NULL DEFAULT 0,
                    PRIMARY KEY (SyncCode, TargetSyncCode),
                    FOREIGN KEY (SyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE,
                    FOREIGN KEY (TargetSyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE
                )
              """;
-        permissions.ExecuteNonQuery();
+        pairs.ExecuteNonQuery();
     }
 }
