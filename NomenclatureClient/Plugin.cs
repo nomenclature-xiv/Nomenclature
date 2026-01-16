@@ -63,7 +63,8 @@ public sealed class Plugin : IDalamudPlugin
                 // Internal Services
                 collection.AddSingleton<ConfigurationService>();
                 collection.AddSingleton<FontService>();
-                collection.AddSingleton<PairsService>();
+                collection.AddSingleton<NomenclatureService>();
+                collection.AddSingleton<PairService>();
                 collection.AddSingleton<WorldService>();
                 collection.AddSingleton<NetworkService>();
                 collection.AddSingleton<NetworkRegisterService>();
@@ -71,7 +72,6 @@ public sealed class Plugin : IDalamudPlugin
                 // Managers
                 collection.AddSingleton<ConnectionManager>();
                 collection.AddSingleton<LoginManager>();
-                collection.AddSingleton<NomenclatureManager>();
                 
                 // Handlers
                 collection.AddSingleton<ChatBoxHandler>();

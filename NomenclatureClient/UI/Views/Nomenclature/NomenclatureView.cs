@@ -4,7 +4,7 @@ using NomenclatureClient.Services;
 
 namespace NomenclatureClient.UI.Views.Nomenclature;
 
-public class NomenclatureView(NomenclatureViewController controller, NomenclatureManager nomenclatures)
+public class NomenclatureView(NomenclatureViewController controller, NomenclatureService nomenclatures)
 {
     public void Draw()
     {

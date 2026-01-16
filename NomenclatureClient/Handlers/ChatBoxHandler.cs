@@ -11,7 +11,7 @@ using NomenclatureClient.Services;
 
 namespace NomenclatureClient.Handlers;
 
-public class ChatBoxHandler(IChatGui chatGui, ConfigurationService configuration, NomenclatureManager nomenclatures) : IHostedService
+public class ChatBoxHandler(IChatGui chatGui, ConfigurationService configuration, NomenclatureService nomenclatures) : IHostedService
 {
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {

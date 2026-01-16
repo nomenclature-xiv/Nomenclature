@@ -1,12 +1,11 @@
 using MessagePack;
+using NomenclatureCommon.Domain.Network.Pairs;
 
 namespace NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
 
 [MessagePackObject]
 public record UpdateOnlineStatusForwardedRequest(
-    [property: Key(0)] string SyncCode,
-    [property: Key(1)] OnlineStatus Status,
-    [property: Key(2)] Nomenclature? Nomenclature
+    [property: Key(0)] PairDto Pair
 );
 /*
 {

@@ -7,11 +7,12 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
+using NomenclatureClient.Services;
 using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Handlers;
 
-public class NamePlateHandler(INamePlateGui namePlateGui, NomenclatureManager nomenclatures) : IHostedService
+public class NamePlateHandler(INamePlateGui namePlateGui, NomenclatureService nomenclatures) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {

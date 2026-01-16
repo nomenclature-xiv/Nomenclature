@@ -6,6 +6,7 @@ using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
+using NomenclatureCommon.Domain.Network.Pairs;
 using NomenclatureCommon.Domain.Network.RemoveNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
@@ -22,20 +23,20 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     ///     Gets the account id from claims
     /// </summary>
     private string SyncCode => Context.User?.FindFirst(AuthClaimType.SyncCode)?.Value ?? throw new MissingExpectedClaimException($"{AuthClaimType.SyncCode} is not present in claims");
-    
+
     [HubMethodName(HubMethod.InitializeSession)]
     public async Task<InitializeSessionResponse> InitializeSession(InitializeSessionRequest request)
     {
         var syncCode = SyncCode;
         if (connections.TryGetConnectedClient(syncCode) is not { } information)
             return new InitializeSessionResponse(RequestErrorCode.NotAuthenticatedOrOnline, string.Empty, []);
-        
+
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
 
         if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
             return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, []);
-        
+
         nomenclatures.Upsert(syncCode, request.Nomenclature);
 
         var results = new List<PairDto>();
@@ -43,21 +44,28 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         {
             if (pair.IsOneWay())
             {
-                results.Add(new PairDto(pair.SyncCode, OnlineStatus.Pending, pair.LeftSidePaused, pair.RightSidePaused, null));
+                results.Add(new PendingPairDto(pair.SyncCode));
                 continue;
             }
-            
+
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target)
             {
-                results.Add(new PairDto(pair.SyncCode, OnlineStatus.Offline, pair.LeftSidePaused, pair.RightSidePaused, null));
+                results.Add(new OfflinePairDto(pair.SyncCode));
                 continue;
             }
-            
-            results.Add(new PairDto(pair.SyncCode, OnlineStatus.Offline, pair.LeftSidePaused, pair.RightSidePaused, nomenclatures.TryGet(pair.SyncCode)));
-            
+
+            if (nomenclatures.TryGet(pair.SyncCode) is not { } nomenclature)
+            {
+                logger.LogWarning("A connected client {SyncCode} did not have a corresponding Nomenclature, did they log out?", pair.SyncCode);
+                results.Add(new OfflinePairDto(pair.SyncCode));
+                continue;
+            }
+
+            results.Add(new OnlinePairDto(pair.SyncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, nomenclature, target.CharacterName, target.CharacterWorld));
+
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, OnlineStatus.Online, request.Nomenclature);
+                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, request.Nomenclature, information.CharacterName, information.CharacterWorld));
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -65,7 +73,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[InitializeSession] {Error}", e);
             }
         }
-        
+
         return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results);
     }
 
@@ -75,14 +83,14 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         var syncCode = SyncCode;
         if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
             return new UpdateNomenclatureResponse(RequestErrorCode.InvalidNomenclature);
-        
+
         nomenclatures.Upsert(syncCode, request.Nomenclature);
-        
+
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
             if (pair.IsOneWay()) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
-            
+
             try
             {
                 var forward = new UpdateNomenclatureForwardedRequest(syncCode, request.Nomenclature);
@@ -93,23 +101,23 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[UpdateNomenclature] {Error}", e);
             }
         }
-        
+
         return new UpdateNomenclatureResponse(RequestErrorCode.Success);
     }
-    
+
     [HubMethodName(HubMethod.RemoveNomenclature)]
     public async Task<RemoveNomenclatureResponse> RemoveNomenclature(RemoveNomenclatureRequest request)
     {
         var syncCode = SyncCode;
-        
+
         if (nomenclatures.Remove(syncCode) is false)
             return new RemoveNomenclatureResponse(RequestErrorCode.Success);
-        
+
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
             if (pair.IsOneWay()) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
-            
+
             try
             {
                 var forward = new RemoveNomenclatureForwardedRequest(syncCode);
@@ -120,10 +128,10 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[RemoveNomenclature] {Error}", e);
             }
         }
-        
+
         return new RemoveNomenclatureResponse(RequestErrorCode.Success);
     }
-    
+
     public override Task OnConnectedAsync()
     {
         connections.AddConnectedClient(SyncCode, Context.ConnectionId);
@@ -139,10 +147,10 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         {
             if (pair.IsOneWay()) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
-            
+
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(syncCode, OnlineStatus.Offline, null);
+                var forward = new UpdateOnlineStatusForwardedRequest(new OfflinePairDto(pair.SyncCode));
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -150,7 +158,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[OnDisconnectedAsync] {Error}", e);
             }
         }
-        
+
         await base.OnDisconnectedAsync(exception);
     }
 }

@@ -1,11 +1,11 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
+using NomenclatureCommon.Domain.Network.Pairs;
 
 namespace NomenclatureClient.Managers;
 
@@ -13,15 +13,15 @@ public class ConnectionManager : IHostedService
 {
     private readonly ConfigurationService _configuration;
     private readonly NetworkService _network;
-    private readonly PairsService _pairs;
-    private readonly NomenclatureManager _nomenclatures;
+    private readonly NomenclatureService _nomenclatures;
+    private readonly PairService _pairs;
     
-    public ConnectionManager(ConfigurationService configuration, NetworkService network, PairsService pairs, NomenclatureManager nomenclatures)
+    public ConnectionManager(ConfigurationService configuration, NetworkService network, NomenclatureService nomenclatures, PairService pairs)
     {
         _configuration = configuration;
         _network = network;
-        _pairs = pairs;
         _nomenclatures = nomenclatures;
+        _pairs = pairs;
 
         _network.Connected += OnConnected;
         _network.Disconnected += OnDisconnected;
@@ -39,12 +39,16 @@ public class ConnectionManager : IHostedService
 
         foreach (var pair in response.Pairs)
         {
+            _pairs.Add(pair);
+            if (pair is OnlinePairDto onlinePairDto)
+                _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.Nomenclature);
         }
     }
 
     private Task OnDisconnected()
     {
-        // TODO: Clear pair data here
+        _pairs.Clear();
+        _nomenclatures.Clear();
         return Task.CompletedTask;
     }
 

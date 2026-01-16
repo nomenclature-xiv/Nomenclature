@@ -1,14 +1,19 @@
 using MessagePack;
 
-namespace NomenclatureCommon.Domain.Network;
+namespace NomenclatureCommon.Domain.Network.Pairs;
 
+/// <summary>
+///     A pair as represented
+/// </summary>
+/// <remarks>
+///     See the valid types:<br/>
+///     <see cref="PendingPairDto"/><br/>
+///     <see cref="OfflinePairDto"/><br/>
+///     <see cref="OnlinePairDto"/>
+/// </remarks>
 [MessagePackObject]
-public record PairDto(
-    [property: Key(0)] string SyncCode,
-    [property: Key(1)] OnlineStatus Status,
-    [property: Key(2)] bool LeftSidePaused,
-    [property: Key(3)] bool? RightSidePaused,
-    [property: Key(4)] Nomenclature? Nomenclature
+public abstract record PairDto(
+    [property: Key(0)] string SyncCode
 );
 
 /*

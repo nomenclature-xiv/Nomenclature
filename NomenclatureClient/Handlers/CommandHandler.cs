@@ -21,7 +21,7 @@ public partial class CommandHandler(
     IPluginLog logger, 
     PrimaryWindow primaryWindow,
     ConfigurationService configuration,
-    NomenclatureManager nomenclatures) : IHostedService
+    NomenclatureService nomenclatures) : IHostedService
 {
     private const string CommandName = "/nom";
     private const NomenclatureBehavior Original = NomenclatureBehavior.DisplayOriginal;

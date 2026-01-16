@@ -7,9 +7,9 @@ using NomenclatureCommon.Domain;
 
 // ReSharper disable RedundantBoolCompare
 
-namespace NomenclatureClient.Managers;
+namespace NomenclatureClient.Services;
 
-public class NomenclatureManager : IHostedService
+public class NomenclatureService : IHostedService
 {
     private readonly ConcurrentDictionary<(string Name, string World), Nomenclature> _nomenclatures = [];
     
@@ -78,6 +78,8 @@ public class NomenclatureManager : IHostedService
     {
         return _nomenclatures.GetValueOrDefault((name, world));
     }
+    
+    public void Clear() => _nomenclatures.Clear();
     
     public Task StartAsync(CancellationToken cancellationToken)
     {
