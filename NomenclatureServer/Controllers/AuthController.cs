@@ -1,11 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using NomenclatureCommon.Domain.Api.Controller;
+using NomenclatureCommon.Domain.Api.Login;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
 
@@ -13,24 +15,41 @@ namespace NomenclatureServer.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(Configuration config, DatabaseService db, ILogger<AuthController> logger) : ControllerBase
+public class AuthController(Configuration config, DatabaseService database, ILogger<AuthController> logger) : ControllerBase
 {
+    // Const
+    private static readonly Version ExpectedVersion = new(0, 5, 0, 0);
+
+    // Instantiated
+#if DEBUG
+    private readonly SymmetricSecurityKey _key = new(RandomNumberGenerator.GetBytes(32));
+#else
+    private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(config.SigningKey));
+#endif
+
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] GenerateTokenRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginAuthenticationRequest request)
     {
-        // DB Request
-        if (await db.GetRegisteredCharacter(request.Secret) is not { } registeredCharacter)
-            return Unauthorized("There are no registered characters with this secret.");
+        if (request.Version < ExpectedVersion)
+            return StatusCode(StatusCodes.Status409Conflict, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.VersionMismatch));
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SigningKey));
-        var descriptor = new SecurityTokenDescriptor
+        if (await database.GetAccountBySecret(request.Secret) is not { } registeredCharacter)
+            return StatusCode(StatusCodes.Status401Unauthorized, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.UnknownSecret));
+        
+        var token = GenerateJwtToken([new Claim(AuthClaimType.SyncCode, registeredCharacter.SyncCode)]);
+        return StatusCode(StatusCodes.Status200OK, new LoginAuthenticationResponse(LoginAuthenticationErrorCode.Success, token.RawData));
+    }
+
+    private JwtSecurityToken GenerateJwtToken(List<Claim> claims)
+    {
+        var token = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity([new Claim(AuthClaimType.CharacterIdentifier, registeredCharacter)]),
-            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
+            Subject = new ClaimsIdentity(claims),
+            SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256Signature),
             Expires = DateTime.UtcNow.AddHours(4)
         };
 
-        return Ok(new JwtSecurityTokenHandler().CreateJwtSecurityToken(descriptor).RawData);
+        return new JwtSecurityTokenHandler().CreateJwtSecurityToken(token);
     }
 }

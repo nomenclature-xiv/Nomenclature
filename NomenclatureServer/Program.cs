@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Cache;
+using System.Security.Cryptography;
 using System.Text;
 using MessagePack;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -28,6 +29,13 @@ public class Program
         // Configuration Authentication and Authorization
         ConfigureJwtAuthentication(builder.Services, configuration);
 
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+        
         builder.Services.AddControllers();
         builder.Services.AddSignalR(options => options.EnableDetailedErrors = true) 
             .AddMessagePackProtocol(options =>
@@ -38,9 +46,12 @@ public class Program
         builder.Services.AddSingleton(configuration);
 
         builder.Services.AddSingleton<DatabaseService>();
+        builder.Services.AddSingleton<OauthService>();
         builder.Services.AddSingleton<RegistrationController>();
         builder.Services.AddSingleton<LodestoneService>();
         builder.Services.AddSingleton<ConnectionService>();
+        builder.Services.AddHttpClient();
+        builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<OauthService>());
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<LodestoneService>());
 
 #if DEBUG
@@ -82,8 +93,9 @@ public class Program
         app.MapHub<NomenclatureHub>("/nomenclature");
         app.MapControllers();
         app.Run();
-        
     }
+
+    private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(32);
 
     private static void ConfigureJwtAuthentication(IServiceCollection services, Configuration configuration)
     {
@@ -95,7 +107,11 @@ public class Program
                 ValidateIssuer = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
+#if DEBUG
+                IssuerSigningKey = new SymmetricSecurityKey(SigningKey)
+#else
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(configuration.SigningKey))
+#endif
             };
         });
     }

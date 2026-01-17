@@ -9,7 +9,7 @@ namespace NomenclatureServer.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class RegistrationController(DatabaseService database, LodestoneService lodestoneService, ILogger<RegistrationController> logger) : ControllerBase
+public class RegistrationController(DatabaseService database, OauthService authService, ILogger<RegistrationController> logger) : ControllerBase
 {
     /// <summary>
     ///     List of all current registrations
@@ -18,37 +18,41 @@ public class RegistrationController(DatabaseService database, LodestoneService l
 
     [AllowAnonymous]
     [HttpPost("initiate")]
-    public async Task<IActionResult> Initiate([FromBody] BeginCharacterRegistrationRequest request)
+    public IActionResult Initiate([FromBody] BeginCharacterRegistrationRequest request)
     {
-        if (await lodestoneService.GetCharacterLodestoneIdAsync(request.Character) is not { } lodestoneId)
-            return NotFound();
-
-        var key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        PendingRegistrations[key] = lodestoneId;
-        return Ok(key);
+        string ticket = authService.GetSetTicket();
+        string url = authService.GetAuthorizationUrl(ticket);
+        var res = new BeginCharacterRegistrationResponse(true, ticket, url);
+        return Ok(res);
     }
 
     [AllowAnonymous]
     [HttpPost("validate")]
     public async Task<IActionResult> Validate([FromBody] ValidateCharacterRegistration request)
     {
-        logger.LogInformation("{Request}", request);
-        
-        if (PendingRegistrations.TryGetValue(request.ValidationCode, out var lodestoneId) is false)
-            return BadRequest();
+        try
+        {
+            var token = authService.ValidateTicket(request.Character, request.Ticket);
+            if (token is null)
+                return Ok(new ValidateCharacterRegistrationResponse() { Status = "unbound", Token = null });
+            return Ok(new ValidateCharacterRegistrationResponse() { Status = "bound", Token = token.RawData });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 
-        if (await lodestoneService.GetLodestoneCharacterByLodestoneId(lodestoneId) is not { } character)
-            return NotFound();
-
-        if (character.Bio.Equals(request.ValidationCode) is false)
-            return Conflict();
-
-        PendingRegistrations.Remove(request.ValidationCode);
-
-        var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        if (await database.RegisterCharacter(secret, character.CharacterName, character.WorldName))
-            return Ok(secret);
-
-        return StatusCode(500);
+    [AllowAnonymous]
+    [HttpGet("callback")]
+    public async Task Callback([FromQuery] string code, [FromQuery] string state)
+    {
+        var request = HttpContext.Request;
+        var res = await authService.GetBearerToken(code, $"{request.Scheme}://{request.Host}{request.Path}");
+        if(res is null)
+        {
+            return;
+        }
+        await authService.GetCharacter(res, state);
     }
 }

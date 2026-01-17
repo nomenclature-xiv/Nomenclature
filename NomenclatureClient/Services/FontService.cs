@@ -8,7 +8,7 @@ namespace NomenclatureClient.Services;
 
 public class FontService(IDalamudPluginInterface pluginInterface) : IHostedService
 {
-    private const int BigFontSize = 40;
+    private const int BigFontSize = 36;
     public static IFontHandle? BigFont;
 
     private const int MediumFontSize = 24;
@@ -29,8 +29,8 @@ public class FontService(IDalamudPluginInterface pluginInterface) : IHostedServi
             toolkit.OnPreBuild(preBuild => { preBuild.AddDalamudDefaultFont(BigFontSize); });
         });
         
-        await MediumFont.WaitAsync().ConfigureAwait(false);
-        await BigFont.WaitAsync().ConfigureAwait(false);
+        await MediumFont.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await BigFont.WaitAsync(cancellationToken).ConfigureAwait(false);
         await pluginInterface.UiBuilder.FontAtlas.BuildFontsAsync().ConfigureAwait(false);
     }
 

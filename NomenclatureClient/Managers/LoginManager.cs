@@ -5,45 +5,80 @@ using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
-using NomenclatureClient.Types;
-using NomenclatureClient.UI;
-using NomenclatureCommon.Domain;
+
+// ReSharper disable RedundantBoolCompare
 
 namespace NomenclatureClient.Managers;
 
-public class LoginManager(
-    IPluginLog logger,
-    IFramework framework,
-    Configuration configuration,
-    NetworkService networkService,
-    IClientState clientState,
-    SessionService sessionService,
-    MainWindowController controller) : IHostedService
+/// <summary>
+///     Handles logging in and out of a character in game
+/// </summary>
+public class LoginManager : IHostedService
 {
+    // Injected
+    private readonly IClientState _client;
+    private readonly IFramework _framework;
+    private readonly IObjectTable _objectTable;
+    private readonly ConfigurationService _configuration;
+    private readonly NetworkService _network;
+    
+    /// <summary>
+    ///     If we have finished processing all the login events
+    /// </summary>
+    public event Action? LoginFinished;
+
+    /// <summary>
+    ///     <inheritdoc cref="LoginManager"/>
+    /// </summary>
+    public LoginManager(IClientState client, IFramework framework, IObjectTable objectTable, ConfigurationService configuration, NetworkService network)
+    {
+        _client = client;
+        _framework = framework;
+        _objectTable = objectTable;
+        _configuration = configuration;
+        _network = network;
+        
+        _client.Login += OnLogin;
+        _client.Logout += OnLogout;
+    }
+    
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_client.IsLoggedIn)
+            OnLogin();
+        
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _client.Login -= OnLogin;
+        _client.Logout -= OnLogout;
+        return Task.CompletedTask;
+    }
+    
     private async void OnLogin()
     {
         try
         {
             // This should never happen as the event we're listening to suggests the local player is available
-            if (await framework.RunOnFrameworkThread(() => clientState.LocalPlayer)  is not { } player)
+            if (await _framework.RunOnFrameworkThread(() => _objectTable.LocalPlayer).ConfigureAwait(false)  is not { } player)
                 return;
             
-            // Get character name and their configuration
-            var character = new Character(player.Name.ToString(), player.HomeWorld.Value.Name.ToString());
-            if (configuration.LocalConfigurations.TryGetValue(character.ToString(), out var value) is false)
+            // Extract name and world
+            var name = player.Name.ToString();
+            var world = player.HomeWorld.Value.Name.ToString();
+            
+            // Load the configuration for this character
+            if (await _configuration.LoadCharacterConfigurationAsync(name, world).ConfigureAwait(false) is false)
                 return;
             
-            // Set the session info
-            sessionService.CurrentSession = new SessionInfo(character, value);
+            // Emit an event for the loaded login event
+            LoginFinished?.Invoke();
             
-            // Connect if we have it enabled
-            if (value.AutoConnect)
-                await networkService.Connect();
-
-            controller.OverrideName = value.OverrideName;
-            controller.OverrideWorld = value.OverrideWorld;
-            controller.OverwrittenName = value.Name ?? "";
-            controller.OverwrittenWorld = value.World ?? "";
+            // If the character is enabled for automatic connection
+            if (_configuration.CharacterConfiguration?.AutoConnect ?? false)
+                await _network.Connect().ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -53,26 +88,7 @@ public class LoginManager(
 
     private void OnLogout(int type, int code)
     {
-        // Cleanse the identity service
-        IdentityService.Identities.Clear();
-
-        // Reset the current session to an empty one
-        sessionService.CurrentSession = new SessionInfo(new Character(), new CharacterConfiguration());
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        clientState.Login += OnLogin;
-        clientState.Logout += OnLogout;
-        
-        OnLogin();
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        clientState.Login -= OnLogin;
-        clientState.Logout -= OnLogout;
-        return Task.CompletedTask;
+        // Clear character configuration
+        _configuration.ResetCharacterConfiguration();
     }
 }

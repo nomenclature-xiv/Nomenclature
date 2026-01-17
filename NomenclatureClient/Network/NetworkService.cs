@@ -1,5 +1,6 @@
 using System;
-using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,16 +10,20 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Services;
-using NomenclatureClient.Types.Exceptions;
-using NomenclatureCommon.Domain.Api.Controller;
+using NomenclatureCommon.Domain.Api.Login;
+
+// ReSharper disable RedundantBoolCompare
 
 namespace NomenclatureClient.Network;
 
 /// <summary>
 ///     Provides access to the Signal R hub connection
 /// </summary>
-public class NetworkService : IHostedService, IDisposable
+public class NetworkService : IHostedService
 {
+    // Const
+    private static readonly JsonSerializerOptions DeserializationOptions = new() { PropertyNameCaseInsensitive = true };
+    
     /// <summary>
     ///     Signal R Hub Connection
     /// </summary>
@@ -34,6 +39,9 @@ public class NetworkService : IHostedService, IDisposable
     /// </summary>
     public event Func<Task>? Disconnected;
 
+    /// <summary>
+    ///     If the plugin has begun the connection process
+    /// </summary>
     public bool Connecting;
 
 #if DEBUG
@@ -49,22 +57,28 @@ public class NetworkService : IHostedService, IDisposable
     //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
     //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
-    private readonly SessionService _sessionService;
+    // Injected
     private readonly IPluginLog _pluginLog;
-
+    private readonly ConfigurationService _configuration;
+    
+    /// <summary>
+    ///     Access token required to connect to the SignalR hub
+    /// </summary>
     private string? _token = string.Empty;
 
     /// <summary>
     ///     <inheritdoc cref="NetworkService"/>
     /// </summary>
-    public NetworkService(SessionService sessionService, IPluginLog pluginLog)
+    public NetworkService(IPluginLog pluginLog, ConfigurationService configuration)
     {
-        _sessionService =  sessionService;
         _pluginLog = pluginLog;
+        _configuration = configuration;
 
-        Connection = new HubConnectionBuilder()
-            .WithUrl(HubUrl,
-                options => { options.AccessTokenProvider = () => Task.FromResult<string?>(_token); })
+        Connection = new HubConnectionBuilder().WithUrl(HubUrl, options =>
+            {
+                // ReSharper disable once RedundantTypeArgumentsOfMethod
+                options.AccessTokenProvider = () => Task.FromResult<string?>(_token);
+            })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol(options =>
             {
@@ -113,34 +127,43 @@ public class NetworkService : IHostedService, IDisposable
     {
         if (Connection.State is not HubConnectionState.Disconnected)
             return;
+        
+        Connecting = true;
+        
         try
         {
-            if (await Token().ConfigureAwait(false) is { } token)
+            // If we have a secret id set for this character
+            if (_configuration.CharacterConfiguration?.SecretId is not { } id)
+                return;
+
+            // If the secret id corresponds to a valid secret
+            if (_configuration.Configuration.Secrets.TryGetValue(id, out var secret) is false)
+                return;
+
+            // Try to authenticate it with the authentication server
+            if (await TryAuthenticateSecret(secret).ConfigureAwait(false) is { } token)
             {
                 _token = token;
+                
                 await Connection.StartAsync().ConfigureAwait(false);
+
                 if (Connection.State is HubConnectionState.Connected)
                 {
                     Connected?.Invoke();
-                    Connecting = false;
+                    _pluginLog.Info("[NetworkService.Connect] Successfully connected");
                 }
-
+                else
+                {
+                    _pluginLog.Info("[NetworkService.Connect] Unable to connect to the server");
+                }
             }
-        }
-        catch (NoSecretForLocalCharacterException)
-        {
-            _pluginLog.Warning(
-                "[NetworkService] You do not have a secret assigned to your local character, please register");
-        }
-        catch (InvalidSecretException)
-        {
-            _pluginLog.Warning(
-                "[NetworkService] Your secret is invalid. Make sure your current character is registered");
         }
         catch (Exception e)
         {
-            _pluginLog.Warning($"[NetworkService] Unexpected error while connecting, {e}");
+            _pluginLog.Error($"[NetworkService.Connect] Unexpected error occurred, {e}");
         }
+        
+        Connecting = false;
     }
 
     /// <summary>
@@ -154,24 +177,44 @@ public class NetworkService : IHostedService, IDisposable
         try
         {
             await Connection.StopAsync().ConfigureAwait(false);
-            Connecting = true;
         }
         catch (Exception e)
         {
-            _pluginLog.Warning($"[NetworkService] Unexpected error while disconnecting, {e}");
+            _pluginLog.Error($"[NetworkService.Disconnect] Unexpected error occurred, {e}");
         }
     }
-    
+
+    /// <summary>
+    ///     <inheritdoc cref="IHostedService.StartAsync"/>
+    /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Connecting = true;
+        // Nothing needs to start immediately here. Auto connecting will happen in a different manager that calls the connect method
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    ///     <inheritdoc cref="IHostedService.StopAsync"/>
+    /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await Disconnect();
-        await Connection.DisposeAsync();
+        try
+        {
+            Connection.Reconnected -= OnReconnected;
+            Connection.Reconnecting -= OnReconnecting;
+            Connection.Closed -= OnClosed;
+
+            await Disconnect().ConfigureAwait(false);
+            await Connection.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected
+        }
+        catch (Exception e)
+        {
+            _pluginLog.Error($"[NetworkService.StopAsync] Unexpected error occurred, {e}");
+        }
     }
 
     private Task OnReconnected(string? arg)
@@ -191,40 +234,53 @@ public class NetworkService : IHostedService, IDisposable
         Disconnected?.Invoke();
         return Task.CompletedTask;
     }
-
-    /// <summary>
-    ///     Queries the login server for a valid token
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidSecretException">Thrown when the client submits an invalid token</exception>
-    /// <exception cref="UnknownTokenException">Thrown when the client gets an unexpected return code</exception>
-    private async Task<string?> Token()
+    
+    private async Task<string?> TryAuthenticateSecret(string secret)
     {
-        if (_sessionService.CurrentSession.CharacterConfiguration.Secret == string.Empty)
-            throw new NoSecretForLocalCharacterException();
+        using var client = new HttpClient();
+        var request = new LoginAuthenticationRequest(Plugin.Version, secret);
+        var payload = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
-        var request = new GenerateTokenRequest(_sessionService.CurrentSession.CharacterConfiguration.Secret);
-        var response = await NetworkUtils.PostRequest(JsonSerializer.Serialize(request), AuthPostUrl);
-        if (response.IsSuccessStatusCode is false)
-            throw response.StatusCode switch
+        try
+        {
+            var response = await client.PostAsync(AuthPostUrl, payload).ConfigureAwait(false);
+            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (JsonSerializer.Deserialize<LoginAuthenticationResponse>(content, DeserializationOptions) is not { } result)
             {
-                HttpStatusCode.Unauthorized => new InvalidSecretException(),
-                _ => new UnknownTokenException($"StatusCode was {response.StatusCode}")
-            };
+                _pluginLog.Warning("[NetworkService.TryAuthenticateSecret] A deserialization error occurred");
+                return null;
+            }
+            
+            switch (result.ErrorCode)
+            {
+                case LoginAuthenticationErrorCode.Success:
+                    _pluginLog.Verbose("[NetworkService.TryAuthenticateSecret] Successfully authenticated");
+                    return result.Secret;
 
-        _pluginLog.Verbose("[NetworkHelper] Successfully authenticated");
-        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-    }
+                case LoginAuthenticationErrorCode.VersionMismatch:
+                    _pluginLog.Warning("[NetworkService.TryAuthenticateSecret] Unsupported client version");
+                    return null;
 
-    public void Dispose()
-    {
-        Connection.Reconnected -= OnReconnected;
-        Connection.Reconnecting -= OnReconnecting;
-        Connection.Closed -= OnClosed;
+                case LoginAuthenticationErrorCode.UnknownSecret:
+                    _pluginLog.Warning("[NetworkService.TryAuthenticateSecret] Invalid secret provided");
+                    return null;
 
-        Connection.StopAsync().ConfigureAwait(false);
-        Connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
-
-        GC.SuppressFinalize(this);
+                case LoginAuthenticationErrorCode.Uninitialized:
+                case LoginAuthenticationErrorCode.Unknown:
+                default:
+                    _pluginLog.Warning($"[NetworkService.TryAuthenticateSecret] Unknown error occurred on the server, {result.ErrorCode}");
+                    return null;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _pluginLog.Warning("[NetworkService.TryAuthenticateSecret] Authentication Server Down");
+            return null;
+        }
+        catch (Exception e)
+        {
+            _pluginLog.Error($"[NetworkService.TryAuthenticateSecret] Unexpected error occurred, {e}");
+            return null;
+        }
     }
 }

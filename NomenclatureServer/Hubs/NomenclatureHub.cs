@@ -1,163 +1,164 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
-using System.Collections.Concurrent;
 using NomenclatureCommon.Domain.Network;
-using NomenclatureCommon.Domain.Network.Base;
-using NomenclatureCommon.Domain.Network.DeleteNomenclature;
+using NomenclatureCommon.Domain.Network.InitializeSession;
+using NomenclatureCommon.Domain.Network.Pairs;
+using NomenclatureCommon.Domain.Network.RemoveNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
-using NomenclatureCommon.Domain.Network.UpdateSubscriptions;
+using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
+using NomenclatureServer.Utilities;
+
+// ReSharper disable RedundantBoolCompare
 
 namespace NomenclatureServer.Hubs;
 
-// ReSharper disable once ForCanBeConvertedToForeach
-
 [Authorize]
-public class NomenclatureHub(ILogger<NomenclatureHub> logger, ConnectionService connectionService) : Hub
+public class NomenclatureHub(ConnectionService connections, DatabaseService database, NomenclatureService nomenclatures, ILogger<NomenclatureHub> logger) : Hub
 {
-
     /// <summary>
-    ///     List of currently applied nomenclatures
+    ///     Gets the account id from claims
     /// </summary>
-    private static readonly ConcurrentDictionary<string, Nomenclature> Nomenclatures = new();
+    private string SyncCode => Context.User?.FindFirst(AuthClaimType.SyncCode)?.Value ?? throw new MissingExpectedClaimException($"{AuthClaimType.SyncCode} is not present in claims");
 
-    /// <summary>
-    ///     Gets a character identifier from the claims provided by the sender
-    /// </summary>
-    private string CharacterIdentifier => Context.User?.FindFirst(AuthClaimType.CharacterIdentifier)?.Value ??
-                                          throw new MissingExpectedClaimException(
-                                              "CharacterIdentifier is not present in claims");
-    
+    [HubMethodName(HubMethod.InitializeSession)]
+    public async Task<InitializeSessionResponse> InitializeSession(InitializeSessionRequest request)
+    {
+        var syncCode = SyncCode;
+        if (connections.TryGetConnectedClient(syncCode) is not { } information)
+            return new InitializeSessionResponse(RequestErrorCode.NotAuthenticatedOrOnline, string.Empty, []);
+
+        information.CharacterName = request.CharacterName;
+        information.CharacterWorld = request.CharacterWorld;
+
+        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+            return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, []);
+
+        nomenclatures.Upsert(syncCode, request.Nomenclature);
+
+        var results = new List<PairDto>();
+        foreach (var pair in await database.GetAllPairs(syncCode))
+        {
+            if (pair.IsOneWay())
+            {
+                results.Add(new PendingPairDto(pair.SyncCode));
+                continue;
+            }
+
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target)
+            {
+                results.Add(new OfflinePairDto(pair.SyncCode));
+                continue;
+            }
+
+            if (nomenclatures.TryGet(pair.SyncCode) is not { } nomenclature)
+            {
+                logger.LogWarning("A connected client {SyncCode} did not have a corresponding Nomenclature, did they log out?", pair.SyncCode);
+                results.Add(new OfflinePairDto(pair.SyncCode));
+                continue;
+            }
+
+            results.Add(new OnlinePairDto(pair.SyncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, nomenclature, target.CharacterName, target.CharacterWorld));
+
+            try
+            {
+                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, request.Nomenclature, information.CharacterName, information.CharacterWorld));
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[InitializeSession] {Error}", e);
+            }
+        }
+
+        return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results);
+    }
+
     [HubMethodName(HubMethod.UpdateNomenclature)]
-    public Response UpdateNomenclature(UpdateNomenclatureRequest request)
+    public async Task<UpdateNomenclatureResponse> UpdateNomenclature(UpdateNomenclatureRequest request)
     {
-        // TODO: Remove after testing
-        logger.LogInformation("{Request}", request);
+        var syncCode = SyncCode;
+        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+            return new UpdateNomenclatureResponse(RequestErrorCode.InvalidNomenclature);
 
-        // Get identifier from claims
-        var identifier = CharacterIdentifier;
+        nomenclatures.Upsert(syncCode, request.Nomenclature);
 
-        if (request.Name?.Length > 32 || request.World?.Length > 32)
-            return new Response(false);
-
-        // Check if the nomenclature already exists
-        if (Nomenclatures.TryGetValue(identifier, out var existingNomenclature))
+        foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            // Only update name if included in update mode
-            var name = (request.Mode & UpdateNomenclatureMode.Name) == UpdateNomenclatureMode.Name
-                ? request.Name
-                : null;
-            
-            // Only update world if included in update mode
-            var world = (request.Mode & UpdateNomenclatureMode.World) == UpdateNomenclatureMode.World
-                ? request.World
-                : null;
-            
-            var nomenclature = new Nomenclature(name, world);
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
-            // Update the identifier and nomenclature
-            Nomenclatures[identifier] = nomenclature;
-
-            // Notify everyone in the group that this nomenclature has been updated
-            var update = new UpdateNomenclatureForwardedRequest(identifier, nomenclature);
-            Clients.Group(identifier).SendAsync(HubMethod.UpdateNomenclature, update);
-        }
-        else
-        {
-            var nomenclature = new Nomenclature(request.Name, request.World);
-            
-            // Update the identifier and nomenclature
-            Nomenclatures[identifier] = nomenclature;
-
-            // Notify everyone in the group that this nomenclature has been updated
-            var update = new UpdateNomenclatureForwardedRequest(identifier, nomenclature);
-            Clients.Group(identifier).SendAsync(HubMethod.UpdateNomenclature, update);
+            try
+            {
+                var forward = new UpdateNomenclatureForwardedRequest(syncCode, request.Nomenclature);
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateNomenclature, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[UpdateNomenclature] {Error}", e);
+            }
         }
 
-        // Return success
-        return new Response(true);
+        return new UpdateNomenclatureResponse(RequestErrorCode.Success);
     }
 
-    [HubMethodName(HubMethod.DeleteNomenclature)]
-    public Response DeleteNomenclature(DeleteNomenclatureRequest request)
+    [HubMethodName(HubMethod.RemoveNomenclature)]
+    public async Task<RemoveNomenclatureResponse> RemoveNomenclature(RemoveNomenclatureRequest request)
     {
-        // TODO: Remove after testing
-        logger.LogInformation("{Request}", request);
+        var syncCode = SyncCode;
 
-        // Get identifier from claims
-        var identifier = CharacterIdentifier;
+        if (nomenclatures.Remove(syncCode) is false)
+            return new RemoveNomenclatureResponse(RequestErrorCode.Success);
 
-        // Remove the identifier from our list of nomenclatures
-        Nomenclatures.TryRemove(identifier, out _);
-
-        // Notify everyone in the group that this nomenclature has been removed
-        var delete = new DeleteNomenclatureForwardedRequest(identifier);
-        Clients.Group(identifier).SendAsync(HubMethod.DeleteNomenclature, delete);
-
-        // Return success
-        return new Response(true);
-    }
-
-    [HubMethodName(HubMethod.UpdateSubscriptions)]
-    public UpdateSubscriptionsResponse UpdateSubscriptions(UpdateSubscriptionsRequest request)
-    {
-        // TODO: Remove after testing
-        logger.LogInformation("{Request}", request);
-        
-        // Process all the subscriptions to remove
-        var unsubscriptions = request.CharacterToUnsubscribeFrom.AsSpan();
-
-        for (var i = 0; i < unsubscriptions.Length; i++)
-            Groups.RemoveFromGroupAsync(Context.ConnectionId, unsubscriptions[i]);
-
-        // TODO: Check the number of subscriptions this client has and prevent them subscribing to more than 128
-
-        // Create a dictionary map to get all the new identities subscribed to immediately
-        var identities = new Dictionary<string, Nomenclature>();
-
-        // Process all the subscriptions to add
-        var subscriptions = request.CharactersToSubscribeTo.AsSpan();
-        for (var i = 0; i < subscriptions.Length; i++)
+        foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            // Add the caller to the group
-            ref var identity = ref subscriptions[i];
-            Groups.AddToGroupAsync(Context.ConnectionId, identity);
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
-            // Check if there is a nomenclature, and if there is, add it to the return dictionary
-            if (Nomenclatures.TryGetValue(identity, out var nomenclature))
-                identities.Add(identity, nomenclature);
+            try
+            {
+                var forward = new RemoveNomenclatureForwardedRequest(syncCode);
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.RemoveNomenclature, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[RemoveNomenclature] {Error}", e);
+            }
         }
 
-        // Return result with newly subscribed to identities
-        return new UpdateSubscriptionsResponse(true, identities);
+        return new RemoveNomenclatureResponse(RequestErrorCode.Success);
     }
-    
+
     public override Task OnConnectedAsync()
     {
-        connectionService.Connections.Add(Context.ConnectionId);
-        logger.LogInformation(Context.ConnectionId + " connected.");
-
+        connections.AddConnectedClient(SyncCode, Context.ConnectionId);
         return base.OnConnectedAsync();
     }
 
-    public override Task OnDisconnectedAsync(Exception? exception)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        connectionService.Connections.Remove(Context.ConnectionId);
-        logger.LogInformation(Context.ConnectionId + " disconnected.");
+        var syncCode = SyncCode;
+        connections.RemoveConnectedClient(syncCode);
 
-        // Get identifier from claims
-        var identifier = CharacterIdentifier;
+        foreach (var pair in await database.GetAllPairs(syncCode))
+        {
+            if (pair.IsOneWay()) continue;
+            if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
-        // Remove the identifier from our list of nomenclatures
-        Nomenclatures.TryRemove(identifier, out _);
+            try
+            {
+                var forward = new UpdateOnlineStatusForwardedRequest(new OfflinePairDto(pair.SyncCode));
+                await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("[OnDisconnectedAsync] {Error}", e);
+            }
+        }
 
-        // Notify everyone in the group that this nomenclature has been removed
-        Clients.Group(identifier).SendAsync(HubMethod.DeleteNomenclature, identifier);
-
-        return base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(exception);
     }
 }
