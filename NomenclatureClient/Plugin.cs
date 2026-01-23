@@ -94,6 +94,7 @@ public sealed class Plugin : IDalamudPlugin
                 collection.AddHostedService(p => p.GetRequiredService<ConfigurationService>());
                 collection.AddHostedService(p => p.GetRequiredService<FontService>());
                 collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
+                collection.AddHostedService(p => p.GetRequiredService<PairService>());
                 
                 // Startup Managers
                 collection.AddHostedService(p => p.GetRequiredService<ConnectionManager>());
