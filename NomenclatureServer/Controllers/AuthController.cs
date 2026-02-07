@@ -21,11 +21,7 @@ public class AuthController(Configuration config, DatabaseService database, ILog
     private static readonly Version ExpectedVersion = new(0, 5, 0, 0);
 
     // Instantiated
-#if DEBUG
-    private readonly SymmetricSecurityKey _key = new(RandomNumberGenerator.GetBytes(32));
-#else
     private readonly SymmetricSecurityKey _key = new(Encoding.UTF8.GetBytes(config.SigningKey));
-#endif
 
     [AllowAnonymous]
     [HttpPost("login")]

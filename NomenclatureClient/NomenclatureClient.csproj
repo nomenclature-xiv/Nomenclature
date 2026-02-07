@@ -3,7 +3,7 @@
     <PropertyGroup>
         <Authors>Mora</Authors>
         <Company>Mora-XIV</Company>
-        <Version>0.2.4</Version>
+        <Version>0.5.0</Version>
         <Description>XIV Plugin</Description>
         <Copyright>(C)Mora 2024 - 25</Copyright>
         <PackageProjectUrl>https://github.com/nomenclature-xiv/Nomenclature</PackageProjectUrl>

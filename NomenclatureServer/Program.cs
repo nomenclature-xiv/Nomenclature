@@ -50,6 +50,7 @@ public class Program
         builder.Services.AddSingleton<RegistrationController>();
         builder.Services.AddSingleton<LodestoneService>();
         builder.Services.AddSingleton<ConnectionService>();
+        builder.Services.AddSingleton<NomenclatureService>();
         builder.Services.AddHttpClient();
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<OauthService>());
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<LodestoneService>());
@@ -107,11 +108,7 @@ public class Program
                 ValidateIssuer = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-#if DEBUG
-                IssuerSigningKey = new SymmetricSecurityKey(SigningKey)
-#else
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(configuration.SigningKey))
-#endif
             };
         });
     }

@@ -18,6 +18,7 @@ public class NomenclatureViewController : IHostedService
     private readonly ConfigurationService _configuration;
     private readonly NetworkService _networkService;
     private readonly LoginManager _loginManager;
+    private readonly NomenclatureService _nomenclatureService;
     
     public readonly string[] Behaviors = Enum.GetNames<NomenclatureBehavior>();
 
@@ -26,12 +27,13 @@ public class NomenclatureViewController : IHostedService
     public string NomenclatureName, NomenclatureWorld;
     public int NomenclatureNameBehaviorIndex, NomenclatureWorldBehaviorIndex;
     
-    public NomenclatureViewController(ConfigurationService configuration, NetworkService networkService, LoginManager loginManager)
+    public NomenclatureViewController(ConfigurationService configuration, NetworkService networkService, LoginManager loginManager, NomenclatureService nomenclatureService)
     {
         _configuration = configuration;
         _networkService = networkService;
         _loginManager = loginManager;
         _loginManager.LoginFinished += OnLoginFinished;
+        _nomenclatureService = nomenclatureService;
         
         NomenclatureName = string.Empty;
         NomenclatureWorld = string.Empty;
@@ -119,6 +121,7 @@ public class NomenclatureViewController : IHostedService
             if (response.ErrorCode is not RequestErrorCode.Success)
                 return;
 
+            _nomenclatureService.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, nomenclature);
             Nomenclature = nomenclature;
             _configuration.CharacterConfiguration?.Nomenclature = nomenclature;
             await _configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
@@ -137,7 +140,7 @@ public class NomenclatureViewController : IHostedService
             var response = await _networkService.InvokeAsync<RemoveNomenclatureResponse>(HubMethod.RemoveNomenclature, request).ConfigureAwait(false);
             if (response.ErrorCode is not RequestErrorCode.Success)
                 return;
-            
+            _nomenclatureService.RemoveNomenclatureForCharacter(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World);
             // Do something
         }
         catch (Exception)

@@ -12,6 +12,9 @@ namespace NomenclatureCommon.Domain.Network.Pairs;
 ///     <see cref="OnlinePairDto"/>
 /// </remarks>
 [MessagePackObject]
+[Union(0, typeof(OfflinePairDto))]
+[Union(1, typeof(OnlinePairDto))]
+[Union(2, typeof(PendingPairDto))]
 public abstract record PairDto(
     [property: Key(0)] string SyncCode
 );

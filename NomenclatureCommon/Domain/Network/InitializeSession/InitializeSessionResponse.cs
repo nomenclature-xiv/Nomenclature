@@ -4,12 +4,8 @@ using NomenclatureCommon.Domain.Network.Pairs;
 namespace NomenclatureCommon.Domain.Network.InitializeSession;
 
 [MessagePackObject]
-public record InitializeSessionResponse(
-    [property: Key(0)] RequestErrorCode ErrorCode,
-    [property: Key(1)] string SyncCode,
-    [property: Key(2)] List<PairDto> Pairs
-);
-/*
+public record InitializeSessionResponse
+
 {
     [Key(0)] public RequestErrorCode ErrorCode { get; set; }
     [Key(1)] public string SyncCode { get; set; } = string.Empty;
@@ -26,4 +22,3 @@ public record InitializeSessionResponse(
         Pairs = pairs;
     }
 }
-*/

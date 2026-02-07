@@ -24,8 +24,6 @@ public class PairService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _pairsBySyncCode["ABCD12345"] = new OnlinePairDto("ABCD12345", false, false, new Nomenclature("", NomenclatureBehavior.DisplayOriginal, "", NomenclatureBehavior.DisplayNothing), "Silent Lightbond", "Diabolos");
-        _pairsBySyncCode["12345ABCD"] = new OfflinePairDto("12345ABCD");
         return Task.CompletedTask;
     }
 

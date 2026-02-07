@@ -161,8 +161,8 @@ public class DatabaseService
                 SELECT
                 p.TargetSyncCode,
                 p.Paused,
-                r.Paused AS PausedByThem,
-                FROM Pairs AS p LEFT JOIN Pairs AS r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
+                r.Paused AS PausedByThem
+                FROM Pairs p LEFT JOIN Pairs r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
                 WHERE p.SyncCode = @syncCode;
             """;
         command.Parameters.AddWithValue("@syncCode", syncCode);
@@ -175,7 +175,7 @@ public class DatabaseService
             while (reader.Read())
             {
                 // Always get the target account id
-                var targetSyncCode = reader.GetInt32(0).ToString();
+                var targetSyncCode = reader.GetString(0);
                 
                 // Get our pair data for them
                 var leftSidePaused = reader.GetBoolean(1);

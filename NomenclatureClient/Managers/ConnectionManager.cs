@@ -43,6 +43,7 @@ public class ConnectionManager : IHostedService
             if (pair is OnlinePairDto onlinePairDto)
                 _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.Nomenclature);
         }
+        _nomenclatures.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, _configuration.CharacterConfiguration.Nomenclature);
     }
 
     private Task OnDisconnected()

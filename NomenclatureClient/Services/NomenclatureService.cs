@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureCommon.Domain;
 
@@ -9,7 +10,7 @@ using NomenclatureCommon.Domain;
 
 namespace NomenclatureClient.Services;
 
-public class NomenclatureService : IHostedService
+public class NomenclatureService(INamePlateGui namePlateGui) : IHostedService
 {
     private readonly ConcurrentDictionary<(string Name, string World), Nomenclature> _nomenclatures = [];
     
@@ -24,6 +25,7 @@ public class NomenclatureService : IHostedService
         {
             _nomenclatures[(characterName, characterWorld)] = new Nomenclature(newName, behavior, string.Empty, NomenclatureBehavior.DisplayOriginal);
         }
+        namePlateGui.RequestRedraw();
     }
 
     public void SetWorld(string characterName, string characterWorld, string newWorld, NomenclatureBehavior behavior)
@@ -37,6 +39,7 @@ public class NomenclatureService : IHostedService
         {
             _nomenclatures[(characterName, characterWorld)] = new Nomenclature(string.Empty, NomenclatureBehavior.DisplayOriginal, newWorld, behavior);
         }
+        namePlateGui.RequestRedraw();
     }
 
     public void Set(string characterName, string characterWorld, Nomenclature newNomenclature)
@@ -52,6 +55,7 @@ public class NomenclatureService : IHostedService
         {
             _nomenclatures[(characterName, characterWorld)] = newNomenclature;
         }
+        namePlateGui.RequestRedraw();
     }
     
     public void Set(string characterName, string characterWorld, string name, NomenclatureBehavior nameBehavior, string world, NomenclatureBehavior worldBehavior)
@@ -67,11 +71,13 @@ public class NomenclatureService : IHostedService
         {
             _nomenclatures[(characterName, characterWorld)] = new Nomenclature(name, worldBehavior, world, worldBehavior);
         }
+        namePlateGui.RequestRedraw();
     }
 
     public void RemoveNomenclatureForCharacter(string characterName, string characterWorld)
     {
         _nomenclatures.TryRemove((characterName, characterWorld), out _);
+        namePlateGui.RequestRedraw();
     }
 
     public Nomenclature? TryGetNomenclature(string name, string world)
