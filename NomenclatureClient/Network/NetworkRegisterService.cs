@@ -75,7 +75,11 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
                     var resmodel = JsonSerializer.Deserialize<ValidateCharacterRegistrationResponse>(text, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
                     if (resmodel?.Status is "bound")
                     {
-                        return resmodel.Token;
+                        return resmodel.Secret;
+                    }
+                    if(resmodel?.Status is not "unbound")
+                    {
+                        throw new Exception(resmodel?.Status);
                     }
                 }
                 if (resp.StatusCode == HttpStatusCode.BadRequest)

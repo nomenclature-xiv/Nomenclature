@@ -77,6 +77,24 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results);
     }
 
+    [HubMethodName(HubMethod.AddPair)]
+    public async Task<string> AddPair(string syncCode)
+    {
+        var res = await database.CreatePair(SyncCode, syncCode);
+    }
+
+    [HubMethodName(HubMethod.RemovePair)]
+    public async Task<string> RemovePair(string syncCode)
+    {
+
+    }
+
+    [HubMethodName(HubMethod.PausePair)]
+    public async Task<string> PausePair(string syncCode)
+    {
+
+    }
+
     [HubMethodName(HubMethod.UpdateNomenclature)]
     public async Task<UpdateNomenclatureResponse> UpdateNomenclature(UpdateNomenclatureRequest request)
     {

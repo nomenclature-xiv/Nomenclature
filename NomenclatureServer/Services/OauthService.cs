@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Text;
 using NomenclatureCommon.Domain.Exceptions;
 using Microsoft.Extensions.Hosting;
+using NomenclatureServer.Utilities;
 
 namespace NomenclatureServer.Services
 {
@@ -18,7 +19,7 @@ namespace NomenclatureServer.Services
     {
         private const string url = "https://xivauth.net";
         private const string client_id = "AiasXFDGFGc2pVPk6XvEgY5WPAn7x3PMgN-4yJ49VD4";
-        private Dictionary<string, Character?> loginEphemerals = new();
+        private Dictionary<string, CharacterResponseModel?> loginEphemerals = new();
 
         public string GetAuthorizationUrl(string ticket)
         {
@@ -79,29 +80,20 @@ namespace NomenclatureServer.Services
             string text = await res.Content.ReadAsStringAsync();
             var resmodel = JsonSerializer.Deserialize<CharacterResponseModel[]>(text);
             if (resmodel is null || resmodel.Length < 1) return;
-            loginEphemerals[state] = new Character(resmodel[0].name, resmodel[0].home_world);
+            loginEphemerals[state] = resmodel[0];
         }
 
-        public JwtSecurityToken? ValidateTicket(Character character, string ticket)
+        public CharacterResponseModel? ValidateTicket(Character character, string ticket)
         {
             loginEphemerals.TryGetValue(ticket, out var bound);
             if (bound is null) return null;
-            
-            if (!character.Equals(bound))
+
+            if (!character.Equals(new Character(bound.name, bound.home_world)))
             {
                 loginEphemerals.Remove(ticket);
                 throw new CharacterNotMatchingException("The character that was authorized via XIVAuth does not match your current character. Please try again, proceeding through the login steps with the correct character.");
             }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SigningKey));
-            var descriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity([new Claim(AuthClaimType.SyncCode, bound.ToString())]),
-                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
-                Expires = DateTime.UtcNow.AddHours(4)
-            };
-
-            return new JwtSecurityTokenHandler().CreateJwtSecurityToken(descriptor);
+            return loginEphemerals[ticket];
         }
 
         public Task StartAsync(CancellationToken token)

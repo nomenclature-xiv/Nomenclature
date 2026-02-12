@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NomenclatureCommon.Domain.Api.Controller;
+using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
+using NomenclatureServer.Utilities;
 
 namespace NomenclatureServer.Controllers;
 
@@ -32,10 +34,15 @@ public class RegistrationController(DatabaseService database, OauthService authS
     {
         try
         {
-            var token = authService.ValidateTicket(request.Character, request.Ticket);
-            if (token is null)
-                return Ok(new ValidateCharacterRegistrationResponse() { Status = "unbound", Token = null });
-            return Ok(new ValidateCharacterRegistrationResponse() { Status = "bound", Token = token.RawData });
+            var lodestone = authService.ValidateTicket(request.Character, request.Ticket);
+            if (lodestone is null)
+                return Ok(new ValidateCharacterRegistrationResponse() { Status = "unbound", Secret = null });
+            var secret = AuthUtilities.GenerateSecret();
+            var friendcode = AuthUtilities.GenerateFriendCode();
+            var succ = await database.CreateAccount(lodestone.lodestone_id, friendcode, secret);
+            if (succ != DatabaseResultEc.Success)
+                return Ok(new ValidateCharacterRegistrationResponse() { Status = "Could not create account! Was this character already used to register an account?", Secret = null});
+            return Ok(new ValidateCharacterRegistrationResponse() { Status = "bound", Secret = secret });
         }
         catch (Exception ex)
         {

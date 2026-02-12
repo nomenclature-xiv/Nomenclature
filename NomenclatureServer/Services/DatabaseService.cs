@@ -71,7 +71,7 @@ public class DatabaseService
     /// <summary>
     ///     Creates a one-direction pair with target account id
     /// </summary>
-    public async Task<DatabaseResultEc> CreatePair(int senderSyncCode, int targetSyncCode)
+    public async Task<DatabaseResultEc> CreatePair(string senderSyncCode, string targetSyncCode)
     {
         await using var transaction = (SqliteTransaction)await _database.BeginTransactionAsync();
 
@@ -131,7 +131,7 @@ public class DatabaseService
     /// <summary>
     ///     Pauses a one-sided pair
     /// </summary>
-    public async Task<DatabaseResultEc> PausePair(int senderSyncCode, int targetSyncCode, bool paused)
+    public async Task<DatabaseResultEc> PausePair(string senderSyncCode, string targetSyncCode, bool paused)
     {
         await using var command = _database.CreateCommand();
         command.CommandText = "UPDATE Pairs SET Paused = @pause WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";

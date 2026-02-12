@@ -122,6 +122,24 @@ public class ConfigurationService : IHostedService
         }
     }
 
+    public async Task<bool> InitSecretAsync(string name, string world, string secret)
+    {
+        try
+        {
+            string secretid = $"{name}{world}";
+            Configuration.Secrets[secretid] = secret;
+            CharacterConfiguration?.SecretId = secretid;
+            await SaveConfigurationAsync();
+            await SaveCharacterConfigurationAsync();
+            return true;
+        }
+        catch (Exception e)
+        {
+            _pluginLog.Error($"[ConfigurationService.SaveConfigurationAsync] {e}");
+            return false;
+        }
+    }
+
     /// <summary>
     ///     Load a character configuration into this service instance
     /// </summary>

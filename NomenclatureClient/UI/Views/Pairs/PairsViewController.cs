@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.Pairs;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NomenclatureClient.UI.Views.Pairs;
 
@@ -16,17 +18,19 @@ public class PairsViewController(PairService pairService, NetworkService network
     public IReadOnlyDictionary<string, PairDto> OfflinePairs => _pairs.Where(i => i.Value is OfflinePairDto).ToImmutableDictionary();
     public IReadOnlyDictionary<string, PairDto> PendingPairs => _pairs.Where(i => i.Value is PendingPairDto).ToImmutableDictionary();
 
-    public void Pause(string item)
+    public async Task Pause(string item)
     {
+        var res = await networkService.InvokeAsync<string>(HubMethod.PausePair, item);
     }
 
-    public void Remove(string item)
+    public async Task Remove(string item)
     {
-
+        var res = await networkService.InvokeAsync<string>(HubMethod.RemovePair, item);
     }
 
-    public void Add()
+    public async void Add()
     {
+        var res = await networkService.InvokeAsync<string>(HubMethod.AddPair, guh);
     }
 
 }

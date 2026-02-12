@@ -35,7 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>
     ///     Entry point for the plugin
     /// </summary>
-    public Plugin(IChatGui chatGui, IClientState clientState, ICommandManager commandManager, IDalamudPluginInterface pluginInterface, IDataManager dataManager, IFramework framework, INamePlateGui namePlateGui, IObjectTable objectTable, IPluginLog pluginLog)
+    public Plugin(IChatGui chatGui, IClientState clientState, ICommandManager commandManager, IDalamudPluginInterface pluginInterface, IDataManager dataManager, IFramework framework, INamePlateGui namePlateGui, IObjectTable objectTable, IPluginLog pluginLog, IPlayerState playerState)
     {
         _host = new HostBuilder()
             .UseContentRoot(pluginInterface.ConfigDirectory.FullName)
@@ -59,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
                 collection.AddSingleton(pluginLog);
                 collection.AddSingleton(dataManager);
                 collection.AddSingleton(chatGui);
+                collection.AddSingleton(playerState);
                 
                 // Internal Services
                 collection.AddSingleton<ConfigurationService>();

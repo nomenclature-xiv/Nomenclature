@@ -14,6 +14,6 @@ namespace NomenclatureCommon.Domain.Api.Controller
         [Key(0)]
         public string Status { get; set; } = string.Empty;
         [Key(1)]
-        public string? Token { get; set; } = null;
+        public string? Secret { get; set; } = null;
     }
 }
