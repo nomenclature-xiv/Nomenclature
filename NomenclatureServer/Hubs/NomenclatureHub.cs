@@ -78,19 +78,19 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     }
 
     [HubMethodName(HubMethod.AddPair)]
-    public async Task<string> AddPair(string syncCode)
+    public async Task<bool> AddPair(string syncCode)
     {
         var res = await database.CreatePair(SyncCode, syncCode);
     }
 
     [HubMethodName(HubMethod.RemovePair)]
-    public async Task<string> RemovePair(string syncCode)
+    public async Task<bool> RemovePair(string syncCode)
     {
 
     }
 
     [HubMethodName(HubMethod.PausePair)]
-    public async Task<string> PausePair(string syncCode)
+    public async Task<bool> PausePair(string syncCode)
     {
 
     }

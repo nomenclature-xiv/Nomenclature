@@ -20,17 +20,21 @@ public class PairsViewController(PairService pairService, NetworkService network
 
     public async Task Pause(string item)
     {
-        var res = await networkService.InvokeAsync<string>(HubMethod.PausePair, item);
+        var res = await networkService.InvokeAsync<bool>(HubMethod.PausePair, item);
+        if(res)
+        {
+            pairService.
+        }
     }
 
     public async Task Remove(string item)
     {
-        var res = await networkService.InvokeAsync<string>(HubMethod.RemovePair, item);
+        var res = await networkService.InvokeAsync<bool>(HubMethod.RemovePair, item);
     }
 
     public async void Add()
     {
-        var res = await networkService.InvokeAsync<string>(HubMethod.AddPair, guh);
+        var res = await networkService.InvokeAsync<bool>(HubMethod.AddPair, guh);
     }
 
 }
