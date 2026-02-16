@@ -1,5 +1,4 @@
 using Dalamud.Bindings.ImGui;
-using NomenclatureClient.Managers;
 using NomenclatureClient.Services;
 
 namespace NomenclatureClient.UI.Views.Nomenclature;
@@ -41,11 +40,11 @@ public class NomenclatureView(NomenclatureViewController controller)
         
         FontService.MediumFont?.Push();
         if (ImGui.Button("Submit Changes"))
-            controller.SubmitChanges();
+            _ = controller.SubmitChanges().ConfigureAwait(false);
         
         ImGui.SameLine();
         if (ImGui.Button("Remove Nomenclature"))
-            controller.RemoveNomenclature();
+            _ =controller.RemoveNomenclature().ConfigureAwait(false);
         
         FontService.MediumFont?.Pop();
     }

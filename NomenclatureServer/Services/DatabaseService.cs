@@ -149,6 +149,27 @@ public class DatabaseService
             return DatabaseResultEc.Unknown;
         }
     }
+    
+    /// <summary>
+    ///     Removes a one-sided pair
+    /// </summary>
+    public async Task<DatabaseResultEc> RemovePair(string senderSyncCode, string targetSyncCode)
+    {
+        await using var command = _database.CreateCommand();
+        command.CommandText = "DELETE FROM Pairs WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";
+        command.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
+        command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
+        
+        try
+        {
+            return await command.ExecuteNonQueryAsync() is 0 ? DatabaseResultEc.NoOp : DatabaseResultEc.Success;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("[RemovePair] {Error}", e);
+            return DatabaseResultEc.Unknown;
+        }
+    }
 
     /// <summary>
     ///     Get all the pairs for a provided account id

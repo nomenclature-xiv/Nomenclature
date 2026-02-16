@@ -3,20 +3,8 @@ using MessagePack;
 namespace NomenclatureCommon.Domain.Network.InitializeSession;
 
 [MessagePackObject]
-public record InitializeSessionRequest
-{
-    [Key(0)] public string CharacterName { get; set; } = string.Empty;
-    [Key(1)] public string CharacterWorld { get; set; } = string.Empty;
-    [Key(2)] public Nomenclature Nomenclature { get; set; } = new();
-
-    public InitializeSessionRequest()
-    {
-    }
-
-    public InitializeSessionRequest(string characterName, string characterWorld, Nomenclature nomenclature)
-    {
-        CharacterName = characterName;
-        CharacterWorld = characterWorld;
-        Nomenclature = nomenclature;
-    }
-}
+public record InitializeSessionRequest(
+    [property: Key(0)] string CharacterName,
+    [property: Key(1)] string CharacterWorld,
+    [property: Key(2)] NomenclatureDto NomenclatureDto
+);

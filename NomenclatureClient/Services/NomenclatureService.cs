@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
+using NomenclatureClient.Types;
 using NomenclatureCommon.Domain;
 
 // ReSharper disable RedundantBoolCompare

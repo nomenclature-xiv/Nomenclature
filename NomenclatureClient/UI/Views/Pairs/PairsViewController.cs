@@ -23,7 +23,7 @@ public class PairsViewController(PairService pairService, NetworkService network
         var res = await networkService.InvokeAsync<bool>(HubMethod.PausePair, item);
         if(res)
         {
-            pairService.
+            
         }
     }
 

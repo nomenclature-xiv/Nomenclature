@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types.Extensions;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
 using NomenclatureCommon.Domain.Network.Pairs;
@@ -31,8 +32,8 @@ public class ConnectionManager : IHostedService
     {
         if (_configuration.CharacterConfiguration is not { } player)
             return;
-
-        var request = new InitializeSessionRequest(player.Name, player.World, player.Nomenclature);
+        
+        var request = new InitializeSessionRequest(player.Name, player.World, player.Nomenclature.ToNomenclatureDto());
         var response = await _network.InvokeAsync<InitializeSessionResponse>(HubMethod.InitializeSession, request).ConfigureAwait(false);
         if (response.ErrorCode is not RequestErrorCode.Success)
             return;
@@ -41,7 +42,7 @@ public class ConnectionManager : IHostedService
         {
             _pairs.Add(pair);
             if (pair is OnlinePairDto onlinePairDto)
-                _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.Nomenclature);
+                _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.NomenclatureDto.ToNomenclature());
         }
         _nomenclatures.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, _configuration.CharacterConfiguration.Nomenclature);
     }

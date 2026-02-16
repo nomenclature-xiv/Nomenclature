@@ -7,7 +7,11 @@ using NomenclatureServer.Services;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
 using NomenclatureCommon.Domain.Network.Pairs;
+using NomenclatureCommon.Domain.Network.Pairs.AddPair;
+using NomenclatureCommon.Domain.Network.Pairs.PausePair;
+using NomenclatureCommon.Domain.Network.Pairs.RemovePair;
 using NomenclatureCommon.Domain.Network.RemoveNomenclature;
+using NomenclatureCommon.Domain.Network.Responses;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
 using NomenclatureServer.Utilities;
@@ -34,10 +38,10 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
 
-        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+        if (Validator.TryValidateNomenclature(request.NomenclatureDto) is false)
             return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, []);
 
-        nomenclatures.Upsert(syncCode, request.Nomenclature);
+        nomenclatures.Upsert(syncCode, request.NomenclatureDto);
 
         var results = new List<PairDto>();
         foreach (var pair in await database.GetAllPairs(syncCode))
@@ -65,7 +69,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, request.Nomenclature, information.CharacterName, information.CharacterWorld));
+                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, request.NomenclatureDto, information.CharacterName, information.CharacterWorld));
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -78,31 +82,60 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     }
 
     [HubMethodName(HubMethod.AddPair)]
-    public async Task<bool> AddPair(string syncCode)
+    public async Task<PairResponse> AddPair(AddPairRequest request)
     {
-        var res = await database.CreatePair(SyncCode, syncCode);
+        var result = await database.CreatePair(SyncCode, request.TargetPairCode);
+        var code = result switch
+        {
+            DatabaseResultEc.Success or DatabaseResultEc.AlreadyPaired => PairResponseErrorCode.Success,
+            DatabaseResultEc.Pending => PairResponseErrorCode.PairPending,
+            DatabaseResultEc.NoSuchSyncCode => PairResponseErrorCode.NoSuchPairCode,
+            _ => PairResponseErrorCode.Unknown
+        };
+
+        // If we successfully added, we can retrieve their friend code, and send them ours
+        if (code is PairResponseErrorCode.Success)
+        {
+            
+        }
+
+        return new PairResponse(code);
     }
 
     [HubMethodName(HubMethod.RemovePair)]
-    public async Task<bool> RemovePair(string syncCode)
+    public async Task<PairResponse> RemovePair(RemovePairRequest request)
     {
+        var result = await database.RemovePair(SyncCode, request.TargetPairCode);
+        var code = result switch
+        {
+            DatabaseResultEc.Success or DatabaseResultEc.NoOp => PairResponseErrorCode.Success,
+            _ => PairResponseErrorCode.Unknown
+        };
 
+        return new PairResponse(code);
     }
 
     [HubMethodName(HubMethod.PausePair)]
-    public async Task<bool> PausePair(string syncCode)
+    public async Task<PairResponse> PausePair(PausePairRequest request)
     {
+        var result = await database.PausePair(SyncCode, request.TargetPairCode, request.Pause);
+        var code = result switch
+        {
+            DatabaseResultEc.Success or DatabaseResultEc.NoOp => PairResponseErrorCode.Success,
+            _ => PairResponseErrorCode.Unknown
+        };
 
+        return new PairResponse(code);
     }
 
     [HubMethodName(HubMethod.UpdateNomenclature)]
     public async Task<UpdateNomenclatureResponse> UpdateNomenclature(UpdateNomenclatureRequest request)
     {
         var syncCode = SyncCode;
-        if (Validator.TryValidateNomenclature(request.Nomenclature) is false)
+        if (Validator.TryValidateNomenclature(request.NomenclatureDto) is false)
             return new UpdateNomenclatureResponse(RequestErrorCode.InvalidNomenclature);
 
-        nomenclatures.Upsert(syncCode, request.Nomenclature);
+        nomenclatures.Upsert(syncCode, request.NomenclatureDto);
 
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
@@ -111,7 +144,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
             try
             {
-                var forward = new UpdateNomenclatureForwardedRequest(syncCode, request.Nomenclature);
+                var forward = new UpdateNomenclatureForwardedRequest(syncCode, request.NomenclatureDto);
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateNomenclature, forward);
             }
             catch (Exception e)

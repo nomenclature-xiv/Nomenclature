@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types.Extensions;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.RemoveNomenclature;
@@ -22,7 +23,7 @@ public class NomenclatureViewController : IHostedService
     
     public readonly string[] Behaviors = Enum.GetNames<NomenclatureBehavior>();
 
-    public NomenclatureCommon.Domain.Nomenclature? Nomenclature;
+    public Types.Nomenclature? Nomenclature;
     
     public string NomenclatureName, NomenclatureWorld;
     public int NomenclatureNameBehaviorIndex, NomenclatureWorldBehaviorIndex;
@@ -43,7 +44,7 @@ public class NomenclatureViewController : IHostedService
 
     private void OnLoginFinished()
     {
-        Nomenclature = _configuration.CharacterConfiguration?.Nomenclature ?? new NomenclatureCommon.Domain.Nomenclature();
+        Nomenclature = _configuration.CharacterConfiguration?.Nomenclature ?? Types.Nomenclature.Empty;
         
         NomenclatureName = Nomenclature.Name;
         NomenclatureWorld = Nomenclature.World;
@@ -106,47 +107,57 @@ public class NomenclatureViewController : IHostedService
         return name + " «" + world + "»";
     }
 
-    public async void SubmitChanges()
+    public async Task SubmitChanges()
     {
-        try
-        {
-            var nameBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureNameBehaviorIndex], out var nameMode) ? nameMode : NomenclatureBehavior.DisplayOriginal;
-            var worldBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureWorldBehaviorIndex], out var worldMode) ? worldMode : NomenclatureBehavior.DisplayOriginal;
+        // We shouldn't save changes if the character configuration isn't set
+        if (_configuration.CharacterConfiguration is null)
+            return;
+        
+        var nameBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureNameBehaviorIndex], out var nameMode) ? nameMode : NomenclatureBehavior.DisplayOriginal;
+        var worldBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureWorldBehaviorIndex], out var worldMode) ? worldMode : NomenclatureBehavior.DisplayOriginal;
             
-            var nomenclature = new NomenclatureCommon.Domain.Nomenclature(NomenclatureName, nameBehavior, NomenclatureWorld, worldBehavior);
-            var request = new UpdateNomenclatureRequest(nomenclature);
-            
-            var response = await _networkService.InvokeAsync<UpdateNomenclatureResponse>(HubMethod.UpdateNomenclature, request).ConfigureAwait(false);
+        // TODO: Validate NomenclatureName, NomenclatureWorld
+        var nomenclature = new NomenclatureDto(NomenclatureName, nameBehavior, NomenclatureWorld, worldBehavior);
+        var request = new UpdateNomenclatureRequest(nomenclature);
+        var response = await _networkService.InvokeAsync<UpdateNomenclatureResponse>(HubMethod.UpdateNomenclature, request).ConfigureAwait(false);
 
-            if (response.ErrorCode is not RequestErrorCode.Success)
-                return;
-
-            _nomenclatureService.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, nomenclature);
-            Nomenclature = nomenclature;
-            _configuration.CharacterConfiguration?.Nomenclature = nomenclature;
-            await _configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
-        }
-        catch (Exception)
+        // TODO: Log failures
+        if (response.ErrorCode is not RequestErrorCode.Success)
         {
-            // Ignored
+            return;
         }
+
+        // Convert back to domain
+        var domain = nomenclature.ToNomenclature();
+        
+        // Set Nomenclature in service
+        _nomenclatureService.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, domain);
+        
+        // Set Nomenclature for Ui editing purposes
+        Nomenclature = domain;
+        
+        // Set and save Nomenclature
+        _configuration.CharacterConfiguration.Nomenclature = domain;
+        await _configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
     }
 
-    public async void RemoveNomenclature()
+    public async Task RemoveNomenclature()
     {
-        try
-        {
-            var request = new RemoveNomenclatureRequest();
-            var response = await _networkService.InvokeAsync<RemoveNomenclatureResponse>(HubMethod.RemoveNomenclature, request).ConfigureAwait(false);
-            if (response.ErrorCode is not RequestErrorCode.Success)
-                return;
-            _nomenclatureService.RemoveNomenclatureForCharacter(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World);
-            // Do something
-        }
-        catch (Exception)
-        {
-            // Ignore
-        }
+        // We shouldn't save changes if the character configuration isn't set
+        if (_configuration.CharacterConfiguration is null)
+            return;
+        
+        var request = new RemoveNomenclatureRequest();
+        var response = await _networkService.InvokeAsync<RemoveNomenclatureResponse>(HubMethod.RemoveNomenclature, request).ConfigureAwait(false);
+        if (response.ErrorCode is not RequestErrorCode.Success)
+            return;
+        
+        // Remove our Nomenclature
+        _nomenclatureService.RemoveNomenclatureForCharacter(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World);
+        
+        // Set and save an empty Nomenclature
+        _configuration.CharacterConfiguration.Nomenclature = Types.Nomenclature.Empty;
+        await _configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
     }
     
     public Task StartAsync(CancellationToken cancellationToken)

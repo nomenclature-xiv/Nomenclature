@@ -1,12 +1,12 @@
 using Dalamud.Bindings.ImGui;
 using NomenclatureClient.Utils;
-using System;
-using System.Linq;
 
 namespace NomenclatureClient.UI.Views.Pairs;
 
 public class PairsView(PairsViewController controller)
 {
+    // TODO: This doesn't actually display the individual categories
+    
     public void Draw()
     {
         ImGui.InputText("##Friend", ref controller.guh);
@@ -23,10 +23,10 @@ public class PairsView(PairsViewController controller)
                     ImGui.TextUnformatted(item);
                     ImGui.SameLine();
                     if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Pause))
-                        controller.Pause(item);
+                        _ = controller.Pause(item).ConfigureAwait(false);
                     ImGui.SameLine();
                     if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        controller.Remove(item);
+                        _ = controller.Remove(item).ConfigureAwait(false);
                 }
             });
         }
@@ -40,7 +40,7 @@ public class PairsView(PairsViewController controller)
                     ImGui.TextUnformatted(item);
                     ImGui.SameLine();
                     if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        controller.Remove(item);
+                        _ = controller.Remove(item).ConfigureAwait(false);
                 }
             });
         }
@@ -54,7 +54,7 @@ public class PairsView(PairsViewController controller)
                     ImGui.TextUnformatted(item);
                     ImGui.SameLine();
                     if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        controller.Remove(item);
+                        _ = controller.Remove(item).ConfigureAwait(false);
                 }
             });
         }

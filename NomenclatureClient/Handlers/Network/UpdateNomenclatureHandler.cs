@@ -1,5 +1,6 @@
 using Dalamud.Plugin.Services;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types.Extensions;
 using NomenclatureCommon.Domain.Network.Pairs;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 
@@ -14,6 +15,6 @@ public class UpdateNomenclatureHandler(IPluginLog logger, NomenclatureService no
         if (pairs.TryGet(request.SyncCode) is not OnlinePairDto pair)
             return;
         
-        nomenclatures.Set(pair.CharacterName, pair.CharacterWorld, pair.Nomenclature);
+        nomenclatures.Set(pair.CharacterName, pair.CharacterWorld, pair.NomenclatureDto.ToNomenclature());
     }
 }

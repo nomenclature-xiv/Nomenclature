@@ -1,5 +1,3 @@
-using NomenclatureCommon.Domain;
-
 namespace NomenclatureClient.Types.Configurations;
 
 public class CharacterConfigurationV2
@@ -37,5 +35,5 @@ public class CharacterConfigurationV2
     /// <summary>
     ///     The saved / active nomenclature
     /// </summary>
-    public Nomenclature Nomenclature = new();
+    public Nomenclature Nomenclature = Nomenclature.Empty;
 }
