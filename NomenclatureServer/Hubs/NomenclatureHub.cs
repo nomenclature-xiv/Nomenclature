@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
@@ -82,9 +83,10 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     }
 
     [HubMethodName(HubMethod.AddPair)]
-    public async Task<PairResponse> AddPair(AddPairRequest request)
+    public async Task<PairResponse<NomenclatureDto>?> AddPair(AddPairRequest request)
     {
-        var result = await database.CreatePair(SyncCode, request.TargetPairCode);
+        var senderSyncCode = SyncCode;
+        var result = await database.CreatePair(senderSyncCode, request.TargetPairCode);
         var code = result switch
         {
             DatabaseResultEc.Success or DatabaseResultEc.AlreadyPaired => PairResponseErrorCode.Success,
@@ -93,13 +95,40 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
             _ => PairResponseErrorCode.Unknown
         };
 
-        // If we successfully added, we can retrieve their friend code, and send them ours
-        if (code is PairResponseErrorCode.Success)
+        // Exit early if not in a success state
+        if (code is not PairResponseErrorCode.Success and PairResponseErrorCode.PairPending)
+            return new PairResponse<NomenclatureDto>(code, null);
+        
+        // If they're not online, exit early
+        if (connections.TryGetConnectedClient(request.TargetPairCode) is not { } target)
+            return new PairResponse<NomenclatureDto>(code, null);
+        
+        // If they're online, send our nomenclature to them
+        try
         {
+            if (connections.TryGetConnectedClient(senderSyncCode) is not { } sender)
+            {
+                // This shouldn't happen ever...
+                return new PairResponse<NomenclatureDto>(code, null);
+            }
+
+            if (nomenclatures.TryGet(senderSyncCode) is not { } senderNomenclature)
+                senderNomenclature = null;
             
+            var online = new OnlinePairDto(senderSyncCode, false, false, senderNomenclature, sender.CharacterName, sender.CharacterWorld);
+            var sync = new UpdateOnlineStatusForwardedRequest(online);
+            await Clients.Clients(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, sync);
+        }
+        catch (Exception e)
+        {
+            logger.LogError("[AddPair] Error while sending updated status, {Error}", e);
         }
 
-        return new PairResponse(code);
+        // Grab their nomenclature if they have one
+        if (nomenclatures.TryGet(request.TargetPairCode) is not { } targetNomenclature)
+            targetNomenclature = null;
+        
+        return new PairResponse<NomenclatureDto>(code, targetNomenclature);
     }
 
     [HubMethodName(HubMethod.RemovePair)]
