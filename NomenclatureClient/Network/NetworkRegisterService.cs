@@ -14,8 +14,8 @@ namespace NomenclatureClient.Network;
 
 public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
 {
-    private const string RegisterPostUrlInit = "https://localhost:5006/registration/initiate";
-    private const string RegisterPostUrlPoll = "https://localhost:5006/registration/validate";
+    private const string RegisterPostUrlInit = "https://foxitsvc.com:5007/registration/initiate";
+    private const string RegisterPostUrlPoll = "https://foxitsvc.com:5007/registration/validate";
 
     public Func<Task>? Registered;
 

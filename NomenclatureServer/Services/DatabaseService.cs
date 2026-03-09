@@ -85,15 +85,14 @@ public class DatabaseService
             command.Transaction = transaction;
             command.CommandText = 
                  """
-                    INSERT INTO Pairs (SyncCode, TargetSyncCode, Paused)
-                    SELECT @syncCode, @targetSyncCode, @paused
+                    INSERT INTO Pairs (SyncCode, TargetSyncCode)
+                    SELECT @syncCode, @targetSyncCode
                     WHERE EXISTS (
-                        SELECT 1 FROM Accounts WHERE Id = @targetSyncCode
+                        SELECT 1 FROM Accounts WHERE SyncCode = @targetSyncCode
                     )
                  """;
             command.Parameters.AddWithValue("@syncCode", senderSyncCode);
             command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
-            command.Parameters.AddWithValue("@paused", 0);
             
             // If nothing was added, that means we're already paired or the target account doesn't exist
             if (await command.ExecuteNonQueryAsync() is 0)
@@ -124,28 +123,6 @@ public class DatabaseService
         {
             _logger.LogError("[CreatePair] {Error}", e);
             await transaction.RollbackAsync();
-            return DatabaseResultEc.Unknown;
-        }
-    }
-
-    /// <summary>
-    ///     Pauses a one-sided pair
-    /// </summary>
-    public async Task<DatabaseResultEc> PausePair(string senderSyncCode, string targetSyncCode, bool paused)
-    {
-        await using var command = _database.CreateCommand();
-        command.CommandText = "UPDATE Pairs SET Paused = @pause WHERE SyncCode = @senderSyncCode AND TargetSyncCode = @targetSyncCode";
-        command.Parameters.AddWithValue("@senderSyncCode", senderSyncCode);
-        command.Parameters.AddWithValue("@targetSyncCode", targetSyncCode);
-        command.Parameters.AddWithValue("@pause", paused);
-        
-        try
-        {
-            return await command.ExecuteNonQueryAsync() is 0 ? DatabaseResultEc.NoOp : DatabaseResultEc.Success;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("[PausePair] {Error}", e);
             return DatabaseResultEc.Unknown;
         }
     }
@@ -181,8 +158,7 @@ public class DatabaseService
             """
                 SELECT
                 p.TargetSyncCode,
-                p.Paused,
-                r.Paused AS PausedByThem
+                r.SyncCode IS NULL as OneWay
                 FROM Pairs p LEFT JOIN Pairs r ON r.SyncCode = p.TargetSyncCode AND r.TargetSyncCode = p.SyncCode
                 WHERE p.SyncCode = @syncCode;
             """;
@@ -197,13 +173,9 @@ public class DatabaseService
             {
                 // Always get the target account id
                 var targetSyncCode = reader.GetString(0);
-                
-                // Get our pair data for them
-                var leftSidePaused = reader.GetBoolean(1);
-                var rightSidePaused = reader.IsDBNull(2) ? null : (bool?)reader.GetBoolean(2);
-                
+                var oneway = reader.GetBoolean(1);
                 // Add pair
-                results.Add(new Pair(targetSyncCode, leftSidePaused, rightSidePaused));
+                results.Add(new Pair(targetSyncCode, oneway));
             }
 
             return results;
@@ -278,7 +250,6 @@ public class DatabaseService
                CREATE TABLE IF NOT EXISTS {PairsTable} (
                    SyncCode TEXT NOT NULL,
                    TargetSyncCode TEXT NOT NULL,
-                   Paused INTEGER NOT NULL DEFAULT 0,
                    PRIMARY KEY (SyncCode, TargetSyncCode),
                    FOREIGN KEY (SyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE,
                    FOREIGN KEY (TargetSyncCode) REFERENCES {AccountsTable} (SyncCode) ON UPDATE CASCADE ON DELETE CASCADE

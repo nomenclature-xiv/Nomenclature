@@ -22,9 +22,6 @@ public class PairsView(PairsViewController controller)
                 {
                     ImGui.TextUnformatted(item);
                     ImGui.SameLine();
-                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Pause))
-                        _ = controller.Pause(item).ConfigureAwait(false);
-                    ImGui.SameLine();
                     if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
                         _ = controller.Remove(item).ConfigureAwait(false);
                 }

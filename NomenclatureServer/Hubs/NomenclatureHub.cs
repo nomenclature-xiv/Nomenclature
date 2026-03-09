@@ -47,7 +47,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         var results = new List<PairDto>();
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.IsOneWay())
+            if (pair.IsOneWay)
             {
                 results.Add(new PendingPairDto(pair.SyncCode));
                 continue;
@@ -66,11 +66,11 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 continue;
             }
 
-            results.Add(new OnlinePairDto(pair.SyncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, nomenclature, target.CharacterName, target.CharacterWorld));
+            results.Add(new OnlinePairDto(pair.SyncCode, nomenclature, target.CharacterName, target.CharacterWorld));
 
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, pair.LeftSidePaused, pair.RightSidePaused ?? false, request.NomenclatureDto, information.CharacterName, information.CharacterWorld));
+                var forward = new UpdateOnlineStatusForwardedRequest(new OnlinePairDto(syncCode, request.NomenclatureDto, information.CharacterName, information.CharacterWorld));
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
@@ -83,7 +83,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     }
 
     [HubMethodName(HubMethod.AddPair)]
-    public async Task<PairResponse<NomenclatureDto>?> AddPair(AddPairRequest request)
+    public async Task<PairResponse<PairDto>> AddPair(AddPairRequest request)
     {
         var senderSyncCode = SyncCode;
         var result = await database.CreatePair(senderSyncCode, request.TargetPairCode);
@@ -96,12 +96,15 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         };
 
         // Exit early if not in a success state
-        if (code is not PairResponseErrorCode.Success and PairResponseErrorCode.PairPending)
-            return new PairResponse<NomenclatureDto>(code, null);
+        if (code is not (PairResponseErrorCode.Success or PairResponseErrorCode.PairPending))
+            return new PairResponse<PairDto>(code, null);
         
+        if(code is PairResponseErrorCode.PairPending)
+            return new PairResponse<PairDto>(code, new PendingPairDto(request.TargetPairCode));
+
         // If they're not online, exit early
         if (connections.TryGetConnectedClient(request.TargetPairCode) is not { } target)
-            return new PairResponse<NomenclatureDto>(code, null);
+            return new PairResponse<PairDto>(code, new OfflinePairDto(request.TargetPairCode));
         
         // If they're online, send our nomenclature to them
         try
@@ -109,13 +112,13 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
             if (connections.TryGetConnectedClient(senderSyncCode) is not { } sender)
             {
                 // This shouldn't happen ever...
-                return new PairResponse<NomenclatureDto>(code, null);
+                return new PairResponse<PairDto>(code, null);
             }
 
             if (nomenclatures.TryGet(senderSyncCode) is not { } senderNomenclature)
                 senderNomenclature = null;
             
-            var online = new OnlinePairDto(senderSyncCode, false, false, senderNomenclature, sender.CharacterName, sender.CharacterWorld);
+            var online = new OnlinePairDto(senderSyncCode, senderNomenclature, sender.CharacterName, sender.CharacterWorld);
             var sync = new UpdateOnlineStatusForwardedRequest(online);
             await Clients.Clients(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, sync);
         }
@@ -128,26 +131,13 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         if (nomenclatures.TryGet(request.TargetPairCode) is not { } targetNomenclature)
             targetNomenclature = null;
         
-        return new PairResponse<NomenclatureDto>(code, targetNomenclature);
+        return new PairResponse<PairDto>(code, new OnlinePairDto(request.TargetPairCode, targetNomenclature, target.CharacterName, target.CharacterWorld));
     }
 
     [HubMethodName(HubMethod.RemovePair)]
     public async Task<PairResponse> RemovePair(RemovePairRequest request)
     {
         var result = await database.RemovePair(SyncCode, request.TargetPairCode);
-        var code = result switch
-        {
-            DatabaseResultEc.Success or DatabaseResultEc.NoOp => PairResponseErrorCode.Success,
-            _ => PairResponseErrorCode.Unknown
-        };
-
-        return new PairResponse(code);
-    }
-
-    [HubMethodName(HubMethod.PausePair)]
-    public async Task<PairResponse> PausePair(PausePairRequest request)
-    {
-        var result = await database.PausePair(SyncCode, request.TargetPairCode, request.Pause);
         var code = result switch
         {
             DatabaseResultEc.Success or DatabaseResultEc.NoOp => PairResponseErrorCode.Success,
@@ -168,7 +158,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.IsOneWay()) continue;
+            if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
             try
@@ -195,7 +185,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.IsOneWay()) continue;
+            if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
             try
@@ -225,7 +215,7 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
         foreach (var pair in await database.GetAllPairs(syncCode))
         {
-            if (pair.IsOneWay()) continue;
+            if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
             try
