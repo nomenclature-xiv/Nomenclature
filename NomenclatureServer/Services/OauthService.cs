@@ -33,7 +33,7 @@ namespace NomenclatureServer.Services
 #if DEBUG
             query["redirect_uri"] = "https://localhost:5006/registration/callback";
 #else
-            query["redirect_uri"] = "https://foxitsvc.com:5007/registration/callback";
+            query["redirect_uri"] = "https://foxitsvc.com:5017/registration/callback";
 #endif
             query["state"] = ticket;
             builder.Query = query.ToString();
