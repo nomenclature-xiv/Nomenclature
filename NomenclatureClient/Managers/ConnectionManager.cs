@@ -38,10 +38,11 @@ public class ConnectionManager : IHostedService
         if (response.ErrorCode is not RequestErrorCode.Success)
             return;
 
+        _pairs.CurrentSyncCode = response.SyncCode;
         foreach (var pair in response.Pairs)
         {
             _pairs.Add(pair);
-            if (pair is OnlinePairDto onlinePairDto)
+            if (pair is OnlinePairDto onlinePairDto && onlinePairDto.NomenclatureDto is not null)
                 _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.NomenclatureDto.ToNomenclature());
         }
         _nomenclatures.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, _configuration.CharacterConfiguration.Nomenclature);

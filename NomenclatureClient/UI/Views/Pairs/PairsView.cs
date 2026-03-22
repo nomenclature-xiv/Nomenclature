@@ -5,10 +5,15 @@ namespace NomenclatureClient.UI.Views.Pairs;
 
 public class PairsView(PairsViewController controller)
 {
-    // TODO: This doesn't actually display the individual categories
     
     public void Draw()
     {
+        ImGui.Text(controller.SyncCode);
+        ImGui.SameLine();
+        if(SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Copy))
+        {
+            ImGui.SetClipboardText(controller.SyncCode);
+        }
         ImGui.InputText("##Friend", ref controller.guh);
         ImGui.SameLine();
         if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Plus, tooltip: "Add Friend"))

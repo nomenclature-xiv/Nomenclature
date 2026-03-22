@@ -14,6 +14,8 @@ namespace NomenclatureClient.Services;
 /// </summary>
 public class PairService : IHostedService
 {
+    public string CurrentSyncCode { get; set; } = string.Empty;
+
     private readonly ConcurrentDictionary<string, PairDto> _pairsBySyncCode = [];
     
     public void Add(PairDto pair) => _pairsBySyncCode[pair.SyncCode] = pair;

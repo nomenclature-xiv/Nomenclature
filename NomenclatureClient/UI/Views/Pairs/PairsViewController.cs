@@ -23,6 +23,8 @@ public class PairsViewController(IPluginLog pluginLog, PairService pairService, 
     public IReadOnlyDictionary<string, PairDto> OfflinePairs => _pairs.Where(i => i.Value is OfflinePairDto).ToImmutableDictionary();
     public IReadOnlyDictionary<string, PairDto> PendingPairs => _pairs.Where(i => i.Value is PendingPairDto).ToImmutableDictionary();
 
+    public string SyncCode => pairService.CurrentSyncCode;
+
     public async Task Remove(string item)
     {
         var res = await networkService.InvokeAsync<PairResponse>(HubMethod.RemovePair, new RemovePairRequest(item));

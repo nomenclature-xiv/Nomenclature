@@ -45,17 +45,17 @@ public class NetworkService : IHostedService
     public bool Connecting;
 
 #if DEBUG
-   // private const string HubUrl = "https://localhost:5006/nomenclature";
-    //private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
+    private const string HubUrl = "https://localhost:5006/nomenclature";
+    private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
 #else
     // Server URL 
-    //private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
-    // private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
+    private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
+     private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
 #endif
 
     // Beta
-    private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
-    private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
+    //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
+    //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
     
     // Injected
     private readonly IPluginLog _pluginLog;
