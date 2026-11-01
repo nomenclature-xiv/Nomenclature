@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -12,9 +13,9 @@ namespace NomenclatureClient.Handlers;
 
 public class ChatBoxHandler(IChatGui chatGui, ConfigurationService configuration, NomenclatureService nomenclatures) : IHostedService
 {
-    private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+    private void OnChatMessage(IHandleableChatMessage  message)
     {
-        switch (type)
+        switch (message.LogKind)
         {
             case XivChatType.Say:
             case XivChatType.Shout:
@@ -44,11 +45,11 @@ public class ChatBoxHandler(IChatGui chatGui, ConfigurationService configuration
             case XivChatType.Party:
             case XivChatType.CrossParty:
             case XivChatType.Alliance:
-                HandleDefaults(type, sender.Payloads);
+                HandleDefaults(message.LogKind, message.Sender.Payloads);
                 break;
             
             case XivChatType.StandardEmote:
-                HandleDefaults(type, message.Payloads);
+                HandleDefaults(message.LogKind, message.Sender.Payloads);
                 break;
             
             case XivChatType.None:

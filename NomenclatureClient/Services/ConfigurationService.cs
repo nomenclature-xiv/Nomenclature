@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Plugin;
@@ -42,6 +43,11 @@ public class ConfigurationService : IHostedService
     ///     The current configuration for the logged in character, loaded on login by <see cref="LoadCharacterConfigurationAsync"/> by <see cref="LoginManager"/>
     /// </summary>
     public CharacterConfigurationV2? CharacterConfiguration { get; private set; }
+
+    /// <summary>
+    ///     Whether any character is registered on startup.
+    /// </summary>
+    public bool AnyCharacterRegistered = false;
     
     /// <summary>
     ///     <inheritdoc cref="ConfigurationService"/>
@@ -51,6 +57,7 @@ public class ConfigurationService : IHostedService
         _baseConfigurationFolderPath = dalamudPluginInterface.GetPluginConfigDirectory();
         _configurationFilePath = Path.Combine(_baseConfigurationFolderPath, ConfigurationFileName);
         _charactersFolderPath = Path.Combine(_baseConfigurationFolderPath, CharactersFolderName);
+        CheckAnyCharacterRegistered();
         
         _pluginLog = pluginLog;
     }
@@ -210,6 +217,25 @@ public class ConfigurationService : IHostedService
         catch (Exception e)
         {
             _pluginLog.Error($"[ConfigurationService.SaveCharacterConfigurationAsync] {e}");
+        }
+    }
+    
+
+    public void CheckAnyCharacterRegistered()
+    {
+        try
+        {
+            if (!Directory.Exists(_charactersFolderPath))
+            {
+                AnyCharacterRegistered = false;
+                return;
+            }
+            AnyCharacterRegistered = Directory.EnumerateFiles(_charactersFolderPath).Any();
+        }
+        catch (Exception e)
+        {
+            _pluginLog.Error($"[ConfigurationService.AnyCharacterRegistered] {e}");
+            AnyCharacterRegistered = false;
         }
     }
 

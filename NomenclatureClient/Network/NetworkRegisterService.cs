@@ -9,14 +9,12 @@ using Microsoft.Win32;
 using System.Net.Http;
 using System.Net;
 using NomenclatureCommon.Domain.Exceptions;
+using NomenclatureClient.Network;
 
 namespace NomenclatureClient.Network;
 
 public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
 {
-    private const string RegisterPostUrlInit = "https://foxitsvc.com:5017/registration/initiate";
-    private const string RegisterPostUrlPoll = "https://foxitsvc.com:5017/registration/validate";
-
     public Func<Task>? Registered;
 
     public async Task<string?> RegisterCharacter(Character character)
@@ -40,7 +38,7 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
             {
                 Character = characterName
             };
-            var response = await NetworkUtils.PostRequest(client, JsonSerializer.Serialize(request), RegisterPostUrlInit);
+            var response = await NetworkUtils.PostRequest(client, JsonSerializer.Serialize(request), $"{NetworkConstants.BaseUrl}{NetworkConstants.RegisterPostUrlInit}");
             pluginLog.Verbose($"Registration request returned. Status: {response.StatusCode}");
             var text = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<BeginCharacterRegistrationResponse>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); 
@@ -68,7 +66,7 @@ public class NetworkRegisterService(IPluginLog pluginLog, HttpClient client)
         {
             try
             {
-                using var resp = await NetworkUtils.PostRequest(client, JsonSerializer.Serialize(data), RegisterPostUrlPoll).ConfigureAwait(false);
+                using var resp = await NetworkUtils.PostRequest(client, JsonSerializer.Serialize(data), $"{NetworkConstants.BaseUrl}{NetworkConstants.RegisterPostUrlPoll}").ConfigureAwait(false);
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
                     var text = await resp.Content.ReadAsStringAsync();

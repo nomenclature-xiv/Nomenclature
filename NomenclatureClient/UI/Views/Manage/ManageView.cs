@@ -1,6 +1,7 @@
 using System.Linq;
 using Dalamud.Bindings.ImGui;
 using NomenclatureClient.Services;
+using NomenclatureClient.Utils;
 
 namespace NomenclatureClient.UI.Views.Manage;
 
@@ -8,13 +9,14 @@ public class ManageView(ManageViewController controller, ConfigurationService co
 {
     public void Draw()
     {
-        FontService.BigFont?.Push();
-        ImGui.TextUnformatted("Secret Keys");
-        FontService.BigFont?.Pop();
+        SharedUserInterfaces.ContentBox(() =>
+        {
+            FontService.BigFont?.Push();
+            ImGui.TextUnformatted("Secret Keys");
+            FontService.BigFont?.Pop();
 
-        ImGui.Checkbox("Show Secrets", ref controller.ShowSecrets);
-        
-        ImGui.Separator();
+            ImGui.Checkbox("Show Secrets", ref controller.ShowSecrets);
+        });
         
         if (configuration.Configuration.Secrets.Count is 0)
         {
@@ -28,12 +30,18 @@ public class ManageView(ManageViewController controller, ConfigurationService co
             
             foreach (var (identifier, secret) in secrets)
             {
-                var i = identifier;
-                var s = secret;
-                ImGui.InputText("Secret Identifier", ref i, 512, ImGuiInputTextFlags.ReadOnly);
-                ImGui.InputText("Secret Key", ref s, 512, controller.ShowSecrets ? ImGuiInputTextFlags.ReadOnly : ImGuiInputTextFlags.ReadOnly | ImGuiInputTextFlags.Password);
-                if (ImGui.Button($"Delete Key##{secret}"))
-                    controller.DeleteSecret(identifier);
+                SharedUserInterfaces.ContentBox(() =>
+                {
+                    var i = identifier;
+                    var s = secret;
+                    ImGui.InputText("Secret Identifier", ref i, 512, ImGuiInputTextFlags.ReadOnly);
+                    ImGui.InputText("Secret Key", ref s, 512,
+                        controller.ShowSecrets
+                            ? ImGuiInputTextFlags.ReadOnly
+                            : ImGuiInputTextFlags.ReadOnly | ImGuiInputTextFlags.Password);
+                    if (ImGui.Button($"Delete Key##{secret}"))
+                        controller.DeleteSecret(identifier);
+                });
             }
         }
     }

@@ -73,6 +73,22 @@ public class LoginViewController : IHostedService
             // Ignore
         }
     }
+
+    public async void UpdateAutologin()
+    {
+        try
+        {
+            if (_configuration.CharacterConfiguration is null)
+                return;
+
+            _configuration.CharacterConfiguration.AutoConnect = this.AutoLogin;
+            await _configuration.SaveCharacterConfigurationAsync().ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            //ignore
+        }
+    }
     
     private void OnLoginFinished()
     {

@@ -47,6 +47,9 @@ public class LoginView(LoginViewController controller, ConfigurationService conf
             ImGui.EndCombo();
         }
 
-        ImGui.Checkbox("Automatically login to Nomenclature", ref controller.AutoLogin);
+        if (ImGui.Checkbox("Automatically login to Nomenclature", ref controller.AutoLogin))
+        {
+            controller.UpdateAutologin();
+        }
     }
 }

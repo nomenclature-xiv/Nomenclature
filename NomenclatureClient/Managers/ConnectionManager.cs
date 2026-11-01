@@ -12,6 +12,8 @@ namespace NomenclatureClient.Managers;
 
 public class ConnectionManager : IHostedService
 {
+    public bool IsConnected = false;
+    
     private readonly ConfigurationService _configuration;
     private readonly NetworkService _network;
     private readonly NomenclatureService _nomenclatures;
@@ -46,12 +48,14 @@ public class ConnectionManager : IHostedService
                 _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.NomenclatureDto.ToNomenclature());
         }
         _nomenclatures.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, _configuration.CharacterConfiguration.Nomenclature);
+        IsConnected = true;
     }
 
     private Task OnDisconnected()
     {
         _pairs.Clear();
         _nomenclatures.Clear();
+        IsConnected = false;
         return Task.CompletedTask;
     }
 
