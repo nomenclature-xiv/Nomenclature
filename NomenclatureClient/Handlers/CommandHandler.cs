@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types.Configurations;
-using NomenclatureClient.UI;
+using NomenclatureClient.UI.Windows;
 using NomenclatureClient.Utils;
 using NomenclatureCommon.Domain;
 

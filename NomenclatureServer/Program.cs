@@ -54,23 +54,18 @@ public class Program
         builder.Services.AddSingleton<IHostedService>(p => p.GetRequiredService<OauthService>());
 
 #if DEBUG
-        builder.WebHost.UseUrls("https://localhost:5006");
-        
-        /*builder.WebHost.ConfigureKestrel(options =>
+        builder.WebHost.ConfigureKestrel(options =>
         {
-            var ip = IPAddress.Parse("192.168.1.14");
-            options.Listen(ip, 5017, listenOptions =>
+            var ip = IPAddress.Parse("127.0.0.1");
+            options.Listen(ip, 5006, listenOptions =>
             {
                 listenOptions.UseHttps($"{configuration.CertificatePath}", $"{configuration.CertificatePasswordPath}");
             });
-        });*/
+        }).UseUrls("https://dotnet.local:5006");
 #else
         builder.WebHost.ConfigureKestrel(options => 
         {
-            options.Listen(Configuration.Ip, Configuration.Port, listenOptions =>
-            {
-                listenOptions.UseHttps($"{configuration.CertificatePath}", $"{configuration.CertificatePasswordPath}");
-            });
+            options.Listen(Configuration.Ip, Configuration.Port);
         });
 #endif
         

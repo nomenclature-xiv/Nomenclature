@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using NomenclatureClient.Network;
 using NomenclatureCommon.Domain.Api.Controller;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
@@ -55,7 +56,7 @@ public class RegistrationController(DatabaseService database, OauthService authS
     public async Task Callback([FromQuery] string code, [FromQuery] string state)
     {
         var request = HttpContext.Request;
-        var res = await authService.GetBearerToken(code, $"{request.Scheme}://{request.Host}{request.Path}");
+        var res = await authService.GetBearerToken(code, $"{NetworkConstants.BaseUrl}{request.Path}");
         if(res is null)
         {
             return;

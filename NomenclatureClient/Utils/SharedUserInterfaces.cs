@@ -89,4 +89,14 @@ public static class SharedUserInterfaces
         else
             ImGui.TextColored(color.Value, text);
     }
+
+    public static void InvisSelectableCentered(string text)
+    {
+        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - ImGui.CalcTextSize(text).X) * 0.5f);
+        ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui.Selectable(text);
+        ImGui.PopStyleColor(3);
+    }
 }

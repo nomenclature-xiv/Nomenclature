@@ -11,11 +11,13 @@ using System.Security.Claims;
 using System.Text;
 using NomenclatureCommon.Domain.Exceptions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NomenclatureClient.Network;
 using NomenclatureServer.Utilities;
 
 namespace NomenclatureServer.Services
 {
-    public class OauthService(HttpClient client, Configuration config) : IHostedService
+    public class OauthService(HttpClient client, Configuration config, ILogger<OauthService> logger) : IHostedService
     {
         private const string url = "https://xivauth.net";
         private const string client_id = "AiasXFDGFGc2pVPk6XvEgY5WPAn7x3PMgN-4yJ49VD4";
@@ -30,11 +32,9 @@ namespace NomenclatureServer.Services
             query["response_type"] = "code";
             query["client_id"] = client_id;
             query["scope"] = "character";
-#if DEBUG
-            query["redirect_uri"] = "https://foxitsvc.com:5017/registration/callback";
-#else
-            query["redirect_uri"] = "https://foxitsvc.com:5007/registration/callback";
-#endif
+            
+            query["redirect_uri"] = $"{NetworkConstants.BaseUrl}/registration/callback";
+
             query["state"] = ticket;
             builder.Query = query.ToString();
             return builder.Uri.ToString();
@@ -58,6 +58,12 @@ namespace NomenclatureServer.Services
                 redirect_uri = path
             };
             var res = await client.PostAsJsonAsync<TokenRequestModel>($"{url}/oauth/token", data);
+            if (!res.IsSuccessStatusCode)
+            {
+                logger.LogError("Did not succesfully request characters! Error code: {ErrorCode}", res.StatusCode);
+                logger.LogInformation("id: {clientid}, secret: {clientsecret}, code: {code}, redirect, path: {path}", client_id, config.ClientSecret, code, path);
+                return null;
+            }
             string text = await res.Content.ReadAsStringAsync();
             var resmodel = JsonSerializer.Deserialize<TokenResponseModel>(text);
             if (resmodel is null) return null;

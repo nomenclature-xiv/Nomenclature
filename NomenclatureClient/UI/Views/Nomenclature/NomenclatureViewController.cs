@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
@@ -20,21 +22,23 @@ public class NomenclatureViewController : IHostedService
     private readonly NetworkService _networkService;
     private readonly LoginManager _loginManager;
     private readonly NomenclatureService _nomenclatureService;
+    private readonly IPluginLog _pluginLog;
     
-    public readonly string[] Behaviors = Enum.GetNames<NomenclatureBehavior>();
+    public readonly string[] Behaviors = Enum.GetValues<NomenclatureBehavior>().Select(x => x.GetDisplayName()).ToArray();
 
     public Types.Nomenclature? Nomenclature;
     
     public string NomenclatureName, NomenclatureWorld;
     public int NomenclatureNameBehaviorIndex, NomenclatureWorldBehaviorIndex;
     
-    public NomenclatureViewController(ConfigurationService configuration, NetworkService networkService, LoginManager loginManager, NomenclatureService nomenclatureService)
+    public NomenclatureViewController(ConfigurationService configuration, NetworkService networkService, LoginManager loginManager, NomenclatureService nomenclatureService, IPluginLog pluginLog)
     {
         _configuration = configuration;
         _networkService = networkService;
         _loginManager = loginManager;
         _loginManager.LoginFinished += OnLoginFinished;
         _nomenclatureService = nomenclatureService;
+        _pluginLog = pluginLog;
         
         NomenclatureName = string.Empty;
         NomenclatureWorld = string.Empty;
@@ -48,8 +52,8 @@ public class NomenclatureViewController : IHostedService
         
         NomenclatureName = Nomenclature.Name;
         NomenclatureWorld = Nomenclature.World;
-        NomenclatureNameBehaviorIndex = Math.Max(Behaviors.IndexOf(Enum.GetName(Nomenclature.NameBehavior)), 0);
-        NomenclatureWorldBehaviorIndex = Math.Max(Behaviors.IndexOf(Enum.GetName(Nomenclature.WorldBehavior)), 0);
+        NomenclatureNameBehaviorIndex = Math.Max((int)Nomenclature.NameBehavior, 0);
+        NomenclatureWorldBehaviorIndex = Math.Max((int)Nomenclature.WorldBehavior, 0);
     }
 
     public string DisplayCurrentNomenclature()
@@ -76,14 +80,14 @@ public class NomenclatureViewController : IHostedService
         };
 
         if (nomenclature.NameBehavior is NomenclatureBehavior.DisplayNothing && nomenclature.WorldBehavior is NomenclatureBehavior.DisplayNothing)
-            return "<You are not displaying a name or world>";
+            return "<This space intentionally left blank>";
 
-        return name + " «" + world + "»";
+        return name + (nomenclature.WorldBehavior != NomenclatureBehavior.DisplayNothing ? " «" + world + "»" : "");
     }
 
     public string DisplayPendingNomenclature()
     {
-        Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureNameBehaviorIndex], out var nameMode);
+        NomenclatureBehavior nameMode = (NomenclatureBehavior)NomenclatureNameBehaviorIndex;
         var name = nameMode switch
         {
             NomenclatureBehavior.DisplayOriginal => _configuration.CharacterConfiguration?.Name,
@@ -92,7 +96,7 @@ public class NomenclatureViewController : IHostedService
             _ => "Unknown"
         };
         
-        Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureWorldBehaviorIndex], out var worldMode);
+        NomenclatureBehavior worldMode = (NomenclatureBehavior)NomenclatureWorldBehaviorIndex;
         var world = worldMode switch
         {
             NomenclatureBehavior.DisplayOriginal => _configuration.CharacterConfiguration?.World,
@@ -102,9 +106,9 @@ public class NomenclatureViewController : IHostedService
         };
 
         if (nameMode is NomenclatureBehavior.DisplayNothing && worldMode is NomenclatureBehavior.DisplayNothing)
-            return "<You are not displaying a name or world>";
+            return "<This space intentionally left blank>";
 
-        return name + " «" + world + "»";
+        return name + (worldMode != NomenclatureBehavior.DisplayNothing ? " «" + world + "»" : "");
     }
 
     public async Task SubmitChanges()
@@ -113,11 +117,11 @@ public class NomenclatureViewController : IHostedService
         if (_configuration.CharacterConfiguration is null)
             return;
         
-        var nameBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureNameBehaviorIndex], out var nameMode) ? nameMode : NomenclatureBehavior.DisplayOriginal;
-        var worldBehavior = Enum.TryParse<NomenclatureBehavior>(Behaviors[NomenclatureWorldBehaviorIndex], out var worldMode) ? worldMode : NomenclatureBehavior.DisplayOriginal;
+        NomenclatureBehavior nameMode = (NomenclatureBehavior)NomenclatureNameBehaviorIndex;
+        NomenclatureBehavior worldMode = (NomenclatureBehavior)NomenclatureWorldBehaviorIndex;
             
         // TODO: Validate NomenclatureName, NomenclatureWorld
-        var nomenclature = new NomenclatureDto(NomenclatureName, nameBehavior, NomenclatureWorld, worldBehavior);
+        var nomenclature = new NomenclatureDto(NomenclatureName, nameMode, NomenclatureWorld, worldMode);
         var request = new UpdateNomenclatureRequest(nomenclature);
         var response = await _networkService.InvokeAsync<UpdateNomenclatureResponse>(HubMethod.UpdateNomenclature, request).ConfigureAwait(false);
 

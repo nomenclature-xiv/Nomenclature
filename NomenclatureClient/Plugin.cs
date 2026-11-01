@@ -11,7 +11,7 @@ using NomenclatureClient.Handlers.Network;
 using NomenclatureClient.Managers;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
-using NomenclatureClient.UI;
+using NomenclatureClient.UI.Windows;
 using NomenclatureClient.UI.Views.Login;
 using NomenclatureClient.UI.Views.Manage;
 using NomenclatureClient.UI.Views.Nomenclature;
@@ -138,6 +138,8 @@ public sealed class Plugin : IDalamudPlugin
         
         // Windows
         collection.AddSingleton<PrimaryWindow>();
+        collection.AddSingleton<PairsWindow>();
+        collection.AddSingleton<SettingsWindow>();
         
         // Window Container
         collection.AddSingleton<WindowContainer>();

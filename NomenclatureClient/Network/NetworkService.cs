@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Services;
 using NomenclatureCommon.Domain.Api.Login;
+using NomenclatureClient.Network;
 
 // ReSharper disable RedundantBoolCompare
 
@@ -44,19 +45,6 @@ public class NetworkService : IHostedService
     /// </summary>
     public bool Connecting;
 
-#if DEBUG
-    private const string HubUrl = "https://localhost:5006/nomenclature";
-    private const string AuthPostUrl = "https://localhost:5006/api/auth/login";
-#else
-    // Server URL 
-    private const string HubUrl = "https://foxitsvc.com:5007/nomenclature";
-     private const string AuthPostUrl = "https://foxitsvc.com:5007/api/auth/login";
-#endif
-
-    // Beta
-    //private const string HubUrl = "https://foxitsvc.com:5017/nomenclature";
-    //private const string AuthPostUrl = "https://foxitsvc.com:5017/api/auth/login";
-    
     // Injected
     private readonly IPluginLog _pluginLog;
     private readonly ConfigurationService _configuration;
@@ -74,7 +62,7 @@ public class NetworkService : IHostedService
         _pluginLog = pluginLog;
         _configuration = configuration;
 
-        Connection = new HubConnectionBuilder().WithUrl(HubUrl, options =>
+        Connection = new HubConnectionBuilder().WithUrl($"{NetworkConstants.BaseUrl}{NetworkConstants.HubUrl}", options =>
             {
                 // ReSharper disable once RedundantTypeArgumentsOfMethod
                 options.AccessTokenProvider = () => Task.FromResult<string?>(_token);
@@ -243,7 +231,7 @@ public class NetworkService : IHostedService
 
         try
         {
-            var response = await client.PostAsync(AuthPostUrl, payload).ConfigureAwait(false);
+            var response = await client.PostAsync($"{NetworkConstants.BaseUrl}{NetworkConstants.AuthPostUrl}", payload).ConfigureAwait(false);
             var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (JsonSerializer.Deserialize<LoginAuthenticationResponse>(content, DeserializationOptions) is not { } result)
             {

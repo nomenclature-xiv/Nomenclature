@@ -31,6 +31,8 @@ public class RegisterViewController(IFramework framework, IPlayerState playerSta
                     return;
                 }
                 await configuration.InitSecretAsync(self.Name, self.World, res);
+                //updates character registration status
+                configuration.CheckAnyCharacterRegistered();
                 ErrorMessage = string.Empty;
             }
             catch (Exception ex)
