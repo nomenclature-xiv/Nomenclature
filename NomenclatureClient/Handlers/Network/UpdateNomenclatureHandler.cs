@@ -15,6 +15,6 @@ public class UpdateNomenclatureHandler(IPluginLog logger, NomenclatureService no
         if (pairs.TryGet(request.SyncCode) is not OnlinePairDto pair)
             return;
         
-        nomenclatures.Set(pair.CharacterName, pair.CharacterWorld, pair.NomenclatureDto.ToNomenclature());
+        nomenclatures.Set(pair.CharacterName, pair.CharacterWorld, request.NomenclatureDto.ToNomenclature());
     }
 }
