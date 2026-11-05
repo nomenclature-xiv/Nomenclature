@@ -6,5 +6,5 @@ namespace NomenclatureCommon.Domain.Network.InitializeSession;
 public record InitializeSessionRequest(
     [property: Key(0)] string CharacterName,
     [property: Key(1)] string CharacterWorld,
-    [property: Key(2)] NomenclatureDto NomenclatureDto
+    [property: Key(2)] NomenclatureDto? NomenclatureDto
 );
