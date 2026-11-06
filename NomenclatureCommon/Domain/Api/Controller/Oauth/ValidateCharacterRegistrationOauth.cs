@@ -1,9 +1,9 @@
 using MessagePack;
 
-namespace NomenclatureCommon.Domain.Api.Controller;
+namespace NomenclatureCommon.Domain.Api.Controller.Oauth;
 
 [MessagePackObject]
-public record ValidateCharacterRegistration
+public record ValidateCharacterRegistrationOauth
 {
     [Key(0)]
     public string Ticket { get; set; } = string.Empty;

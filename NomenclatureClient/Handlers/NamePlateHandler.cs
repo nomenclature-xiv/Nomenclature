@@ -33,7 +33,7 @@ public class NamePlateHandler(INamePlateGui namePlateGui, NomenclatureService no
             switch (nomenclature.NameBehavior)
             {
                 case NomenclatureBehavior.OverrideOriginal:
-                    handler.Name = new SeString(new TextPayload(string.Concat(nomenclature.Name, "♪")));
+                    handler.Name = new SeString(new TextPayload(string.Concat(nomenclature.Name, "*")));
                     break;
                 
                 case NomenclatureBehavior.DisplayNothing:

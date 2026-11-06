@@ -4,34 +4,47 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NomenclatureClient.Network;
 using NomenclatureCommon.Domain.Api.Controller;
+using NomenclatureCommon.Domain.Api.Controller.Lodestone;
+using NomenclatureCommon.Domain.Api.Controller.Oauth;
 using NomenclatureServer.Domain;
 using NomenclatureServer.Services;
+using NomenclatureServer.Types;
 using NomenclatureServer.Utilities;
 
 namespace NomenclatureServer.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class RegistrationController(DatabaseService database, OauthService authService, ILogger<RegistrationController> logger) : ControllerBase
+public class RegistrationController(DatabaseService database, OauthService authService, LodestoneAuthService lodestoneAuthService, ILogger<RegistrationController> logger) : ControllerBase
 {
-    /// <summary>
-    ///     List of all current registrations
-    /// </summary>
-    private static readonly Dictionary<string, string> PendingRegistrations = new();
 
     [AllowAnonymous]
-    [HttpPost("initiate")]
-    public IActionResult Initiate([FromBody] BeginCharacterRegistrationRequest request)
+    [HttpPost("initiate/xivauth")]
+    public IActionResult InitiateXivAuth()
     {
-        string ticket = authService.GetSetTicket();
-        string url = authService.GetAuthorizationUrl(ticket);
-        var res = new BeginCharacterRegistrationResponse(true, ticket, url);
+            string ticket = authService.GetSetTicket();
+            string url = authService.GetAuthorizationUrl(ticket);
+            var res = new BeginCharacterRegistrationResponseOauth(true, ticket, url);
+            return Ok(res);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("initiate/lodestone")]
+    public async Task<IActionResult> InitiateLodestone([FromBody] BeginCharacterRegistrationRequest request)
+    {
+        var key = await lodestoneAuthService.InitLodestoneAuth(request.Character);
+        if (key is null)
+        {
+            return NotFound();
+        }
+
+        var res = new BeginCharacterRegistrationResponseLodestone(true, key);
         return Ok(res);
     }
 
     [AllowAnonymous]
-    [HttpPost("validate")]
-    public async Task<IActionResult> Validate([FromBody] ValidateCharacterRegistration request)
+    [HttpPost("validate/xivauth")]
+    public async Task<IActionResult> ValidateXivAuth([FromBody] ValidateCharacterRegistrationOauth request)
     {
         try
         {
@@ -49,6 +62,26 @@ public class RegistrationController(DatabaseService database, OauthService authS
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("validate/lodestone")]
+    public async Task<IActionResult> ValidateLodestone([FromBody] ValidateCharacterRegistrationLodestone request)
+    {
+        var result = await lodestoneAuthService.ValidateLodestoneAuth(request.Code);
+        switch (result.Status)
+        {
+            case LodestoneValidationStatus.NoPendingRegistration:
+                return BadRequest();
+            case LodestoneValidationStatus.CharacterNotFound:
+                return NotFound();
+            case LodestoneValidationStatus.CodeNotFound:
+                return Conflict();
+            case LodestoneValidationStatus.UnknownError:
+                return Problem();
+        }
+
+        return Ok(result.Secret);
     }
 
     [AllowAnonymous]

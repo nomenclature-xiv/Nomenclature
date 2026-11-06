@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NomenclatureCommon.Domain.Api.Controller
+namespace NomenclatureCommon.Domain.Api.Controller.Oauth
 {
     public record PollRegistrationResponse
     {

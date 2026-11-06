@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NomenclatureCommon.Domain.Api.Controller
+namespace NomenclatureCommon.Domain.Api.Controller.Oauth
 {
     [MessagePackObject]
-    public record BeginCharacterRegistrationResponse
+    public record BeginCharacterRegistrationResponseOauth
     {
         [Key(0)] public bool Success { get; set; }
         [Key(1)]
@@ -16,8 +16,8 @@ namespace NomenclatureCommon.Domain.Api.Controller
         [Key(2)]
         public string Uri { get; set; } = string.Empty;
 
-        public BeginCharacterRegistrationResponse() { }
-        public BeginCharacterRegistrationResponse(bool success, string ticket, string uri)
+        public BeginCharacterRegistrationResponseOauth() { }
+        public BeginCharacterRegistrationResponseOauth(bool success, string ticket, string uri)
         {
             Success = success;
             Ticket = ticket;

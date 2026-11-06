@@ -1,4 +1,4 @@
-namespace NomenclatureCommon.Domain.Api.Controller;
+namespace NomenclatureCommon.Domain.Api.Controller.Lodestone;
 
 public record BeginCharacterRegistrationRequest
 {
