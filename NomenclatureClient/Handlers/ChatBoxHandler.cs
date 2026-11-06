@@ -123,18 +123,23 @@ public class ChatBoxHandler(IChatGui chatGui, IPlayerState playerState, IPluginL
                 //match crossworld icon + crossworld isn't home world
                 else if (payloads[i] is IconPayload && ((IconPayload)payloads[i]).Icon == BitmapFontIcon.CrossWorld && worldflag && characterset)
                 {
+                    //need to get world position while we still know it, reference remains the same
+                    var payload = (TextPayload)payloads[i + 1];
                     if(nomenclature?.WorldBehavior is NomenclatureBehavior.DisplayNothing)
                     {
                         payloads.Remove(payloads[i]);
                     }
-                    else
+
+                    if (nomenclature?.WorldBehavior is not NomenclatureBehavior.DisplayOriginal)
                     {
-                        TextPayload tpayload = (TextPayload)payloads[i];
+                        var replacewith = nomenclature?.WorldBehavior is NomenclatureBehavior.DisplayNothing
+                            ? ""
+                            : nomenclature?.World;
                         //we need to parse this because sqex hates me specifically
-                        var tsplit = tpayload.Text!.Split(" ");
+                        var tsplit = payload.Text!.Split(" ");
                         string postfix = tsplit[0].EndsWith('.') ? "." : "";
-                        tsplit[0] = string.Concat(nomenclature?.World!, postfix);
-                        tpayload.Text = string.Join(" ", tsplit);
+                        tsplit[0] = string.Concat(replacewith, postfix);
+                        payload.Text = string.Join(" ", tsplit);
                     }
                     worldflag = false;
                     characterset = false;

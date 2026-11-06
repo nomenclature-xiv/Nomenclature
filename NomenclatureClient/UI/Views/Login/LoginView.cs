@@ -1,6 +1,8 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Colors;
 using NomenclatureClient.Services;
+using System.Numerics;
+using NomenclatureClient.Utils;
 
 namespace NomenclatureClient.UI.Views.Login;
 
@@ -8,48 +10,45 @@ public class LoginView(LoginViewController controller, ConfigurationService conf
 {
     public void Draw()
     {
-        FontService.MediumFont?.Push();
-        ImGui.TextUnformatted("Online Status:");
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Text, controller.Connected ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed);
-        ImGui.Text(controller.Connected ? "Connected" : "Disconnected");
-        ImGui.PopStyleColor();
-        
-        if (ImGui.Button(controller.Connected ? "Disconnect" : "Connect"))
-            if (controller.Connected)
-                controller.Disconnect();
-            else
-                controller.Connect();
-        
-        FontService.MediumFont?.Pop();
-        
-        ImGui.Separator();
-
-        FontService.BigFont?.Push();
-        ImGui.TextUnformatted("Your Current Character");
-        FontService.BigFont?.Pop();
-
-        var name = configuration.CharacterConfiguration?.Name ?? string.Empty;
-        var world = configuration.CharacterConfiguration?.World ?? string.Empty;
-        var dummy = 0;
-        
-        ImGui.BeginDisabled();
-        ImGui.InputText("Character Name##CharacterInputText", ref name);
-        ImGui.Combo("World##CharacterInputText", ref dummy, world);
-        ImGui.EndDisabled();
-        
-        if (ImGui.BeginCombo("##SecretPicker", controller.SecretId))
+        SharedUserInterfaces.ContentBox(() =>
         {
-            foreach (var identifier in configuration.Configuration.Secrets.Keys)
-                if (ImGui.Selectable(identifier))
-                    controller.UpdateSecretId(identifier);
-            
-            ImGui.EndCombo();
-        }
+            FontService.MediumFont?.Push();
+            if (ImGui.Button("Connect"))
+                    controller.Connect();
+            FontService.MediumFont?.Pop();
+        });
 
-        if (ImGui.Checkbox("Automatically login to Nomenclature", ref controller.AutoLogin))
+        SharedUserInterfaces.ContentBox(() =>
         {
-            controller.UpdateAutologin();
-        }
+
+            FontService.BigFont?.Push();
+            ImGui.TextUnformatted("Your Current Character");
+            FontService.BigFont?.Pop();
+
+            var name = configuration.CharacterConfiguration?.Name ?? string.Empty;
+            var world = configuration.CharacterConfiguration?.World ?? string.Empty;
+            var dummy = 0;
+
+            ImGui.BeginDisabled();
+            ImGui.InputText("Character Name##CharacterInputText", ref name);
+            ImGui.Combo("World##CharacterInputText", ref dummy, world);
+            ImGui.EndDisabled();
+
+            if (ImGui.BeginCombo("##SecretPicker", controller.SecretId))
+            {
+                foreach (var identifier in configuration.Configuration.Secrets.Keys)
+                    if (ImGui.Selectable(identifier))
+                        controller.UpdateSecretId(identifier);
+
+                ImGui.EndCombo();
+            }
+
+            if (ImGui.Checkbox("Automatically login to Nomenclature", ref controller.AutoLogin))
+            {
+                controller.UpdateAutologin();
+            }
+        });
+
+       ImGui.TextColored(ImGuiColors.DalamudRed, controller.ErrorMessage);
     }
 }

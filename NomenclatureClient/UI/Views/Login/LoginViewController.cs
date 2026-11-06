@@ -30,11 +30,19 @@ public class LoginViewController : IHostedService
     }
     
     public string SecretId = string.Empty;
+    public string ErrorMessage = "";
     public bool AutoLogin;
     public bool Connected => _network.Connection.State is HubConnectionState.Connected;
 
     public async void Connect()
     {
+        if (_configuration.CharacterConfiguration?.SecretId is null)
+        {
+            ErrorMessage = "Please select a secret before trying to connect.";
+            return;
+        }
+
+        ErrorMessage = "";
         try
         {
             await _network.Connect().ConfigureAwait(false);
