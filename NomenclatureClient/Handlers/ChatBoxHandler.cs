@@ -195,13 +195,13 @@ public class ChatBoxHandler(IChatGui chatGui, IPlayerState playerState, IPluginL
     
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        chatGui.ChatMessage += OnChatMessage;
+        chatGui.CheckMessageHandled += OnChatMessage;
         return Task.CompletedTask;
     }
     
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        chatGui.ChatMessage -= OnChatMessage;
+        chatGui.CheckMessageHandled -= OnChatMessage;
         return Task.CompletedTask;
     }
 }
