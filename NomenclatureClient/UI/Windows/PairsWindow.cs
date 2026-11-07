@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using NomenclatureClient.UI.Views.Pairs;
 
@@ -8,14 +9,14 @@ public class PairsWindow : Window
 {
     private readonly PairsView _pairsView;
     
-    public PairsWindow(PairsView pairsView) : base("Nomenclature - Pairs")
+    public PairsWindow(PairsView pairsView) : base("Nomenclature - Pairs", ImGuiWindowFlags.NoScrollbar)
     {
         _pairsView = pairsView;
-        
+
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(450, 290),
-            MaximumSize = new Vector2(450, int.MaxValue),
+            MinimumSize = new Vector2(350, 290),
+            MaximumSize = new Vector2(350, int.MaxValue),
         };
     }
 

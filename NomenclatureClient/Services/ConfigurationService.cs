@@ -57,7 +57,6 @@ public class ConfigurationService : IHostedService
         _baseConfigurationFolderPath = dalamudPluginInterface.GetPluginConfigDirectory();
         _configurationFilePath = Path.Combine(_baseConfigurationFolderPath, ConfigurationFileName);
         _charactersFolderPath = Path.Combine(_baseConfigurationFolderPath, CharactersFolderName);
-        CheckAnyCharacterRegistered();
         
         _pluginLog = pluginLog;
     }
@@ -103,6 +102,7 @@ public class ConfigurationService : IHostedService
         {
             _pluginLog.Error($"[ConfigurationService.LoadConfigurationAsync] {e}");
         }
+        CheckAnyCharacterRegistered();
     }
 
     /// <summary>
@@ -223,20 +223,7 @@ public class ConfigurationService : IHostedService
 
     public void CheckAnyCharacterRegistered()
     {
-        try
-        {
-            if (!Directory.Exists(_charactersFolderPath))
-            {
-                AnyCharacterRegistered = false;
-                return;
-            }
-            AnyCharacterRegistered = Directory.EnumerateFiles(_charactersFolderPath).Any();
-        }
-        catch (Exception e)
-        {
-            _pluginLog.Error($"[ConfigurationService.AnyCharacterRegistered] {e}");
-            AnyCharacterRegistered = false;
-        }
+        AnyCharacterRegistered = Configuration.Secrets.Count is not 0;
     }
 
     /// <summary>

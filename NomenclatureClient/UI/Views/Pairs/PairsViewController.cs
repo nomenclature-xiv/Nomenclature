@@ -15,15 +15,19 @@ using System.Threading.Tasks;
 
 namespace NomenclatureClient.UI.Views.Pairs;
 
-public class PairsViewController(IPluginLog pluginLog, PairService pairService, NetworkService networkService)
+public class PairsViewController(IPluginLog pluginLog, PairService pairService, NetworkService networkService, ConfigurationService configuration)
 {
     public string guh = "";
     private IReadOnlyDictionary<string, PairDto> _pairs => pairService.PairsBySyncCode;
     public IReadOnlyDictionary<string, PairDto> OnlinePairs => _pairs.Where(i => i.Value is OnlinePairDto).ToImmutableDictionary();
     public IReadOnlyDictionary<string, PairDto> OfflinePairs => _pairs.Where(i => i.Value is OfflinePairDto).ToImmutableDictionary();
     public IReadOnlyDictionary<string, PairDto> PendingPairs => _pairs.Where(i => i.Value is PendingPairDto).ToImmutableDictionary();
+    public Dictionary<string, string> Nicknames => configuration.Configuration.Nicknames;
 
     public string SyncCode => pairService.CurrentSyncCode;
+    public string Editing = "";
+    public string Nickname = "";
+    public bool FocusSet = false;
 
     public async Task Remove(string item)
     {
@@ -48,6 +52,15 @@ public class PairsViewController(IPluginLog pluginLog, PairService pairService, 
                 pairService.Add(res.Value);
             }
         }
+    }
+
+    public async void HandleNickname(string syncCode)
+    {
+        configuration.Configuration.Nicknames[syncCode] = Nickname;
+        await configuration.SaveConfigurationAsync().ConfigureAwait(false);
+        Editing = "";
+        FocusSet = false;
+        Nickname = "";
     }
 
 }

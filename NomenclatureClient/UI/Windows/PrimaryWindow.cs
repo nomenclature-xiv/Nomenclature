@@ -25,7 +25,7 @@ public class PrimaryWindow : Window
         PrimaryWindowController controller,
         LoginView loginView,
         NomenclatureView nomenclatureView,
-        RegisterView registerView) : base($"Nomenclature - Version {Plugin.Version}")
+        RegisterView registerView) : base($"Nomenclature - Version {Plugin.Version}", ImGuiWindowFlags.NoScrollbar)
     {
         SizeConstraints = new WindowSizeConstraints
         {

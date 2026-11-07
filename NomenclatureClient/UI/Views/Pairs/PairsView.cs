@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using NomenclatureClient.Services;
 using NomenclatureClient.Utils;
@@ -9,6 +11,8 @@ public class PairsView(PairsViewController controller)
     
     public void Draw()
     {
+        var padding = ImGui.GetStyle().WindowPadding;
+        var size = ImGui.GetWindowSize();
         SharedUserInterfaces.ContentBox(() =>
         {
             FontService.BigFont?.Push();
@@ -26,59 +30,85 @@ public class PairsView(PairsViewController controller)
         });
         SharedUserInterfaces.ContentBox(() =>
         {
-            var padding = ImGui.GetStyle().WindowPadding;
-            var size = ImGui.GetWindowSize();
             ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetFontSize() * 3);
             ImGui.InputTextWithHint("##Friend", "Other person's UID", ref controller.guh);
             ImGui.SameLine();
             if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Plus, tooltip: "Add Friend"))
                 controller.Add();
         });
+        ImGui.BeginChild("###ScrollingRegion", flags: ImGuiWindowFlags.AlwaysVerticalScrollbar);
         if (controller.OnlinePairs.Count > 0)
         {
-            ImGui.TextUnformatted("Online Pairs");
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                foreach (var item in controller.OnlinePairs.Keys)
-                {
-                    ImGui.TextUnformatted(item);
-                    ImGui.SameLine();
-                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        _ = controller.Remove(item).ConfigureAwait(false);
-                }
-            });
+            DrawAllPairs("Online Pairs", controller.OnlinePairs.Keys, ImGuiTreeNodeFlags.DefaultOpen);
         }
-        else if (controller.PendingPairs.Count > 0)
+        if (controller.PendingPairs.Count > 0)
         {
-            ImGui.TextUnformatted("Pending Pairs");
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                foreach (var item in controller.PendingPairs.Keys)
-                {
-                    ImGui.TextUnformatted(item);
-                    ImGui.SameLine();
-                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        _ = controller.Remove(item).ConfigureAwait(false);
-                }
-            });
+            DrawAllPairs("Pending Pairs", controller.PendingPairs.Keys);
         }
-        else if (controller.OfflinePairs.Count > 0)
+        if (controller.OfflinePairs.Count > 0)
         {
-            ImGui.TextUnformatted("Offline Pairs");
-            SharedUserInterfaces.ContentBox(() =>
-            {
-                foreach (var item in controller.OfflinePairs.Keys)
-                {
-                    ImGui.TextUnformatted(item);
-                    ImGui.SameLine();
-                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
-                        _ = controller.Remove(item).ConfigureAwait(false);
-                }
-            });
+            DrawAllPairs("Offline Pairs", controller.OfflinePairs.Keys);
         }
         else
         {
             ImGui.TextUnformatted("You have no pairs! Try adding one.");
+        }
+
+        ImGui.EndChild();
+    }
+
+    private void DrawAllPairs(string title, IEnumerable<string> keys, ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.None)
+    {
+        var padding = ImGui.GetStyle().WindowPadding;
+        var size = ImGui.GetWindowSize();
+        if (ImGui.CollapsingHeader(title, flags))
+        {
+            SharedUserInterfaces.ContentBox(() =>
+            {
+                foreach (var item in keys)
+                {
+                    controller.Nicknames.TryGetValue(item, out var nickname);
+                    ImGui.AlignTextToFramePadding();
+                    if (ImGui.Selectable(controller.Editing == item ? $"##{item}" : nickname ?? item,
+                            size: new Vector2(controller.Editing == item ? 0.001f : 0f, 0f),
+                            flags: ImGuiSelectableFlags.SpanAllColumns))
+                    {
+                    }
+
+                    if (controller.Editing == item)
+                    {
+                        ImGui.SameLine();
+                        ImGui.SetNextItemWidth(size.X - padding.X - ImGui.GetFontSize() * 4.5f);
+                        if (!controller.FocusSet)
+                        {
+                            ImGui.SetKeyboardFocusHere();
+                            controller.FocusSet = true;
+                        }
+                        if (ImGui.InputTextWithHint($"##EditingInput{item}", "Nickname", ref controller.Nickname,
+                                flags: ImGuiInputTextFlags.EnterReturnsTrue))
+                        {
+                            controller.HandleNickname(item);
+                        }
+                    }
+                    if (ImGui.IsItemHovered())
+                    {
+                        if (controller.Editing == item)
+                            ImGui.SetTooltip("Enter to save\nRight click to revert");
+                        else
+                            ImGui.SetTooltip("Right click to modify nickname");
+                        if (ImGui.IsMouseReleased(ImGuiMouseButton.Right))
+                        {
+                            controller.Nicknames.TryGetValue(item, out nickname);
+                            controller.Nickname = nickname ?? "";
+                            controller.Editing = controller.Editing == item ? "" : item;
+                            controller.FocusSet = false;
+                        }
+                    }
+                    ImGui.SameLine(size.X - padding.X - ImGui.GetFontSize() * 2.5f);
+                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
+                        _ = controller.Remove(item).ConfigureAwait(false);
+                }
+            });
         }
     }
 }

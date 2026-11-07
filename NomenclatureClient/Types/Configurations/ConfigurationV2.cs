@@ -18,4 +18,9 @@ public class ConfigurationV2
     ///     A dictionary mapping SecretId to Secret
     /// </summary>
     public Dictionary<string, string> Secrets = [];
+
+    /// <summary>
+    ///     A dictionary mapping SyncCode to Nickname
+    /// </summary>
+    public Dictionary<string, string> Nicknames = [];
 }
