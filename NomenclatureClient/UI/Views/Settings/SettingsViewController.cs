@@ -72,6 +72,7 @@ public class SettingsViewController
     private void OnLoginFinished()
     {
         AutoLogin = _configuration.CharacterConfiguration?.AutoConnect ?? false;
+        GlobalSync = _configuration.CharacterConfiguration?.GlobalSync ?? false;
     }
     
 }
