@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
 using NomenclatureClient.Types;
+using NomenclatureClient.Types.Extensions;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.RemoveZone;
@@ -38,7 +39,11 @@ public class ZoneManager(IClientState clientState, IDataManager dataManager, IPl
     public async Task UpdateCurrentZone()
     {
         var dto = await framework.RunOnFrameworkThread(GetZoneDto);
-        await network.InvokeAsync<UpdateZoneResponse>(HubMethod.UpdateZone, new UpdateZoneRequest(dto));
+        var res = await network.InvokeAsync<UpdateZoneResponse>(HubMethod.UpdateZone, new UpdateZoneRequest(dto));
+        foreach (var zonemenclature in res.Zonemenclatures)
+        {
+            AddZonemenclature(new Character(zonemenclature.CharacterName,  zonemenclature.CharacterWorld),  zonemenclature.Nomenclature.ToNomenclature());
+        }
     }
 
     public async Task RemoveCurrentZone()
