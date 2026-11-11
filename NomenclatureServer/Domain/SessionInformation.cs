@@ -19,6 +19,11 @@ public class SessionInformation(string connectionId)
     ///     The world of the character this account is currently logged in as
     /// </summary>
     public string CharacterWorld = string.Empty;
+
+    /// <summary>
+    ///     The current zone this character is currently in (optional)
+    /// </summary>
+    public ZoneInformation? Zone = null;
     
     /// <summary>
     ///     The last time this user submitted a command

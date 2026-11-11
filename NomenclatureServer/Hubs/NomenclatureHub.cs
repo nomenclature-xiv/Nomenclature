@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using NetStone.Definitions.Model.CWLS;
 using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Exceptions;
 using NomenclatureServer.Domain;
@@ -12,9 +13,12 @@ using NomenclatureCommon.Domain.Network.Pairs.AddPair;
 using NomenclatureCommon.Domain.Network.Pairs.PausePair;
 using NomenclatureCommon.Domain.Network.Pairs.RemovePair;
 using NomenclatureCommon.Domain.Network.RemoveNomenclature;
+using NomenclatureCommon.Domain.Network.RemoveZone;
 using NomenclatureCommon.Domain.Network.Responses;
 using NomenclatureCommon.Domain.Network.UpdateNomenclature;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
+using NomenclatureCommon.Domain.Network.UpdateZone;
+using NomenclatureCommon.Domain.Network.Zones;
 using NomenclatureServer.Utilities;
 
 // ReSharper disable RedundantBoolCompare
@@ -34,15 +38,18 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
     {
         var syncCode = SyncCode;
         if (connections.TryGetConnectedClient(syncCode) is not { } information)
-            return new InitializeSessionResponse(RequestErrorCode.NotAuthenticatedOrOnline, string.Empty, []);
+            return new InitializeSessionResponse(RequestErrorCode.NotAuthenticatedOrOnline, string.Empty, [], null);
 
         information.CharacterName = request.CharacterName;
         information.CharacterWorld = request.CharacterWorld;
 
-        if (Validator.TryValidateNomenclature(request.NomenclatureDto) is false)
-            return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, []);
+        if (request.NomenclatureDto is not null)
+        {
+            if (Validator.TryValidateNomenclature(request.NomenclatureDto) is false)
+                return new InitializeSessionResponse(RequestErrorCode.InvalidNomenclature, syncCode, [], null);
 
-        nomenclatures.Upsert(syncCode, request.NomenclatureDto);
+            nomenclatures.Upsert(syncCode, request.NomenclatureDto);
+        }
 
         var results = new List<PairDto>();
         foreach (var pair in await database.GetAllPairs(syncCode))
@@ -61,12 +68,14 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
             if (nomenclatures.TryGet(pair.SyncCode) is not { } nomenclature)
             {
-                logger.LogWarning("A connected client {SyncCode} did not have a corresponding Nomenclature, did they log out?", pair.SyncCode);
-                results.Add(new OfflinePairDto(pair.SyncCode));
-                continue;
+                logger.LogWarning("A connected client {SyncCode} did not have a corresponding Nomenclature", pair.SyncCode);
+                results.Add(new OnlinePairDto(pair.SyncCode, null, target.CharacterName, target.CharacterWorld));
             }
-
-            results.Add(new OnlinePairDto(pair.SyncCode, nomenclature, target.CharacterName, target.CharacterWorld));
+            else
+            {
+                results.Add(new OnlinePairDto(pair.SyncCode, nomenclature, target.CharacterName,
+                    target.CharacterWorld));
+            }
 
             try
             {
@@ -79,7 +88,10 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
             }
         }
 
-        return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results);
+        //handling zonesync if we have it on
+        var zoneNomenclatures = await DoUpdateZone(request.ZoneDto, request.NomenclatureDto);
+
+        return new InitializeSessionResponse(RequestErrorCode.Success, syncCode, results, zoneNomenclatures);
     }
 
     [HubMethodName(HubMethod.AddPair)]
@@ -156,7 +168,8 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
 
         nomenclatures.Upsert(syncCode, request.NomenclatureDto);
 
-        foreach (var pair in await database.GetAllPairs(syncCode))
+        var pairs = await database.GetAllPairs(syncCode);
+        foreach (var pair in pairs)
         {
             if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
@@ -171,6 +184,19 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[UpdateNomenclature] {Error}", e);
             }
         }
+        
+        if (connections.ConnectedClients.TryGetValue(SyncCode, out var info))
+        {
+            foreach (var client in connections.ConnectedClients)
+            {
+                if (pairs.Any(pair => pair.SyncCode == client.Key && !pair.IsOneWay))
+                    continue;
+                if (client.Value.Zone != info.Zone)
+                    continue;
+                var req = new UpdateNomenclatureZoneForwardedRequest(info.CharacterName, info.CharacterWorld, request.NomenclatureDto);
+                await Clients.Client(client.Value.ConnectionId).SendAsync(HubMethod.UpdateZone, req);
+            }
+        }
 
         return new UpdateNomenclatureResponse(RequestErrorCode.Success);
     }
@@ -183,7 +209,8 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         if (nomenclatures.Remove(syncCode) is false)
             return new RemoveNomenclatureResponse(RequestErrorCode.Success);
 
-        foreach (var pair in await database.GetAllPairs(syncCode))
+        var pairs = await database.GetAllPairs(syncCode);
+        foreach (var pair in pairs)
         {
             if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
@@ -198,8 +225,77 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
                 logger.LogError("[RemoveNomenclature] {Error}", e);
             }
         }
+        
+        if (connections.ConnectedClients.TryGetValue(SyncCode, out var info))
+        {
+            foreach (var client in connections.ConnectedClients)
+            {
+                if (pairs.Any(pair => pair.SyncCode == client.Key && !pair.IsOneWay))
+                    continue;
+                if (client.Value.Zone != info.Zone)
+                    continue;
+                var req = new RemoveNomenclatureZoneForwardedRequest(info.CharacterName, info.CharacterWorld);
+                await Clients.Client(client.Value.ConnectionId).SendAsync(HubMethod.RemoveZone, req);
+            }
+        }
 
         return new RemoveNomenclatureResponse(RequestErrorCode.Success);
+    }
+
+    [HubMethodName(HubMethod.UpdateZone)]
+    public async Task<UpdateZoneResponse> UpdateZone(UpdateZoneRequest request)
+    {
+        var nomenclature = nomenclatures.TryGet(SyncCode);
+        var zoneNomenclatures = await DoUpdateZone(request.Zone, nomenclature);
+        return new UpdateZoneResponse(zoneNomenclatures!);
+    }
+
+    [HubMethodName(HubMethod.RemoveZone)]
+    public async Task<RemoveZoneResponse> RemoveZone(RemoveZoneRequest request)
+    {
+        var pairs = await database.GetAllPairs(SyncCode);
+        if (connections.ConnectedClients.TryGetValue(SyncCode, out var info))
+        {
+            foreach (var client in connections.ConnectedClients)
+            {
+                if (pairs.Any(pair => pair.SyncCode == client.Key && !pair.IsOneWay))
+                    continue;
+                if (client.Value.Zone != info.Zone)
+                    continue;
+                var req = new RemoveNomenclatureZoneForwardedRequest(info.CharacterName, info.CharacterWorld);
+                await Clients.Client(client.Value.ConnectionId).SendAsync(HubMethod.RemoveZone, req);
+            }
+        }
+        return new  RemoveZoneResponse(RequestErrorCode.Success);
+    }
+
+    private async Task<List<ZonemenclatureDto>?> DoUpdateZone(ZoneDto? zoneDto, NomenclatureDto? nomenclatureDto)
+    {
+        List<ZonemenclatureDto>? zoneNomenclatures = null;
+        if (zoneDto is not null)
+        {
+            if (!connections.ConnectedClients.TryGetValue(SyncCode, out var info))
+                return null;
+            zoneNomenclatures = new ();
+            var zone = ZoneInformation.FromDto(zoneDto);
+            connections.UpdateClientZone(SyncCode, zone);
+            var pairs = await database.GetAllPairs(SyncCode);
+            foreach (var client in connections.ConnectedClients)
+            {
+                if (pairs.Any(pair => pair.SyncCode == client.Key && !pair.IsOneWay))
+                    continue;
+                if (client.Value.Zone != zone)
+                    continue;
+                var req = new UpdateNomenclatureZoneForwardedRequest(info.CharacterName, info.CharacterWorld, nomenclatureDto);
+                await Clients.Client(client.Value.ConnectionId).SendAsync(HubMethod.UpdateZone, req);
+                if (nomenclatures.TryGet(client.Key) is { } nomenclature)
+                {
+                    zoneNomenclatures.Add(new ZonemenclatureDto(client.Value.CharacterName,
+                        client.Value.CharacterWorld, nomenclature));
+                }
+            }
+        }
+        return zoneNomenclatures;
     }
 
     public override Task OnConnectedAsync()
@@ -213,19 +309,33 @@ public class NomenclatureHub(ConnectionService connections, DatabaseService data
         var syncCode = SyncCode;
         connections.RemoveConnectedClient(syncCode);
 
-        foreach (var pair in await database.GetAllPairs(syncCode))
+        var pairs =  await database.GetAllPairs(syncCode);
+        foreach (var pair in pairs)
         {
             if (pair.IsOneWay) continue;
             if (connections.TryGetConnectedClient(pair.SyncCode) is not { } target) continue;
 
             try
             {
-                var forward = new UpdateOnlineStatusForwardedRequest(new OfflinePairDto(pair.SyncCode));
+                var forward = new UpdateOnlineStatusForwardedRequest(new OfflinePairDto(SyncCode));
                 await Clients.Client(target.ConnectionId).SendAsync(HubMethod.UpdateOnlineStatus, forward);
             }
             catch (Exception e)
             {
                 logger.LogError("[OnDisconnectedAsync] {Error}", e);
+            }
+        }
+        
+        if (connections.ConnectedClients.TryGetValue(SyncCode, out var info))
+        {
+            foreach (var client in connections.ConnectedClients)
+            {
+                if (pairs.Any(pair => pair.SyncCode == client.Key && !pair.IsOneWay))
+                    continue;
+                if (client.Value.Zone != info.Zone)
+                    continue;
+                var req = new RemoveNomenclatureZoneForwardedRequest(info.CharacterName, info.CharacterWorld);
+                await Clients.Client(client.Value.ConnectionId).SendAsync(HubMethod.UpdateZone, req);
             }
         }
 

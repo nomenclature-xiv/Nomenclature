@@ -13,6 +13,11 @@ public class SettingsView(SettingsViewController controller)
             {
                 controller.UpdateAutologin();
             }
+
+            if (ImGui.Checkbox("Global Sync", ref controller.GlobalSync))
+            {
+                controller.UpdateGlobalSync();
+            }
             ImGui.Separator();
             if (ImGui.Button("Disconnect"))
             {

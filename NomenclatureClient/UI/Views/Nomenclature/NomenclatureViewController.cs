@@ -128,6 +128,7 @@ public class NomenclatureViewController : IHostedService
         // TODO: Log failures
         if (response.ErrorCode is not RequestErrorCode.Success)
         {
+            _pluginLog.Debug("Did not get success result! Result: {Error}", response.ErrorCode);
             return;
         }
 

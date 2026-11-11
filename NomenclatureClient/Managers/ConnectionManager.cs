@@ -9,6 +9,7 @@ using NomenclatureCommon.Domain;
 using NomenclatureCommon.Domain.Network;
 using NomenclatureCommon.Domain.Network.InitializeSession;
 using NomenclatureCommon.Domain.Network.Pairs;
+using NomenclatureCommon.Domain.Network.Zones;
 
 namespace NomenclatureClient.Managers;
 
@@ -20,13 +21,15 @@ public class ConnectionManager : IHostedService
     private readonly NetworkService _network;
     private readonly NomenclatureService _nomenclatures;
     private readonly PairService _pairs;
+    private readonly ZoneManager _zone;
     
-    public ConnectionManager(ConfigurationService configuration, NetworkService network, NomenclatureService nomenclatures, PairService pairs)
+    public ConnectionManager(ConfigurationService configuration, NetworkService network, NomenclatureService nomenclatures, PairService pairs, ZoneManager zoneManager)
     {
         _configuration = configuration;
         _network = network;
         _nomenclatures = nomenclatures;
         _pairs = pairs;
+        _zone = zoneManager;
 
         _network.Connected += OnConnected;
         _network.Disconnected += OnDisconnected;
@@ -42,7 +45,10 @@ public class ConnectionManager : IHostedService
         {
             nom = player.Nomenclature.ToNomenclatureDto();
         }
-        var request = new InitializeSessionRequest(player.Name, player.World, nom);
+        ZoneDto? zone = null;
+        if (_configuration.CharacterConfiguration.GlobalSync)
+            zone = _zone.GetZoneDto();
+        var request = new InitializeSessionRequest(player.Name, player.World, nom, zone);
         var response = await _network.InvokeAsync<InitializeSessionResponse>(HubMethod.InitializeSession, request).ConfigureAwait(false);
         if (response.ErrorCode is not RequestErrorCode.Success)
             return;
@@ -54,6 +60,15 @@ public class ConnectionManager : IHostedService
             if (pair is OnlinePairDto onlinePairDto && onlinePairDto.NomenclatureDto is not null)
                 _nomenclatures.Set(onlinePairDto.CharacterName, onlinePairDto.CharacterWorld, onlinePairDto.NomenclatureDto.ToNomenclature());
         }
+
+        if (response.ZoneNomenclatureDto is not null)
+        {
+            foreach (var pair in response.ZoneNomenclatureDto)
+            {
+                _zone.AddZonemenclature(new Character(pair.CharacterName, pair.CharacterWorld), pair.Nomenclature.ToNomenclature());
+            }
+        }
+
         _nomenclatures.Set(_configuration.CharacterConfiguration.Name, _configuration.CharacterConfiguration.World, _configuration.CharacterConfiguration.Nomenclature);
         IsConnected = true;
     }
@@ -61,6 +76,7 @@ public class ConnectionManager : IHostedService
     private Task OnDisconnected()
     {
         _pairs.Clear();
+        _zone.ClearZonemenclatures();
         _nomenclatures.Clear();
         IsConnected = false;
         return Task.CompletedTask;

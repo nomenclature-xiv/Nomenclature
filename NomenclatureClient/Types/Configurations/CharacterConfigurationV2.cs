@@ -33,6 +33,11 @@ public class CharacterConfigurationV2
     public bool AutoConnect;
 
     /// <summary>
+    ///     Should this character globally sync their nomenclatures
+    /// </summary>
+    public bool GlobalSync;
+
+    /// <summary>
     ///     The saved / active nomenclature
     /// </summary>
     public Nomenclature Nomenclature = Nomenclature.Empty;

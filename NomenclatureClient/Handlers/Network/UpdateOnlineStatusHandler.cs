@@ -1,10 +1,12 @@
 using Dalamud.Plugin.Services;
 using NomenclatureClient.Services;
+using NomenclatureClient.Types.Extensions;
+using NomenclatureCommon.Domain.Network.Pairs;
 using NomenclatureCommon.Domain.Network.UpdateOnlineStatus;
 
 namespace NomenclatureClient.Handlers.Network;
 
-public class UpdateOnlineStatusHandler(IPluginLog logger, PairService pairs)
+public class UpdateOnlineStatusHandler(IPluginLog logger, PairService pairs, NomenclatureService nomenclatureService)
 {
     public void Handle(UpdateOnlineStatusForwardedRequest request)
     {
@@ -14,5 +16,7 @@ public class UpdateOnlineStatusHandler(IPluginLog logger, PairService pairs)
             return;
         
         pairs.Add(request.Pair);
+        if(request.Pair is OnlinePairDto pair && pair.NomenclatureDto is not null)
+            nomenclatureService.Set(pair.CharacterName, pair.CharacterWorld, pair.NomenclatureDto.ToNomenclature());
     }
 }

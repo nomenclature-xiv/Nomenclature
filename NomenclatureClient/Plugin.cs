@@ -35,7 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>
     ///     Entry point for the plugin
     /// </summary>
-    public Plugin(IChatGui chatGui, IClientState clientState, ICommandManager commandManager, IDalamudPluginInterface pluginInterface, IDataManager dataManager, IFramework framework, INamePlateGui namePlateGui, IObjectTable objectTable, IPluginLog pluginLog, IPlayerState playerState)
+    public Plugin(IChatGui chatGui, IClientState clientState, ICommandManager commandManager, IDalamudPluginInterface pluginInterface, IDataManager dataManager, IFramework framework, INamePlateGui namePlateGui, IObjectTable objectTable, IPluginLog pluginLog, IPlayerState playerState, ICondition condition)
     {
         _host = new HostBuilder()
             .UseContentRoot(pluginInterface.ConfigDirectory.FullName)
@@ -60,6 +60,7 @@ public sealed class Plugin : IDalamudPlugin
                 collection.AddSingleton(dataManager);
                 collection.AddSingleton(chatGui);
                 collection.AddSingleton(playerState);
+                collection.AddSingleton(condition);
                 
                 // Internal Services
                 collection.AddSingleton<ConfigurationService>();
@@ -73,6 +74,7 @@ public sealed class Plugin : IDalamudPlugin
                 // Managers
                 collection.AddSingleton<ConnectionManager>();
                 collection.AddSingleton<LoginManager>();
+                collection.AddSingleton<ZoneManager>();
                 
                 // Handlers
                 collection.AddSingleton<ChatBoxHandler>();
@@ -84,6 +86,8 @@ public sealed class Plugin : IDalamudPlugin
                 collection.AddSingleton<RemoveNomenclatureHandler>();
                 collection.AddSingleton<UpdateNomenclatureHandler>();
                 collection.AddSingleton<UpdateOnlineStatusHandler>();
+                collection.AddSingleton<UpdateNomenclatureZoneHandler>();
+                collection.AddSingleton<RemoveNomenclatureZoneHandler>();
                 
                 // IPC
                 // TODO: IPCs
@@ -96,6 +100,7 @@ public sealed class Plugin : IDalamudPlugin
                 collection.AddHostedService(p => p.GetRequiredService<FontService>());
                 collection.AddHostedService(p => p.GetRequiredService<NetworkService>());
                 collection.AddHostedService(p => p.GetRequiredService<PairService>());
+                collection.AddHostedService(p => p.GetRequiredService<ZoneManager>());
                 
                 // Startup Managers
                 collection.AddHostedService(p => p.GetRequiredService<ConnectionManager>());

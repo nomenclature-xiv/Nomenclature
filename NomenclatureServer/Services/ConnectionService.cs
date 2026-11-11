@@ -13,10 +13,17 @@ public class ConnectionService
     /// </summary>
     private readonly ConcurrentDictionary<string, SessionInformation> _connectedClients = [];
 
+    public IReadOnlyDictionary<string, SessionInformation> ConnectedClients => _connectedClients;
+
     /// <summary>
     ///     Add a new connected client to our list
     /// </summary>
     public void AddConnectedClient(string syncCode, string connectionId) => _connectedClients[syncCode] = new SessionInformation(connectionId);
+    
+    /// <summary>
+    ///     Update a connected client's zone
+    /// </summary>
+    public void UpdateClientZone(string syncCode, ZoneInformation? zone) => _connectedClients[syncCode].Zone = zone;
     
     /// <summary>
     ///     Try to remove a connected client from the list
