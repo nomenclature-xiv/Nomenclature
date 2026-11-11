@@ -60,11 +60,11 @@ public static class SharedUserInterfaces
     /// <summary>
     ///     Creates a button with specified icon
     /// </summary>
-    public static bool IconButton(FontAwesomeIcon icon, Vector2? size = null, string? tooltip = null, IFontHandle? fontHandle = null)
+    public static bool IconButton(FontAwesomeIcon icon, Vector2? size = null, string? tooltip = null, IFontHandle? fontHandle = null, string? label = null)
     {
         fontHandle?.Push();
         ImGui.PushFont(UiBuilder.IconFont);
-        var result = ImGui.Button(icon.ToIconString(), size ?? Vector2.Zero);
+        var result = ImGui.Button($"{icon.ToIconString()}##{label ?? ""}", size ?? Vector2.Zero);
         ImGui.PopFont();
         fontHandle?.Pop();
 

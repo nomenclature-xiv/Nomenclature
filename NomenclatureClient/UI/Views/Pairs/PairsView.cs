@@ -71,7 +71,7 @@ public class PairsView(PairsViewController controller)
                     ImGui.AlignTextToFramePadding();
                     if (ImGui.Selectable(controller.Editing == item ? $"##{item}" : nickname ?? item,
                             size: new Vector2(controller.Editing == item ? 0.001f : 0f, 0f),
-                            flags: ImGuiSelectableFlags.SpanAllColumns))
+                            flags: ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowItemOverlap))
                     {
                     }
 
@@ -105,7 +105,7 @@ public class PairsView(PairsViewController controller)
                         }
                     }
                     ImGui.SameLine(size.X - padding.X - ImGui.GetFontSize() * 2.5f);
-                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash))
+                    if (SharedUserInterfaces.IconButton(Dalamud.Interface.FontAwesomeIcon.Trash, label: item))
                         _ = controller.Remove(item).ConfigureAwait(false);
                 }
             });
