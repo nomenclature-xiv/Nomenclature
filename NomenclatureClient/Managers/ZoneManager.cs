@@ -40,6 +40,11 @@ public class ZoneManager(IClientState clientState, IDataManager dataManager, IPl
     {
         var dto = await framework.RunOnFrameworkThread(GetZoneDto);
         var res = await network.InvokeAsync<UpdateZoneResponse>(HubMethod.UpdateZone, new UpdateZoneRequest(dto));
+        if (res.Zonemenclatures is null)
+        {
+            pluginLog.Error("Zone Nomenclatures was null! Is the server up?");
+            return;
+        }
         foreach (var zonemenclature in res.Zonemenclatures)
         {
             AddZonemenclature(new Character(zonemenclature.CharacterName,  zonemenclature.CharacterWorld),  zonemenclature.Nomenclature.ToNomenclature());
