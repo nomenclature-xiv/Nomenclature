@@ -6,6 +6,7 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.Sheets;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using NomenclatureClient.Network;
 using NomenclatureClient.Services;
@@ -28,6 +29,10 @@ public class ZoneManager(IClientState clientState, IDataManager dataManager, IPl
         if (!config.CharacterConfiguration?.GlobalSync ?? true)
             return;
         if (flag is not ConditionFlag.BetweenAreas || state is not false)
+        {
+            return;
+        }
+        if (network.Connection.State is not HubConnectionState.Connected)
         {
             return;
         }
